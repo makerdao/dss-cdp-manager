@@ -36,7 +36,7 @@ contract Move {
 contract DssCdpManager {
     mapping (bytes32 => mapping (bytes12 => address)) public cdps;
     mapping (address => mapping (address => bool)) public allows;
-    mapping (bytes32 => uint96) public cdpsi;
+    mapping (bytes32 => uint96) public cdpi;
 
     uint256 constant ONE = 10 ** 27;
 
@@ -86,8 +86,8 @@ contract DssCdpManager {
         bytes32 ilk,
         address guy
     ) public note returns (bytes12 cdp) {
-        cdpsi[ilk] ++;
-        cdp = bytes12(cdpsi[ilk]);
+        cdpi[ilk] ++;
+        cdp = bytes12(cdpi[ilk]);
         cdps[ilk][cdp] = guy;
     }
 
