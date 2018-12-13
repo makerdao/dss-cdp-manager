@@ -20,23 +20,16 @@ pragma solidity >= 0.5.0;
 
 contract PitLike {
     function frob(bytes32, bytes32, int256, int256) public;
-    function vat() public returns (VatLike);
 }
 
-contract VatLike {
-    function dai(bytes32) public returns (uint);
-    function gem(bytes32, bytes32) public returns (uint);
-}
-
-contract Move {
-    function move(bytes32, bytes32, uint) public;
-    function ilk() public view returns (bytes32);
+contract Adapter {
+    function exit(bytes32, bytes32, uint) public;
 }
 
 contract DssCdpManager {
-    mapping (bytes32 => mapping (bytes12 => address)) public cdps;
+    mapping (bytes12 => address) public cdps;
     mapping (address => mapping (address => bool)) public allows;
-    mapping (bytes32 => uint96) public cdpi;
+    uint96 public cdpi;
 
     uint256 constant ONE = 10 ** 27;
 
@@ -62,10 +55,9 @@ contract DssCdpManager {
     }
 
     modifier isAllowed(
-        bytes32 ilk,
         bytes12 cdp
     ) {
-        require(msg.sender == cdps[ilk][cdp] || allows[cdps[ilk][cdp]][msg.sender], "");
+        require(msg.sender == cdps[cdp] || allows[cdps[cdp]][msg.sender], "");
         _;
     }
 
@@ -76,27 +68,23 @@ contract DssCdpManager {
         allows[msg.sender][guy] = ok;
     }
 
-    function open(
-        bytes32 ilk
-    ) public returns (bytes12 cdp) {
-        cdp = open(ilk, msg.sender);
+    function open() public returns (bytes12 cdp) {
+        cdp = open(msg.sender);
     }
 
     function open(
-        bytes32 ilk,
         address guy
     ) public note returns (bytes12 cdp) {
-        cdpi[ilk] ++;
-        cdp = bytes12(cdpi[ilk]);
-        cdps[ilk][cdp] = guy;
+        cdpi ++;
+        cdp = bytes12(cdpi);
+        cdps[cdp] = guy;
     }
 
     function move(
-        bytes32 ilk,
         bytes12 cdp,
         address dst
-    ) public note isAllowed(ilk, cdp) {
-        cdps[ilk][cdp] = dst;
+    ) public note isAllowed(cdp) {
+        cdps[cdp] = dst;
     }
 
     function getUrn(
@@ -111,20 +99,22 @@ contract DssCdpManager {
         }
     }
 
+    function exit(
+        address adapter,
+        bytes12 cdp,
+        bytes32 guy,
+        uint wad
+    ) public note isAllowed(cdp) {
+        Adapter(adapter).exit(getUrn(cdp), guy, wad);
+    }
+
     function frob(
         address pit,
-        address daiMove,
-        address gemMove,
-        bytes32 ilk,
         bytes12 cdp,
+        bytes32 ilk,
         int dink,
-        int dart,
-        bytes32 dst
-    ) public /*note*/ isAllowed(ilk, cdp) {
-        bytes32 urn = getUrn(cdp);
-        PitLike(pit).frob(urn, ilk, dink, dart);
-        require(Move(gemMove).ilk() == ilk, "wrong-gemMove-contract");
-        Move(daiMove).move(urn, dst, PitLike(pit).vat().dai(urn) / ONE);
-        Move(gemMove).move(urn, dst, PitLike(pit).vat().gem(ilk, urn) / ONE);
+        int dart
+    ) public note isAllowed(cdp) {
+        PitLike(pit).frob(getUrn(cdp), ilk, dink, dart);
     }
 }

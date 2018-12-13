@@ -6,25 +6,21 @@ import "./DssCdpManager.sol";
 contract FakeUser {
     function doMove(
         DssCdpManager manager,
-        bytes32 ilk,
         bytes12 cdp,
         address dst
     ) public {
-        manager.move(ilk, cdp, dst);
+        manager.move(cdp, dst);
     }
 
     function doFrob(
         DssCdpManager manager,
         address pit,
-        address daiMove,
-        address gemMove,
-        bytes32 ilk,
         bytes12 cdp,
+        bytes32 ilk,
         int dink,
-        int dart,
-        bytes32 dst
+        int dart
     ) public {
-        manager.frob(pit, daiMove, gemMove, ilk, cdp, dink, dart, dst);
+        manager.frob(pit, cdp, ilk, dink, dart);
     }
 }
 
@@ -39,72 +35,72 @@ contract DssCdpManagerTest is DssDeployTest {
     }
 
     function testManagerOpenCDP() public {
-        bytes12 cdp = manager.open("ETH");
+        bytes12 cdp = manager.open();
         assertEq(bytes32(cdp), bytes32(bytes12(uint96(1))));
-        assertEq(manager.cdps("ETH", cdp), address(this));
+        assertEq(manager.cdps(cdp), address(this));
     }
 
     function testManagerOpenCDPOtherAddress() public {
-        bytes12 cdp = manager.open("ETH", address(123));
-        assertEq(manager.cdps("ETH", cdp), address(123));
+        bytes12 cdp = manager.open(address(123));
+        assertEq(manager.cdps(cdp), address(123));
     }
 
     function testManagerTransferCDP() public {
-        bytes12 cdp = manager.open("ETH");
-        manager.move("ETH", cdp, address(123));
-        assertEq(manager.cdps("ETH", cdp), address(123));
+        bytes12 cdp = manager.open();
+        manager.move(cdp, address(123));
+        assertEq(manager.cdps(cdp), address(123));
     }
 
     function testManagerTransferAllowed() public {
-        bytes12 cdp = manager.open("ETH");
+        bytes12 cdp = manager.open();
         manager.allow(address(user), true);
-        user.doMove(manager, "ETH", cdp, address(123));
-        assertEq(manager.cdps("ETH", cdp), address(123));
+        user.doMove(manager, cdp, address(123));
+        assertEq(manager.cdps(cdp), address(123));
     }
 
     function testFailManagerTransferNotAllowed() public {
-        bytes12 cdp = manager.open("ETH");
-        user.doMove(manager, "ETH", cdp, address(123));
+        bytes12 cdp = manager.open();
+        user.doMove(manager, cdp, address(123));
     }
 
     function testFailManagerTransferNotAllowed2() public {
-        bytes12 cdp = manager.open("ETH");
+        bytes12 cdp = manager.open();
         manager.allow(address(user), true);
         manager.allow(address(user), false);
-        user.doMove(manager, "ETH", cdp, address(123));
+        user.doMove(manager, cdp, address(123));
     }
 
     function testManagerFrob() public {
         deploy();
-        bytes12 cdp = manager.open("ETH");
+        bytes12 cdp = manager.open();
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
-        manager.frob(address(pit), address(daiMove), address(ethMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
-        assertEq(vat.dai(bytes32(bytes20(address(this)))), 50 ether * ONE);
+        manager.frob(address(pit), cdp, "ETH", 1 ether, 50 ether);
+        assertEq(vat.dai(manager.getUrn(cdp)), 50 ether * ONE);
     }
 
     function testManagerFrobAllowed() public {
         deploy();
-        bytes12 cdp = manager.open("ETH");
+        bytes12 cdp = manager.open();
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
         manager.allow(address(user), true);
-        user.doFrob(manager, address(pit), address(daiMove), address(ethMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
-        assertEq(vat.dai(bytes32(bytes20(address(this)))), 50 ether * ONE);
+        user.doFrob(manager, address(pit), cdp, "ETH", 1 ether, 50 ether);
+        assertEq(vat.dai(manager.getUrn(cdp)), 50 ether * ONE);
     }
 
     function testFailManagerFrobNotAllowed() public {
         deploy();
-        bytes12 cdp = manager.open("ETH");
+        bytes12 cdp = manager.open();
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
-        user.doFrob(manager, address(pit), address(daiMove), address(ethMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
+        user.doFrob(manager, address(pit), cdp, "ETH", 1 ether, 50 ether);
     }
 
     function testManagerFrobGetCollateralBack() public {
         deploy();
-        bytes12 cdp = manager.open("ETH");
+        bytes12 cdp = manager.open();
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
-        manager.frob(address(pit), address(daiMove), address(ethMove), "ETH", cdp, 1 ether, 50 ether, manager.getUrn(cdp));
-        manager.frob(address(pit), address(daiMove), address(ethMove), "ETH", cdp, -int(1 ether), -int(50 ether), bytes32(bytes20(address(this))));
-        assertEq(vat.dai(bytes32(bytes20(address(this)))), 0);
-        assertEq(vat.gem("ETH", bytes32(bytes20(address(this)))), 1 ether * ONE);
+        manager.frob(address(pit), cdp, "ETH", 1 ether, 50 ether);
+        manager.frob(address(pit), cdp, "ETH", -int(1 ether), -int(50 ether));
+        assertEq(vat.dai(manager.getUrn(cdp)), 0);
+        assertEq(vat.gem("ETH", manager.getUrn(cdp)), 1 ether * ONE);
     }
 }
