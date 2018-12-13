@@ -38,16 +38,6 @@ contract DssCdpManagerTest is DssDeployTest {
         user = new FakeUser();
     }
 
-    function _getUrn(bytes12 cdp) internal returns (bytes32 urn) {
-        bytes20 addr = bytes20(address(manager));
-        assembly {
-            let p := mload(0x40)
-            mstore(p, addr)
-            mstore(add(p, 0x14), cdp)
-            urn := mload(p)
-        }
-    }
-
     function testManagerOpenCDP() public {
         bytes12 cdp = manager.open("ETH");
         assertEq(bytes32(cdp), bytes32(bytes12(uint96(1))));
