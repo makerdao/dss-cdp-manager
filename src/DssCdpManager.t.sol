@@ -4,12 +4,27 @@ import { DssDeployTest } from "dss-deploy/DssDeploy.t.sol";
 import "./DssCdpManager.sol";
 
 contract FakeUser {
-    function doMove(DssCdpManager manager, bytes32 ilk, bytes12 cdp, address dst) public {
+    function doMove(
+        DssCdpManager manager,
+        bytes32 ilk,
+        bytes12 cdp,
+        address dst
+    ) public {
         manager.move(ilk, cdp, dst);
     }
 
-    function doFrob(DssCdpManager manager, address pit, address daiMove, bytes32 ilk, bytes12 cdp, int dink, int dart, bytes32 dst) public {
-        manager.frob(pit, daiMove, ilk, cdp, dink, dart, dst);
+    function doFrob(
+        DssCdpManager manager,
+        address pit,
+        address daiMove,
+        address gemMove,
+        bytes32 ilk,
+        bytes12 cdp,
+        int dink,
+        int dart,
+        bytes32 dst
+    ) public {
+        manager.frob(pit, daiMove, gemMove, ilk, cdp, dink, dart, dst);
     }
 }
 
@@ -73,7 +88,7 @@ contract DssCdpManagerTest is DssDeployTest {
         deploy();
         bytes12 cdp = manager.open("ETH");
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
-        manager.frob(address(pit), address(daiMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
+        manager.frob(address(pit), address(daiMove), address(ethMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
         assertEq(vat.dai(bytes32(bytes20(address(this)))), 50 ether * ONE);
     }
 
@@ -82,7 +97,7 @@ contract DssCdpManagerTest is DssDeployTest {
         bytes12 cdp = manager.open("ETH");
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
         manager.allow(address(user), true);
-        user.doFrob(manager, address(pit), address(daiMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
+        user.doFrob(manager, address(pit), address(daiMove), address(ethMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
         assertEq(vat.dai(bytes32(bytes20(address(this)))), 50 ether * ONE);
     }
 
@@ -90,6 +105,16 @@ contract DssCdpManagerTest is DssDeployTest {
         deploy();
         bytes12 cdp = manager.open("ETH");
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
-        user.doFrob(manager, address(pit), address(daiMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
+        user.doFrob(manager, address(pit), address(daiMove), address(ethMove), "ETH", cdp, 1 ether, 50 ether, bytes32(bytes20(address(this))));
+    }
+
+    function testManagerFrobGetCollateralBack() public {
+        deploy();
+        bytes12 cdp = manager.open("ETH");
+        ethJoin.join.value(1 ether)(manager.getUrn(cdp));
+        manager.frob(address(pit), address(daiMove), address(ethMove), "ETH", cdp, 1 ether, 50 ether, manager.getUrn(cdp));
+        manager.frob(address(pit), address(daiMove), address(ethMove), "ETH", cdp, -int(1 ether), -int(50 ether), bytes32(bytes20(address(this))));
+        assertEq(vat.dai(bytes32(bytes20(address(this)))), 0);
+        assertEq(vat.gem("ETH", bytes32(bytes20(address(this)))), 1 ether * ONE);
     }
 }

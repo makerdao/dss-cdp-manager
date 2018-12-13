@@ -25,10 +25,12 @@ contract PitLike {
 
 contract VatLike {
     function dai(bytes32) public returns (uint);
+    function gem(bytes32, bytes32) public returns (uint);
 }
 
-contract DaiMoveLike {
+contract Move {
     function move(bytes32, bytes32, uint) public;
+    function ilk() public view returns (bytes32);
 }
 
 contract DssCdpManager {
@@ -59,28 +61,47 @@ contract DssCdpManager {
         _;
     }
 
-    modifier isAllowed(bytes32 ilk, bytes12 cdp) {
+    modifier isAllowed(
+        bytes32 ilk,
+        bytes12 cdp
+    ) {
         require(msg.sender == cdps[ilk][cdp] || allows[cdps[ilk][cdp]][msg.sender], "");
         _;
     }
 
-    function allow(address guy, bool ok) public { allows[msg.sender][guy] = ok; }
+    function allow(
+        address guy,
+        bool ok
+    ) public {
+        allows[msg.sender][guy] = ok;
+    }
 
-    function open(bytes32 ilk) public returns (bytes12 cdp) {
+    function open(
+        bytes32 ilk
+    ) public returns (bytes12 cdp) {
         cdp = open(ilk, msg.sender);
     }
 
-    function open(bytes32 ilk, address guy) public note returns (bytes12 cdp) {
+    function open(
+        bytes32 ilk,
+        address guy
+    ) public note returns (bytes12 cdp) {
         cdpsi[ilk] ++;
         cdp = bytes12(cdpsi[ilk]);
         cdps[ilk][cdp] = guy;
     }
 
-    function move(bytes32 ilk, bytes12 cdp, address dst) public note isAllowed(ilk, cdp) {
+    function move(
+        bytes32 ilk,
+        bytes12 cdp,
+        address dst
+    ) public note isAllowed(ilk, cdp) {
         cdps[ilk][cdp] = dst;
     }
 
-    function getUrn(bytes12 cdp) public view returns (bytes32 urn) {
+    function getUrn(
+        bytes12 cdp
+    ) public view returns (bytes32 urn) {
         assembly {
             let p := mload(0x40)
             mstore(p, address)
@@ -90,9 +111,20 @@ contract DssCdpManager {
         }
     }
 
-    function frob(address pit, address daiMove, bytes32 ilk, bytes12 cdp, int dink, int dart, bytes32 dst) public /*note*/ isAllowed(ilk, cdp) {
+    function frob(
+        address pit,
+        address daiMove,
+        address gemMove,
+        bytes32 ilk,
+        bytes12 cdp,
+        int dink,
+        int dart,
+        bytes32 dst
+    ) public /*note*/ isAllowed(ilk, cdp) {
         bytes32 urn = getUrn(cdp);
         PitLike(pit).frob(urn, ilk, dink, dart);
-        DaiMoveLike(daiMove).move(urn, dst, PitLike(pit).vat().dai(urn) / ONE);
+        require(Move(gemMove).ilk() == ilk, "wrong-gemMove-contract");
+        Move(daiMove).move(urn, dst, PitLike(pit).vat().dai(urn) / ONE);
+        Move(gemMove).move(urn, dst, PitLike(pit).vat().gem(ilk, urn) / ONE);
     }
 }
