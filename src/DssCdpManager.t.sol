@@ -76,6 +76,9 @@ contract DssCdpManagerTest is DssDeployTest {
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
         manager.frob(address(pit), cdp, "ETH", 1 ether, 50 ether);
         assertEq(vat.dai(manager.getUrn(cdp)), 50 ether * ONE);
+        assertEq(dai.balanceOf(address(this)), 0);
+        manager.exit(address(daiJoin), cdp, address(this), 50 ether);
+        assertEq(dai.balanceOf(address(this)), 50 ether);
     }
 
     function testManagerFrobAllowed() public {
@@ -102,5 +105,8 @@ contract DssCdpManagerTest is DssDeployTest {
         manager.frob(address(pit), cdp, "ETH", -int(1 ether), -int(50 ether));
         assertEq(vat.dai(manager.getUrn(cdp)), 0);
         assertEq(vat.gem("ETH", manager.getUrn(cdp)), 1 ether * ONE);
+        uint prevBalance = address(this).balance;
+        manager.exit(address(ethJoin), cdp, address(this), 1 ether);
+        assertEq(address(this).balance, prevBalance + 1 ether);
     }
 }

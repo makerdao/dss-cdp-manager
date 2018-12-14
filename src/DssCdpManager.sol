@@ -23,7 +23,7 @@ contract PitLike {
 }
 
 contract Adapter {
-    function exit(bytes32, bytes32, uint) public;
+    function exit(bytes32, address, uint) public;
 }
 
 contract DssCdpManager {
@@ -100,7 +100,7 @@ contract DssCdpManager {
     function exit(
         address adapter,
         bytes12 cdp,
-        bytes32 guy,
+        address guy,
         uint wad
     ) public note isAllowed(cdp) {
         Adapter(adapter).exit(getUrn(cdp), guy, wad);
