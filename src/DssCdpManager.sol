@@ -31,8 +31,6 @@ contract DssCdpManager {
     mapping (address => mapping (address => bool)) public allows;
     uint96 public cdpi;
 
-    uint256 constant ONE = 10 ** 27;
-
     event Note(
         bytes4   indexed  sig,
         bytes32  indexed  foo,
