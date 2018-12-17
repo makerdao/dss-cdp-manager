@@ -31,6 +31,8 @@ contract DssCdpManager {
     mapping (address => mapping (address => bool)) public allows;
     uint96 public cdpi;
 
+    event NewCdp(address indexed guy, address indexed lad, bytes12 cdp);
+
     event Note(
         bytes4   indexed  sig,
         bytes32  indexed  foo,
@@ -76,6 +78,7 @@ contract DssCdpManager {
         cdpi ++;
         cdp = bytes12(cdpi);
         cdps[cdp] = guy;
+        emit NewCdp(msg.sender, guy, cdp);
     }
 
     function move(
