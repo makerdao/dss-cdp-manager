@@ -62,8 +62,8 @@ contract DssCdpManager {
     }
 
     function allow(
-        address guy,
         bytes12 cdp,
+        address guy,
         bool ok
     ) public {
         allows[msg.sender][cdp][guy] = ok;
