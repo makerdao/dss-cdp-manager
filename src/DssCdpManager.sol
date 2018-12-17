@@ -28,7 +28,7 @@ contract Adapter {
 
 contract DssCdpManager {
     mapping (bytes12 => address) public cdps;
-    mapping (address => mapping (address => bool)) public allows;
+    mapping (address => mapping (bytes12 => mapping (address => bool))) public allows;
     uint96 public cdpi;
 
     event NewCdp(address indexed guy, address indexed lad, bytes12 cdp);
@@ -57,15 +57,16 @@ contract DssCdpManager {
     modifier isAllowed(
         bytes12 cdp
     ) {
-        require(msg.sender == cdps[cdp] || allows[cdps[cdp]][msg.sender], "");
+        require(msg.sender == cdps[cdp] || allows[cdps[cdp]][cdp][msg.sender], "not-allowed");
         _;
     }
 
     function allow(
         address guy,
+        bytes12 cdp,
         bool ok
     ) public {
-        allows[msg.sender][guy] = ok;
+        allows[msg.sender][cdp][guy] = ok;
     }
 
     function open() public returns (bytes12 cdp) {
