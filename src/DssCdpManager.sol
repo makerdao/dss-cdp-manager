@@ -88,13 +88,7 @@ contract DssCdpManager {
     function getUrn(
         bytes12 cdp
     ) public view returns (bytes32 urn) {
-        assembly {
-            let p := mload(0x40)
-            mstore(p, address)
-            mstore(p, mload(add(p, 0xc)))
-            mstore(add(p, 0x14), cdp)
-            urn := mload(p)
-        }
+        urn = bytes32(uint(address(this)) * 2 ** (12 * 8) + uint96(cdp));
     }
 
     function exit(
