@@ -1,6 +1,6 @@
 pragma solidity >= 0.5.0;
 
-import { DssDeployTest } from "dss-deploy/DssDeploy.t.sol";
+import { DssDeployTestBase } from "dss-deploy/DssDeploy.t.base.sol";
 import "./DssCdpManager.sol";
 
 contract FakeUser {
@@ -24,7 +24,7 @@ contract FakeUser {
     }
 }
 
-contract DssCdpManagerTest is DssDeployTest {
+contract DssCdpManagerTest is DssDeployTestBase {
     DssCdpManager manager;
     FakeUser user;
 
