@@ -19,7 +19,7 @@
 pragma solidity >= 0.5.0;
 
 contract PitLike {
-    function frob(bytes32, bytes32, int256, int256) public;
+    function frob(bytes32, bytes32, bytes32, bytes32, int256, int256) public;
 }
 
 contract Adapter {
@@ -95,22 +95,22 @@ contract DssCdpManager {
         urn = bytes32(uint(address(this)) * 2 ** (12 * 8) + uint96(cdp));
     }
 
-    function exit(
-        address adapter,
-        bytes12 cdp,
-        address guy,
-        uint wad
-    ) public note isAllowed(cdp) {
-        Adapter(adapter).exit(getUrn(cdp), guy, wad);
-    }
-
     function frob(
         address pit,
         bytes12 cdp,
         bytes32 ilk,
+        bytes32 dst,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
-        PitLike(pit).frob(getUrn(cdp), ilk, dink, dart);
+        bytes32 urn = getUrn(cdp);
+        PitLike(pit).frob(
+            ilk,
+            urn,
+            dink >= 0 ? urn : dst,
+            dart <= 0 ? urn : dst,
+            dink,
+            dart
+        );
     }
 }
