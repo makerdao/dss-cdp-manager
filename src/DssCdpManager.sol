@@ -77,6 +77,7 @@ contract DssCdpManager {
         address guy
     ) public note returns (bytes12 cdp) {
         cdpi ++;
+        require(cdpi > 0, "cdpi-overflow");
         cdp = bytes12(cdpi);
         cdps[cdp] = guy;
         emit NewCdp(msg.sender, guy, cdp);
