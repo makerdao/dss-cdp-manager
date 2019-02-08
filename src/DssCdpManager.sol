@@ -108,8 +108,8 @@ contract DssCdpManager {
         address pit,
         bytes32 ilk,
         bytes12 cdp,
-        int dink,
-        int dart
+        int256 dink,
+        int256 dart
     ) public note isAllowed(cdp) {
         bytes32 urn = getUrn(cdp);
         PitLike(pit).frob(
