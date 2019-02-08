@@ -27,7 +27,9 @@ contract JoinLike {
 }
 
 contract DssCdpManager {
+    // cdp id => owner
     mapping (bytes12 => address) public cdps;
+    // allow transfer: from owner => cdp id => to recipient => yes/no
     mapping (address => mapping (bytes12 => mapping (address => bool))) public allows;
     uint96 public cdpi;
 
