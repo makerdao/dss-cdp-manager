@@ -106,8 +106,8 @@ contract DssCdpManager {
 
     function frob(
         address pit,
-        bytes12 cdp,
         bytes32 ilk,
+        bytes12 cdp,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
