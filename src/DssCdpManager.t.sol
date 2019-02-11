@@ -34,50 +34,50 @@ contract DssCdpManagerTest is DssDeployTestBase {
         user = new FakeUser();
     }
 
-    function testManagerOpenCDP() public {
+    function testOpenCDP() public {
         bytes12 cdp = manager.open();
         assertEq(bytes32(cdp), bytes32(bytes12(uint96(1))));
         assertEq(manager.cdps(cdp), address(this));
     }
 
-    function testManagerOpenCDPOtherAddress() public {
+    function testOpenCDPOtherAddress() public {
         bytes12 cdp = manager.open(address(123));
         assertEq(manager.cdps(cdp), address(123));
     }
 
-    function testManagerTransferCDP() public {
+    function testTransferCDP() public {
         bytes12 cdp = manager.open();
         manager.move(cdp, address(123));
         assertEq(manager.cdps(cdp), address(123));
     }
 
-    function testManagerTransferAllowed() public {
+    function testTransferAllowed() public {
         bytes12 cdp = manager.open();
         manager.allow(cdp, address(user), true);
         user.doMove(manager, cdp, address(123));
         assertEq(manager.cdps(cdp), address(123));
     }
 
-    function testFailManagerTransferNotAllowed() public {
+    function testFailTransferNotAllowed() public {
         bytes12 cdp = manager.open();
         user.doMove(manager, cdp, address(123));
     }
 
-    function testFailManagerTransferNotAllowed2() public {
+    function testFailTransferNotAllowed2() public {
         bytes12 cdp = manager.open();
         manager.allow(cdp, address(user), true);
         manager.allow(cdp, address(user), false);
         user.doMove(manager, cdp, address(123));
     }
 
-    function testFailManagerTransferNotAllowed3() public {
+    function testFailTransferNotAllowed3() public {
         bytes12 cdp = manager.open();
         bytes12 cdp2 = manager.open();
         manager.allow(cdp2, address(user), true);
         user.doMove(manager, cdp, address(123));
     }
 
-    function testManagerFrob() public {
+    function testFrob() public {
         deploy();
         bytes12 cdp = manager.open();
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
@@ -88,7 +88,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(dai.balanceOf(address(this)), 50 ether);
     }
 
-    function testManagerFrobAllowed() public {
+    function testFrobAllowed() public {
         deploy();
         bytes12 cdp = manager.open();
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
@@ -97,14 +97,14 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(vat.dai(manager.getUrn(cdp)), 50 ether * ONE);
     }
 
-    function testFailManagerFrobNotAllowed() public {
+    function testFailFrobNotAllowed() public {
         deploy();
         bytes12 cdp = manager.open();
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
         user.doFrob(manager, address(pit), cdp, "ETH", 1 ether, 50 ether);
     }
 
-    function testManagerFrobGetCollateralBack() public {
+    function testFrobGetCollateralBack() public {
         deploy();
         bytes12 cdp = manager.open();
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
