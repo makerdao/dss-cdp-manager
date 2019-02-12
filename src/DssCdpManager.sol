@@ -22,7 +22,7 @@ contract PitLike {
     function frob(bytes32, bytes32, bytes32, bytes32, int256, int256) public;
 }
 
-contract JoinLike {
+contract AdapterLike {
     function exit(bytes32, address, uint) public;
 }
 
@@ -96,12 +96,12 @@ contract DssCdpManager {
     }
 
     function exit(
-        address join,
+        address adapter,
         bytes12 cdp,
         address guy,
         uint wad
     ) public note isAllowed(cdp) {
-        JoinLike(join).exit(getUrn(cdp), guy, wad);
+        AdapterLike(adapter).exit(getUrn(cdp), guy, wad);
     }
 
     function frob(
