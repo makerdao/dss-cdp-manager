@@ -95,6 +95,13 @@ contract DssCdpManager {
         urn = bytes32(uint(address(this)) * 2 ** (12 * 8) + uint96(cdp));
     }
 
+    function join(
+        address adapter,
+        bytes12 cdp,
+        uint wad
+    } public note {
+        AdapterLike(adapter).join(getUrn(cdp), wad);
+    }
     function exit(
         address adapter,
         bytes12 cdp,
