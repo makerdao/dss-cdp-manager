@@ -27,9 +27,17 @@ contract JoinLike {
 }
 
 contract DssCdpManager {
-    mapping (bytes12 => address) public cdps;
+    mapping (bytes12 => address) public cdpOwners;
     mapping (address => mapping (bytes12 => mapping (address => bool))) public allows;
     uint96 public cdpi;
+    mapping (address => bytes12) public lastCdp;
+    mapping (address => uint) public totalCdps;
+    mapping (bytes12 => Cdp) public cdps;
+
+    struct Cdp {
+        bytes12 prev;
+        bytes12 next;
+    }
 
     event NewCdp(address indexed guy, address indexed lad, bytes12 cdp);
 
@@ -57,7 +65,7 @@ contract DssCdpManager {
     modifier isAllowed(
         bytes12 cdp
     ) {
-        require(msg.sender == cdps[cdp] || allows[cdps[cdp]][cdp][msg.sender], "not-allowed");
+        require(msg.sender == cdpOwners[cdp] || allows[cdpOwners[cdp]][cdp][msg.sender], "not-allowed");
         _;
     }
 
@@ -79,7 +87,14 @@ contract DssCdpManager {
         cdpi ++;
         require(cdpi > 0, "cdpi-overflow");
         cdp = bytes12(cdpi);
-        cdps[cdp] = guy;
+        cdpOwners[cdp] = guy;
+
+        // Add new CDP to double linked list
+        cdps[cdp].prev = lastCdp[guy];
+        cdps[lastCdp[guy]].next = cdp;
+        lastCdp[guy] = cdp;
+        totalCdps[guy] ++;
+
         emit NewCdp(msg.sender, guy, cdp);
     }
 
@@ -87,7 +102,26 @@ contract DssCdpManager {
         bytes12 cdp,
         address dst
     ) public note isAllowed(cdp) {
-        cdps[cdp] = dst;
+        require(cdpOwners[cdp] != dst, "dst-already-owner");
+
+        // Remove transferred CDP from double linked list of origin user
+        cdps[cdps[cdp].prev].next = cdps[cdp].next;
+        if (cdps[cdp].next != "") {
+            cdps[cdps[cdp].next].prev = cdps[cdp].prev;
+        } else {
+            lastCdp[cdpOwners[cdp]] = cdps[cdp].prev;
+        }
+        totalCdps[cdpOwners[cdp]] --;
+
+        // Transfer ownership
+        cdpOwners[cdp] = dst;
+
+        // Add transferred CDP to double linked list of destiny user
+        cdps[cdp].prev = lastCdp[dst];
+        cdps[cdp].next = "";
+        cdps[lastCdp[dst]].next = cdp;
+        lastCdp[dst] = cdp;
+        totalCdps[dst] ++;
     }
 
     function getUrn(
@@ -121,5 +155,18 @@ contract DssCdpManager {
             dink,
             dart
         );
+    }
+
+    function getCdps(address guy) external view returns (bytes12[] memory) {
+        bytes12[] memory res = new bytes12[](totalCdps[guy]);
+        uint i = 0;
+        bytes12 cdp = lastCdp[guy];
+
+        while (cdp != "") {
+            res[i] = cdp;
+            cdp = cdps[cdp].prev;
+            i++;
+        }
+        return res;
     }
 }
