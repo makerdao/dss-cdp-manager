@@ -90,8 +90,10 @@ contract DssCdpManager {
         cdpOwners[cdp] = guy;
 
         // Add new CDP to double linked list
-        cdps[cdp].prev = lastCdp[guy];
-        cdps[lastCdp[guy]].next = cdp;
+        if (lastCdp[guy] != 0) {
+            cdps[cdp].prev = lastCdp[guy];
+            cdps[lastCdp[guy]].next = cdp;
+        }
         lastCdp[guy] = cdp;
         totalCdps[guy] ++;
 
