@@ -26,6 +26,21 @@ contract JoinLike {
     function exit(bytes32, address, uint) public;
 }
 
+contract GetCdps {
+    function getCdps(address manager, address guy) external view returns (bytes12[] memory) {
+        bytes12[] memory res = new bytes12[](DssCdpManager(manager).count(guy));
+        uint i = 0;
+        bytes12 cdp = DssCdpManager(manager).last(guy);
+
+        while (cdp != "") {
+            res[i] = cdp;
+            (cdp,) = DssCdpManager(manager).cdps(cdp);
+            i++;
+        }
+        return res;
+    }
+}
+
 contract DssCdpManager {
     uint96 public cdpi;
     mapping (bytes12 => Cdp) public cdps; // Cdp (id => data)
@@ -159,18 +174,5 @@ contract DssCdpManager {
             dink,
             dart
         );
-    }
-
-    function getCdps(address guy) external view returns (bytes12[] memory) {
-        bytes12[] memory res = new bytes12[](count[guy]);
-        uint i = 0;
-        bytes12 cdp = last[guy];
-
-        while (cdp != "") {
-            res[i] = cdp;
-            cdp = cdps[cdp].prev;
-            i++;
-        }
-        return res;
     }
 }

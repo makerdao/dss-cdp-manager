@@ -26,11 +26,13 @@ contract FakeUser {
 
 contract DssCdpManagerTest is DssDeployTestBase {
     DssCdpManager manager;
+    GetCdps getCdps;
     FakeUser user;
 
     function setUp() public {
         super.setUp();
         manager = new DssCdpManager();
+        getCdps = new GetCdps();
         user = new FakeUser();
     }
 
@@ -157,14 +159,14 @@ contract DssCdpManagerTest is DssDeployTestBase {
         bytes12 cdp2 = manager.open();
         bytes12 cdp3 = manager.open();
 
-        bytes12[] memory cdps = manager.getCdps(address(this));
+        bytes12[] memory cdps = getCdps.getCdps(address(manager), address(this));
         assertEq(cdps.length, 3);
         assertTrue(cdps[0] == cdp3);
         assertTrue(cdps[1] == cdp2);
         assertTrue(cdps[2] == cdp1);
 
         manager.move(cdp2, address(user));
-        cdps = manager.getCdps(address(this));
+        cdps = getCdps.getCdps(address(manager), address(this));
         assertEq(cdps.length, 2);
         assertTrue(cdps[0] == cdp3);
         assertTrue(cdps[1] == cdp1);
