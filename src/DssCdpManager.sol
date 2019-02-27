@@ -18,7 +18,7 @@
 
 pragma solidity >= 0.5.0;
 
-contract PitLike {
+contract VatLike {
     function frob(bytes32, bytes32, bytes32, bytes32, int256, int256) public;
 }
 
@@ -106,14 +106,14 @@ contract DssCdpManager {
     }
 
     function frob(
-        address pit,
+        address vat,
         bytes12 cdp,
         bytes32 ilk,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
         bytes32 urn = getUrn(cdp);
-        PitLike(pit).frob(
+        VatLike(vat).frob(
             ilk,
             urn,
             urn,
