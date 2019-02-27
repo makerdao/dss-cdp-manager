@@ -1,7 +1,7 @@
 /// DssCdpManager.sol
 
-// Copyright (C) 2018 Rain <rainbreak@riseup.net>
-// Copyright (C) 2018 Gonzalo Balabasquer <gbalabasquer@gmail.com>
+// Copyright (C) 2018-2019 Rain <rainbreak@riseup.net>
+// Copyright (C) 2018-2019 Gonzalo Balabasquer <gbalabasquer@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -27,13 +27,15 @@ contract JoinLike {
 }
 
 contract DssCdpManager {
-    mapping (bytes12 => address) public cdpOwners;
+    uint96 public cdpi; // Auto incrementing CDP id
+    mapping (bytes12 => Cdp) public cdps; // CDPs linked list (id => data)
+    mapping (bytes12 => address) public lads; // CDP owners (id => owner)
     mapping (bytes12 => bytes32) public cdpIlk;
-    mapping (address => mapping (bytes12 => mapping (address => bool))) public allows;
-    uint96 public cdpi;
-    mapping (address => bytes12) public lastCdp;
-    mapping (address => uint) public totalCdps;
-    mapping (bytes12 => Cdp) public cdps;
+
+    mapping (address => bytes12) public last; // Last CDP id of a user (owner => id)
+    mapping (address => uint) public count; // Amount of CDPs owned by a user (owner => amount)
+
+    mapping (address => mapping (bytes12 => mapping (address => bool))) public allows; // Allowance from owner + CDP id to another user
 
     struct Cdp {
         bytes12 prev;
@@ -66,7 +68,7 @@ contract DssCdpManager {
     modifier isAllowed(
         bytes12 cdp
     ) {
-        require(msg.sender == cdpOwners[cdp] || allows[cdpOwners[cdp]][cdp][msg.sender], "not-allowed");
+        require(msg.sender == lads[cdp] || allows[lads[cdp]][cdp][msg.sender], "not-allowed");
         _;
     }
 
@@ -89,16 +91,16 @@ contract DssCdpManager {
         cdpi++;
         require(cdpi > 0, "cdpi-overflow");
         cdp = bytes12(cdpi);
-        cdpOwners[cdp] = guy;
+        lads[cdp] = guy;
         cdpIlk[cdp] = ilk;
 
         // Add new CDP to double linked list
-        if (lastCdp[guy] != 0) {
-            cdps[cdp].prev = lastCdp[guy];
-            cdps[lastCdp[guy]].next = cdp;
+        if (last[guy] != 0) {
+            cdps[cdp].prev = last[guy];
+            cdps[last[guy]].next = cdp;
         }
-        lastCdp[guy] = cdp;
-        totalCdps[guy]++;
+        last[guy] = cdp;
+        count[guy]++;
 
         emit NewCdp(msg.sender, guy, cdp);
     }
@@ -107,26 +109,26 @@ contract DssCdpManager {
         bytes12 cdp,
         address dst
     ) public note isAllowed(cdp) {
-        require(cdpOwners[cdp] != dst, "dst-already-owner");
+        require(lads[cdp] != dst, "dst-already-owner");
 
         // Remove transferred CDP from double linked list of origin user
         cdps[cdps[cdp].prev].next = cdps[cdp].next;
         if (cdps[cdp].next != 0) {
             cdps[cdps[cdp].next].prev = cdps[cdp].prev;
         } else {
-            lastCdp[cdpOwners[cdp]] = cdps[cdp].prev;
+            last[lads[cdp]] = cdps[cdp].prev;
         }
-        totalCdps[cdpOwners[cdp]]--;
+        count[lads[cdp]]--;
 
         // Transfer ownership
-        cdpOwners[cdp] = dst;
+        lads[cdp] = dst;
 
         // Add transferred CDP to double linked list of destiny user
-        cdps[cdp].prev = lastCdp[dst];
+        cdps[cdp].prev = last[dst];
         cdps[cdp].next = 0;
-        cdps[lastCdp[dst]].next = cdp;
-        lastCdp[dst] = cdp;
-        totalCdps[dst]++;
+        cdps[last[dst]].next = cdp;
+        last[dst] = cdp;
+        count[dst]++;
     }
 
     function getUrn(
@@ -164,9 +166,9 @@ contract DssCdpManager {
     }
 
     function getCdps(address guy) external view returns (bytes32[] memory) {
-        bytes32[] memory res = new bytes32[](totalCdps[guy] * 2);
+        bytes32[] memory res = new bytes32[](count[guy] * 2);
         uint i = 0;
-        bytes12 cdp = lastCdp[guy];
+        bytes12 cdp = last[guy];
 
         while (cdp != 0) {
             res[i] = bytes32(cdp);

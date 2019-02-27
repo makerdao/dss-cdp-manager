@@ -37,25 +37,25 @@ contract DssCdpManagerTest is DssDeployTestBase {
     function testOpenCDP() public {
         bytes12 cdp = manager.open("ETH");
         assertEq(bytes32(cdp), bytes32(bytes12(uint96(1))));
-        assertEq(manager.cdpOwners(cdp), address(this));
+        assertEq(manager.lads(cdp), address(this));
     }
 
     function testOpenCDPOtherAddress() public {
         bytes12 cdp = manager.open("ETH", address(123));
-        assertEq(manager.cdpOwners(cdp), address(123));
+        assertEq(manager.lads(cdp), address(123));
     }
 
     function testTransferCDP() public {
         bytes12 cdp = manager.open("ETH");
         manager.move(cdp, address(123));
-        assertEq(manager.cdpOwners(cdp), address(123));
+        assertEq(manager.lads(cdp), address(123));
     }
 
     function testTransferAllowed() public {
         bytes12 cdp = manager.open("ETH");
         manager.allow(cdp, address(user), true);
         user.doMove(manager, cdp, address(123));
-        assertEq(manager.cdpOwners(cdp), address(123));
+        assertEq(manager.lads(cdp), address(123));
     }
 
     function testFailTransferNotAllowed() public {
@@ -92,22 +92,22 @@ contract DssCdpManagerTest is DssDeployTestBase {
         bytes12 cdp6 = manager.open("ETH", address(user));
         bytes12 cdp7 = manager.open("ETH", address(user));
 
-        assertEq(manager.totalCdps(address(this)), 3);
-        assertTrue(manager.lastCdp(address(this)) == cdp3);
+        assertEq(manager.count(address(this)), 3);
+        assertTrue(manager.last(address(this)) == cdp3);
         (bytes12 prev, bytes12 next) = manager.cdps(cdp1);
-        assertTrue(prev == "");
+        assertTrue(prev == 0);
         assertTrue(next == cdp2);
         (prev, next) = manager.cdps(cdp2);
         assertTrue(prev == cdp1);
         assertTrue(next == cdp3);
         (prev, next) = manager.cdps(cdp3);
         assertTrue(prev == cdp2);
-        assertTrue(next == "");
+        assertTrue(next == 0);
 
-        assertEq(manager.totalCdps(address(user)), 4);
-        assertTrue(manager.lastCdp(address(user)) == cdp7);
+        assertEq(manager.count(address(user)), 4);
+        assertTrue(manager.last(address(user)) == cdp7);
         (prev, next) = manager.cdps(cdp4);
-        assertTrue(prev == "");
+        assertTrue(prev == 0);
         assertTrue(next == cdp5);
         (prev, next) = manager.cdps(cdp5);
         assertTrue(prev == cdp4);
@@ -117,39 +117,39 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertTrue(next == cdp7);
         (prev, next) = manager.cdps(cdp7);
         assertTrue(prev == cdp6);
-        assertTrue(next == "");
+        assertTrue(next == 0);
 
         manager.move(cdp2, address(user));
 
-        assertEq(manager.totalCdps(address(this)), 2);
-        assertTrue(manager.lastCdp(address(this)) == cdp3);
+        assertEq(manager.count(address(this)), 2);
+        assertTrue(manager.last(address(this)) == cdp3);
         (prev, next) = manager.cdps(cdp1);
         assertTrue(next == cdp3);
         (prev, next) = manager.cdps(cdp3);
         assertTrue(prev == cdp1);
 
-        assertEq(manager.totalCdps(address(user)), 5);
-        assertTrue(manager.lastCdp(address(user)) == cdp2);
+        assertEq(manager.count(address(user)), 5);
+        assertTrue(manager.last(address(user)) == cdp2);
         (prev, next) = manager.cdps(cdp7);
         assertTrue(next == cdp2);
         (prev, next) = manager.cdps(cdp2);
         assertTrue(prev == cdp7);
-        assertTrue(next == "");
+        assertTrue(next == 0);
 
         user.doMove(manager, cdp2, address(this));
 
-        assertEq(manager.totalCdps(address(this)), 3);
-        assertTrue(manager.lastCdp(address(this)) == cdp2);
+        assertEq(manager.count(address(this)), 3);
+        assertTrue(manager.last(address(this)) == cdp2);
         (prev, next) = manager.cdps(cdp3);
         assertTrue(next == cdp2);
         (prev, next) = manager.cdps(cdp2);
         assertTrue(prev == cdp3);
-        assertTrue(next == "");
+        assertTrue(next == 0);
 
-        assertEq(manager.totalCdps(address(user)), 4);
-        assertTrue(manager.lastCdp(address(user)) == cdp7);
+        assertEq(manager.count(address(user)), 4);
+        assertTrue(manager.last(address(user)) == cdp7);
         (prev, next) = manager.cdps(cdp7);
-        assertTrue(next == "");
+        assertTrue(next == 0);
     }
 
     function testGetCdps() public {
