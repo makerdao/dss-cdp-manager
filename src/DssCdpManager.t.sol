@@ -35,62 +35,62 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testOpenCDP() public {
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         assertEq(bytes32(cdp), bytes32(bytes12(uint96(1))));
         assertEq(manager.cdpOwners(cdp), address(this));
     }
 
     function testOpenCDPOtherAddress() public {
-        bytes12 cdp = manager.open(address(123));
+        bytes12 cdp = manager.open("ETH", address(123));
         assertEq(manager.cdpOwners(cdp), address(123));
     }
 
     function testTransferCDP() public {
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         manager.move(cdp, address(123));
         assertEq(manager.cdpOwners(cdp), address(123));
     }
 
     function testTransferAllowed() public {
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         manager.allow(cdp, address(user), true);
         user.doMove(manager, cdp, address(123));
         assertEq(manager.cdpOwners(cdp), address(123));
     }
 
     function testFailTransferNotAllowed() public {
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         user.doMove(manager, cdp, address(123));
     }
 
     function testFailTransferNotAllowed2() public {
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         manager.allow(cdp, address(user), true);
         manager.allow(cdp, address(user), false);
         user.doMove(manager, cdp, address(123));
     }
 
     function testFailTransferNotAllowed3() public {
-        bytes12 cdp = manager.open();
-        bytes12 cdp2 = manager.open();
+        bytes12 cdp = manager.open("ETH");
+        bytes12 cdp2 = manager.open("ETH");
         manager.allow(cdp2, address(user), true);
         user.doMove(manager, cdp, address(123));
     }
 
     function testFailTransferToSameOwner() public {
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         manager.move(cdp, address(this));
     }
 
     function testDoubleLinkedList() public {
-        bytes12 cdp1 = manager.open();
-        bytes12 cdp2 = manager.open();
-        bytes12 cdp3 = manager.open();
+        bytes12 cdp1 = manager.open("ETH");
+        bytes12 cdp2 = manager.open("ETH");
+        bytes12 cdp3 = manager.open("ETH");
 
-        bytes12 cdp4 = manager.open(address(user));
-        bytes12 cdp5 = manager.open(address(user));
-        bytes12 cdp6 = manager.open(address(user));
-        bytes12 cdp7 = manager.open(address(user));
+        bytes12 cdp4 = manager.open("ETH", address(user));
+        bytes12 cdp5 = manager.open("ETH", address(user));
+        bytes12 cdp6 = manager.open("ETH", address(user));
+        bytes12 cdp7 = manager.open("ETH", address(user));
 
         assertEq(manager.totalCdps(address(this)), 3);
         assertTrue(manager.lastCdp(address(this)) == cdp3);
@@ -153,26 +153,31 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testGetCdps() public {
-        bytes12 cdp1 = manager.open();
-        bytes12 cdp2 = manager.open();
-        bytes12 cdp3 = manager.open();
+        bytes12 cdp1 = manager.open("ETH");
+        bytes12 cdp2 = manager.open("REP");
+        bytes12 cdp3 = manager.open("GOLD");
 
-        bytes12[] memory cdps = manager.getCdps(address(this));
-        assertEq(cdps.length, 3);
+        bytes32[] memory cdps = manager.getCdps(address(this));
+        assertEq(cdps.length, 3 * 2);
         assertTrue(cdps[0] == cdp3);
-        assertTrue(cdps[1] == cdp2);
-        assertTrue(cdps[2] == cdp1);
+        assertTrue(cdps[0 * 2 + 1] == "GOLD");
+        assertTrue(cdps[1 * 2] == cdp2);
+        assertTrue(cdps[1 * 2 + 1] == "REP");
+        assertTrue(cdps[2 * 2] == cdp1);
+        assertTrue(cdps[2 * 2 + 1] == "ETH");
 
         manager.move(cdp2, address(user));
         cdps = manager.getCdps(address(this));
-        assertEq(cdps.length, 2);
+        assertEq(cdps.length, 2 * 2);
         assertTrue(cdps[0] == cdp3);
-        assertTrue(cdps[1] == cdp1);
+        assertTrue(cdps[0 * 2 + 1] == "GOLD");
+        assertTrue(cdps[1 * 2] == cdp1);
+        assertTrue(cdps[1 * 2 + 1] == "ETH");
     }
 
     function testFrob() public {
         deploy();
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
         manager.frob(address(pit), cdp, "ETH", 1 ether, 50 ether);
         assertEq(vat.dai(manager.getUrn(cdp)), 50 ether * ONE);
@@ -183,7 +188,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
 
     function testFrobAllowed() public {
         deploy();
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
         manager.allow(cdp, address(user), true);
         user.doFrob(manager, address(pit), cdp, "ETH", 1 ether, 50 ether);
@@ -192,14 +197,14 @@ contract DssCdpManagerTest is DssDeployTestBase {
 
     function testFailFrobNotAllowed() public {
         deploy();
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
         user.doFrob(manager, address(pit), cdp, "ETH", 1 ether, 50 ether);
     }
 
     function testFrobGetCollateralBack() public {
         deploy();
-        bytes12 cdp = manager.open();
+        bytes12 cdp = manager.open("ETH");
         ethJoin.join.value(1 ether)(manager.getUrn(cdp));
         manager.frob(address(pit), cdp, "ETH", 1 ether, 50 ether);
         manager.frob(address(pit), cdp, "ETH", -int(1 ether), -int(50 ether));
