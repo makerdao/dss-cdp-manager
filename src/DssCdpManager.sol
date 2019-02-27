@@ -30,7 +30,7 @@ contract DssCdpManager {
     uint96 public cdpi; // Auto incrementing CDP id
     mapping (bytes12 => Cdp) public cdps; // CDPs linked list (id => data)
     mapping (bytes12 => address) public lads; // CDP owners (id => owner)
-    mapping (bytes12 => bytes32) public cdpIlk;
+    mapping (bytes12 => bytes32) public ilks; // Ilk used by a CDP (id => ilk)
 
     mapping (address => bytes12) public last; // Last CDP id of a user (owner => id)
     mapping (address => uint) public count; // Amount of CDPs owned by a user (owner => amount)
@@ -92,7 +92,7 @@ contract DssCdpManager {
         require(cdpi > 0, "cdpi-overflow");
         cdp = bytes12(cdpi);
         lads[cdp] = guy;
-        cdpIlk[cdp] = ilk;
+        ilks[cdp] = ilk;
 
         // Add new CDP to double linked list
         if (last[guy] != 0) {
@@ -153,7 +153,7 @@ contract DssCdpManager {
         int dink,
         int dart
     ) public note isAllowed(cdp) {
-        require(cdpIlk[cdp] == ilk, "incorrect-ilk-for-cdp");
+        require(ilks[cdp] == ilk, "incorrect-ilk-for-cdp");
         bytes32 urn = getUrn(cdp);
         PitLike(pit).frob(
             ilk,
@@ -172,7 +172,7 @@ contract DssCdpManager {
 
         while (cdp != 0) {
             res[i] = bytes32(cdp);
-            res[i + 1] = cdpIlk[cdp];
+            res[i + 1] = ilks[cdp];
             cdp = cdps[cdp].prev;
             i += 2;
         }
