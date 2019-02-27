@@ -42,9 +42,9 @@ contract GetCdps {
 }
 
 contract DssCdpManager {
-    uint96 public cdpi;
-    mapping (bytes12 => Cdp) public cdps; // Cdp (id => data)
-    mapping (bytes12 => address) public lads; // Cdp owners (id => owner)
+    uint96 public cdpi; // Auto incrementing CDP id
+    mapping (bytes12 => Cdp) public cdps; // CDPs linked list (id => data)
+    mapping (bytes12 => address) public lads; // CDP owners (id => owner)
     mapping (bytes12 => bytes32) public ilks; // Ilk used by a CDP (id => ilk)
 
     mapping (address => bytes12) public last; // Last Cdp from user (owner => id)
