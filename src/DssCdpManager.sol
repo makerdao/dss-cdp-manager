@@ -1,7 +1,7 @@
 /// DssCdpManager.sol
 
-// Copyright (C) 2018 Rain <rainbreak@riseup.net>
-// Copyright (C) 2018 Gonzalo Balabasquer <gbalabasquer@gmail.com>
+// Copyright (C) 2018-2019 Rain <rainbreak@riseup.net>
+// Copyright (C) 2018-2019 Gonzalo Balabasquer <gbalabasquer@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -26,10 +26,35 @@ contract JoinLike {
     function exit(bytes32, address, uint) public;
 }
 
+contract GetCdps {
+    function getCdps(address manager, address guy) external view returns (bytes12[] memory) {
+        bytes12[] memory res = new bytes12[](DssCdpManager(manager).count(guy));
+        uint i = 0;
+        bytes12 cdp = DssCdpManager(manager).last(guy);
+
+        while (cdp != "") {
+            res[i] = cdp;
+            (cdp,) = DssCdpManager(manager).cdps(cdp);
+            i++;
+        }
+        return res;
+    }
+}
+
 contract DssCdpManager {
-    mapping (bytes12 => address) public cdps;
-    mapping (address => mapping (bytes12 => mapping (address => bool))) public allows;
     uint96 public cdpi;
+    mapping (bytes12 => Cdp) public cdps; // Cdp (id => data)
+    mapping (bytes12 => address) public lads; // Cdp owners (id => owner)
+
+    mapping (address => bytes12) public last; // Last Cdp from user (owner => id)
+    mapping (address => uint) public count; // Amount Cdps from user (owner => amount)
+
+    mapping (address => mapping (bytes12 => mapping (address => bool))) public allows; // Allowance from owner + cdpId to another user
+
+    struct Cdp {
+        bytes12 prev;
+        bytes12 next;
+    }
 
     event NewCdp(address indexed guy, address indexed lad, bytes12 cdp);
 
@@ -57,7 +82,7 @@ contract DssCdpManager {
     modifier isAllowed(
         bytes12 cdp
     ) {
-        require(msg.sender == cdps[cdp] || allows[cdps[cdp]][cdp][msg.sender], "not-allowed");
+        require(msg.sender == lads[cdp] || allows[lads[cdp]][cdp][msg.sender], "not-allowed");
         _;
     }
 
@@ -79,7 +104,16 @@ contract DssCdpManager {
         cdpi ++;
         require(cdpi > 0, "cdpi-overflow");
         cdp = bytes12(cdpi);
-        cdps[cdp] = guy;
+        lads[cdp] = guy;
+
+        // Add new CDP to double linked list
+        if (last[guy] != 0) {
+            cdps[cdp].prev = last[guy];
+            cdps[last[guy]].next = cdp;
+        }
+        last[guy] = cdp;
+        count[guy] ++;
+
         emit NewCdp(msg.sender, guy, cdp);
     }
 
@@ -87,7 +121,26 @@ contract DssCdpManager {
         bytes12 cdp,
         address dst
     ) public note isAllowed(cdp) {
-        cdps[cdp] = dst;
+        require(lads[cdp] != dst, "dst-already-owner");
+
+        // Remove transferred CDP from double linked list of origin user
+        cdps[cdps[cdp].prev].next = cdps[cdp].next;
+        if (cdps[cdp].next != "") {
+            cdps[cdps[cdp].next].prev = cdps[cdp].prev;
+        } else {
+            last[lads[cdp]] = cdps[cdp].prev;
+        }
+        count[lads[cdp]] --;
+
+        // Transfer ownership
+        lads[cdp] = dst;
+
+        // Add transferred CDP to double linked list of destiny user
+        cdps[cdp].prev = last[dst];
+        cdps[cdp].next = "";
+        cdps[last[dst]].next = cdp;
+        last[dst] = cdp;
+        count[dst] ++;
     }
 
     function getUrn(

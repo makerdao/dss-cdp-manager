@@ -26,36 +26,38 @@ contract FakeUser {
 
 contract DssCdpManagerTest is DssDeployTestBase {
     DssCdpManager manager;
+    GetCdps getCdps;
     FakeUser user;
 
     function setUp() public {
         super.setUp();
         manager = new DssCdpManager();
+        getCdps = new GetCdps();
         user = new FakeUser();
     }
 
     function testOpenCDP() public {
         bytes12 cdp = manager.open();
         assertEq(bytes32(cdp), bytes32(bytes12(uint96(1))));
-        assertEq(manager.cdps(cdp), address(this));
+        assertEq(manager.lads(cdp), address(this));
     }
 
     function testOpenCDPOtherAddress() public {
         bytes12 cdp = manager.open(address(123));
-        assertEq(manager.cdps(cdp), address(123));
+        assertEq(manager.lads(cdp), address(123));
     }
 
     function testTransferCDP() public {
         bytes12 cdp = manager.open();
         manager.move(cdp, address(123));
-        assertEq(manager.cdps(cdp), address(123));
+        assertEq(manager.lads(cdp), address(123));
     }
 
     function testTransferAllowed() public {
         bytes12 cdp = manager.open();
         manager.allow(cdp, address(user), true);
         user.doMove(manager, cdp, address(123));
-        assertEq(manager.cdps(cdp), address(123));
+        assertEq(manager.lads(cdp), address(123));
     }
 
     function testFailTransferNotAllowed() public {
@@ -75,6 +77,99 @@ contract DssCdpManagerTest is DssDeployTestBase {
         bytes12 cdp2 = manager.open();
         manager.allow(cdp2, address(user), true);
         user.doMove(manager, cdp, address(123));
+    }
+
+    function testFailTransferToSameOwner() public {
+        bytes12 cdp = manager.open();
+        manager.move(cdp, address(this));
+    }
+
+    function testDoubleLinkedList() public {
+        bytes12 cdp1 = manager.open();
+        bytes12 cdp2 = manager.open();
+        bytes12 cdp3 = manager.open();
+
+        bytes12 cdp4 = manager.open(address(user));
+        bytes12 cdp5 = manager.open(address(user));
+        bytes12 cdp6 = manager.open(address(user));
+        bytes12 cdp7 = manager.open(address(user));
+
+        assertEq(manager.count(address(this)), 3);
+        assertTrue(manager.last(address(this)) == cdp3);
+        (bytes12 prev, bytes12 next) = manager.cdps(cdp1);
+        assertTrue(prev == "");
+        assertTrue(next == cdp2);
+        (prev, next) = manager.cdps(cdp2);
+        assertTrue(prev == cdp1);
+        assertTrue(next == cdp3);
+        (prev, next) = manager.cdps(cdp3);
+        assertTrue(prev == cdp2);
+        assertTrue(next == "");
+
+        assertEq(manager.count(address(user)), 4);
+        assertTrue(manager.last(address(user)) == cdp7);
+        (prev, next) = manager.cdps(cdp4);
+        assertTrue(prev == "");
+        assertTrue(next == cdp5);
+        (prev, next) = manager.cdps(cdp5);
+        assertTrue(prev == cdp4);
+        assertTrue(next == cdp6);
+        (prev, next) = manager.cdps(cdp6);
+        assertTrue(prev == cdp5);
+        assertTrue(next == cdp7);
+        (prev, next) = manager.cdps(cdp7);
+        assertTrue(prev == cdp6);
+        assertTrue(next == "");
+
+        manager.move(cdp2, address(user));
+
+        assertEq(manager.count(address(this)), 2);
+        assertTrue(manager.last(address(this)) == cdp3);
+        (prev, next) = manager.cdps(cdp1);
+        assertTrue(next == cdp3);
+        (prev, next) = manager.cdps(cdp3);
+        assertTrue(prev == cdp1);
+
+        assertEq(manager.count(address(user)), 5);
+        assertTrue(manager.last(address(user)) == cdp2);
+        (prev, next) = manager.cdps(cdp7);
+        assertTrue(next == cdp2);
+        (prev, next) = manager.cdps(cdp2);
+        assertTrue(prev == cdp7);
+        assertTrue(next == "");
+
+        user.doMove(manager, cdp2, address(this));
+
+        assertEq(manager.count(address(this)), 3);
+        assertTrue(manager.last(address(this)) == cdp2);
+        (prev, next) = manager.cdps(cdp3);
+        assertTrue(next == cdp2);
+        (prev, next) = manager.cdps(cdp2);
+        assertTrue(prev == cdp3);
+        assertTrue(next == "");
+
+        assertEq(manager.count(address(user)), 4);
+        assertTrue(manager.last(address(user)) == cdp7);
+        (prev, next) = manager.cdps(cdp7);
+        assertTrue(next == "");
+    }
+
+    function testGetCdps() public {
+        bytes12 cdp1 = manager.open();
+        bytes12 cdp2 = manager.open();
+        bytes12 cdp3 = manager.open();
+
+        bytes12[] memory cdps = getCdps.getCdps(address(manager), address(this));
+        assertEq(cdps.length, 3);
+        assertTrue(cdps[0] == cdp3);
+        assertTrue(cdps[1] == cdp2);
+        assertTrue(cdps[2] == cdp1);
+
+        manager.move(cdp2, address(user));
+        cdps = getCdps.getCdps(address(manager), address(this));
+        assertEq(cdps.length, 2);
+        assertTrue(cdps[0] == cdp3);
+        assertTrue(cdps[1] == cdp1);
     }
 
     function testFrob() public {
