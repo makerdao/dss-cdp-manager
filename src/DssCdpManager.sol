@@ -164,14 +164,12 @@ contract DssCdpManager {
     function frob(
         address vat,
         bytes12 cdp,
-        bytes32 ilk,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
-        require(ilks[cdp] == ilk, "incorrect-ilk-for-cdp");
         bytes32 urn = getUrn(cdp);
         VatLike(vat).frob(
-            ilk,
+            ilks[cdp],
             urn,
             urn,
             urn,

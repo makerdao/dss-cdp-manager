@@ -16,11 +16,10 @@ contract FakeUser {
         DssCdpManager manager,
         address vat,
         bytes12 cdp,
-        bytes32 ilk,
         int dink,
         int dart
     ) public {
-        manager.frob(vat, cdp, ilk, dink, dart);
+        manager.frob(vat, cdp, dink, dart);
     }
 }
 
@@ -178,7 +177,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.getUrn(cdp), 1 ether);
-        manager.frob(address(vat), cdp, "ETH", 1 ether, 50 ether);
+        manager.frob(address(vat), cdp, 1 ether, 50 ether);
         assertEq(vat.dai(manager.getUrn(cdp)), 50 ether * ONE);
         assertEq(dai.balanceOf(address(this)), 0);
         manager.exit(address(daiJoin), cdp, address(this), 50 ether);
@@ -192,7 +191,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.getUrn(cdp), 1 ether);
         manager.allow(cdp, address(user), true);
-        user.doFrob(manager, address(vat), cdp, "ETH", 1 ether, 50 ether);
+        user.doFrob(manager, address(vat), cdp, 1 ether, 50 ether);
         assertEq(vat.dai(manager.getUrn(cdp)), 50 ether * ONE);
     }
 
@@ -202,7 +201,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.getUrn(cdp), 1 ether);
-        user.doFrob(manager, address(vat), cdp, "ETH", 1 ether, 50 ether);
+        user.doFrob(manager, address(vat), cdp, 1 ether, 50 ether);
     }
 
     function testFrobGetCollateralBack() public {
@@ -211,8 +210,8 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.getUrn(cdp), 1 ether);
-        manager.frob(address(vat), cdp, "ETH", 1 ether, 50 ether);
-        manager.frob(address(vat), cdp, "ETH", -int(1 ether), -int(50 ether));
+        manager.frob(address(vat), cdp, 1 ether, 50 ether);
+        manager.frob(address(vat), cdp, -int(1 ether), -int(50 ether));
         assertEq(vat.dai(manager.getUrn(cdp)), 0);
         assertEq(vat.gem("ETH", manager.getUrn(cdp)), 1 ether);
         uint prevBalance = address(this).balance;
