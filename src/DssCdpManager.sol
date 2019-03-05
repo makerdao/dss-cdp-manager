@@ -27,37 +27,36 @@ contract JoinLike {
 }
 
 contract GetCdps {
-    function getCdps(address manager, address guy) external view returns (bytes12[] memory) {
-        bytes12[] memory res = new bytes12[](DssCdpManager(manager).count(guy));
+    function getCdps(address manager, address guy) external view returns (uint[] memory res) {
+        res = new uint[](DssCdpManager(manager).count(guy));
         uint i = 0;
-        bytes12 cdp = DssCdpManager(manager).last(guy);
+        uint cdp = DssCdpManager(manager).last(guy);
 
-        while (cdp != "") {
+        while (cdp > 0) {
             res[i] = cdp;
             (cdp,) = DssCdpManager(manager).cdps(cdp);
             i++;
         }
-        return res;
     }
 }
 
 contract DssCdpManager {
     uint96 public cdpi; // Auto incrementing CDP id
-    mapping (bytes12 => Cdp) public cdps; // CDPs linked list (id => data)
-    mapping (bytes12 => address) public lads; // CDP owners (id => owner)
-    mapping (bytes12 => bytes32) public ilks; // Ilk used by a CDP (id => ilk)
+    mapping (uint => Cdp) public cdps; // CDPs linked list (id => data)
+    mapping (uint => address) public lads; // CDP owners (id => owner)
+    mapping (uint => bytes32) public ilks; // Ilk used by a CDP (id => ilk)
 
-    mapping (address => bytes12) public last; // Last Cdp from user (owner => id)
+    mapping (address => uint) public last; // Last Cdp from user (owner => id)
     mapping (address => uint) public count; // Amount Cdps from user (owner => amount)
 
-    mapping (address => mapping (bytes12 => mapping (address => bool))) public allows; // Allowance from owner + cdpId to another user
+    mapping (address => mapping (uint => mapping (address => bool))) public allows; // Allowance from owner + cdpId to another user
 
     struct Cdp {
-        bytes12 prev;
-        bytes12 next;
+        uint prev;
+        uint next;
     }
 
-    event NewCdp(address indexed guy, address indexed lad, bytes12 cdp);
+    event NewCdp(address indexed guy, address indexed lad, uint cdp);
 
     event Note(
         bytes4   indexed  sig,
@@ -81,47 +80,47 @@ contract DssCdpManager {
     }
 
     modifier isAllowed(
-        bytes12 cdp
+        uint cdp
     ) {
         require(msg.sender == lads[cdp] || allows[lads[cdp]][cdp][msg.sender], "not-allowed");
         _;
     }
 
     function allow(
-        bytes12 cdp,
+        uint cdp,
         address guy,
         bool ok
     ) public {
         allows[msg.sender][cdp][guy] = ok;
     }
 
-    function open(bytes32 ilk) public returns (bytes12 cdp) {
+    function open(bytes32 ilk) public returns (uint cdp) {
         cdp = open(ilk, msg.sender);
     }
 
     function open(
         bytes32 ilk,
         address guy
-    ) public note returns (bytes12 cdp) {
+    ) public note returns (uint) {
         cdpi++;
-        require(cdpi > 0, "cdpi-overflow");
-        cdp = bytes12(cdpi);
-        lads[cdp] = guy;
-        ilks[cdp] = ilk;
+        require(uint96(cdpi) > 0, "cdpi-overflow");
+        lads[cdpi] = guy;
+        ilks[cdpi] = ilk;
 
         // Add new CDP to double linked list
         if (last[guy] != 0) {
-            cdps[cdp].prev = last[guy];
-            cdps[last[guy]].next = cdp;
+            cdps[cdpi].prev = last[guy];
+            cdps[last[guy]].next = cdpi;
         }
-        last[guy] = cdp;
+        last[guy] = cdpi;
         count[guy] ++;
 
-        emit NewCdp(msg.sender, guy, cdp);
+        emit NewCdp(msg.sender, guy, cdpi);
+        return cdpi;
     }
 
     function move(
-        bytes12 cdp,
+        uint cdp,
         address dst
     ) public note isAllowed(cdp) {
         require(lads[cdp] != dst, "dst-already-owner");
@@ -140,21 +139,21 @@ contract DssCdpManager {
 
         // Add transferred CDP to double linked list of destiny user
         cdps[cdp].prev = last[dst];
-        cdps[cdp].next = "";
+        cdps[cdp].next = 0;
         cdps[last[dst]].next = cdp;
         last[dst] = cdp;
         count[dst] ++;
     }
 
     function getUrn(
-        bytes12 cdp
+        uint cdp
     ) public view returns (bytes32 urn) {
         urn = bytes32(uint(address(this)) * 2 ** (12 * 8) + uint96(cdp));
     }
 
     function exit(
         address join,
-        bytes12 cdp,
+        uint cdp,
         address guy,
         uint wad
     ) public note isAllowed(cdp) {
@@ -163,7 +162,7 @@ contract DssCdpManager {
 
     function frob(
         address vat,
-        bytes12 cdp,
+        uint cdp,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
