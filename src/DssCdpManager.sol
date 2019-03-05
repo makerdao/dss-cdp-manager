@@ -42,9 +42,10 @@ contract GetCdps {
 }
 
 contract DssCdpManager {
-    uint96 public cdpi;
-    mapping (bytes12 => Cdp) public cdps; // Cdp (id => data)
-    mapping (bytes12 => address) public lads; // Cdp owners (id => owner)
+    uint96 public cdpi; // Auto incrementing CDP id
+    mapping (bytes12 => Cdp) public cdps; // CDPs linked list (id => data)
+    mapping (bytes12 => address) public lads; // CDP owners (id => owner)
+    mapping (bytes12 => bytes32) public ilks; // Ilk used by a CDP (id => ilk)
 
     mapping (address => bytes12) public last; // Last Cdp from user (owner => id)
     mapping (address => uint) public count; // Amount Cdps from user (owner => amount)
@@ -94,17 +95,19 @@ contract DssCdpManager {
         allows[msg.sender][cdp][guy] = ok;
     }
 
-    function open() public returns (bytes12 cdp) {
-        cdp = open(msg.sender);
+    function open(bytes32 ilk) public returns (bytes12 cdp) {
+        cdp = open(ilk, msg.sender);
     }
 
     function open(
+        bytes32 ilk,
         address guy
     ) public note returns (bytes12 cdp) {
-        cdpi ++;
+        cdpi++;
         require(cdpi > 0, "cdpi-overflow");
         cdp = bytes12(cdpi);
         lads[cdp] = guy;
+        ilks[cdp] = ilk;
 
         // Add new CDP to double linked list
         if (last[guy] != 0) {
@@ -125,7 +128,7 @@ contract DssCdpManager {
 
         // Remove transferred CDP from double linked list of origin user
         cdps[cdps[cdp].prev].next = cdps[cdp].next;
-        if (cdps[cdp].next != "") {
+        if (cdps[cdp].next != 0) {
             cdps[cdps[cdp].next].prev = cdps[cdp].prev;
         } else {
             last[lads[cdp]] = cdps[cdp].prev;
@@ -161,13 +164,12 @@ contract DssCdpManager {
     function frob(
         address vat,
         bytes12 cdp,
-        bytes32 ilk,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
         bytes32 urn = getUrn(cdp);
         VatLike(vat).frob(
-            ilk,
+            ilks[cdp],
             urn,
             urn,
             urn,
