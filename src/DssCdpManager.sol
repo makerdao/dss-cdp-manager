@@ -27,13 +27,15 @@ contract JoinLike {
 }
 
 contract GetCdps {
-    function getCdps(address manager, address guy) external view returns (uint[] memory res) {
-        res = new uint[](DssCdpManager(manager).count(guy));
+    function getCdps(address manager, address guy) external view returns (uint[] memory ids, bytes32[] memory ilks) {
+        ids = new uint[](DssCdpManager(manager).count(guy));
+        ilks = new bytes32[](DssCdpManager(manager).count(guy));
         uint i = 0;
         uint cdp = DssCdpManager(manager).last(guy);
 
         while (cdp > 0) {
-            res[i] = cdp;
+            ids[i] = cdp;
+            ilks[i] = DssCdpManager(manager).ilks(cdp);
             (cdp,) = DssCdpManager(manager).cdps(cdp);
             i++;
         }

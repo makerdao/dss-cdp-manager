@@ -158,17 +158,22 @@ contract DssCdpManagerTest is DssDeployTestBase {
         uint cdp2 = manager.open("REP");
         uint cdp3 = manager.open("GOLD");
 
-        uint[] memory cdps = getCdps.getCdps(address(manager), address(this));
+        (uint[] memory cdps, bytes32[] memory ilks) = getCdps.getCdps(address(manager), address(this));
         assertEq(cdps.length, 3);
-        assertTrue(cdps[0] == cdp3);
-        assertTrue(cdps[1] == cdp2);
-        assertTrue(cdps[2] == cdp1);
+        assertEq(cdps[0], cdp3);
+        assertTrue(ilks[0] == bytes32("GOLD"));
+        assertEq(cdps[1], cdp2);
+        assertTrue(ilks[1] == bytes32("REP"));
+        assertEq(cdps[2], cdp1);
+        assertTrue(ilks[2] == bytes32("ETH"));
 
         manager.move(cdp2, address(user));
-        cdps = getCdps.getCdps(address(manager), address(this));
+        (cdps, ilks) = getCdps.getCdps(address(manager), address(this));
         assertEq(cdps.length, 2);
-        assertTrue(cdps[0] == cdp3);
-        assertTrue(cdps[1] == cdp1);
+        assertEq(cdps[0], cdp3);
+        assertTrue(ilks[0] == bytes32("GOLD"));
+        assertEq(cdps[1], cdp1);
+        assertTrue(ilks[1] == bytes32("ETH"));
     }
 
     function testFrob() public {
