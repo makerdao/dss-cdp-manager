@@ -224,4 +224,29 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.withdraw(1 ether);
         assertEq(address(this).balance, prevBalance + 1 ether);
     }
+
+    function testQuit() public {
+        deploy();
+        uint cdp = manager.open("ETH");
+        weth.deposit.value(1 ether)();
+        weth.approve(address(ethJoin), 1 ether);
+        ethJoin.join(manager.getUrn(cdp), 1 ether);
+
+        manager.frob(address(vat), cdp, 1 ether, 50 ether);
+        (uint ink, uint art) = vat.urns("ETH", manager.getUrn(cdp));
+        assertEq(ink, 1 ether);
+        assertEq(art, 50 ether);
+        (ink, art) = vat.urns("ETH", urn);
+        assertEq(ink, 0);
+        assertEq(art, 0);
+
+        vat.hope(address(manager));
+        manager.quit(address(vat), cdp, urn);
+        (ink, art) = vat.urns("ETH", manager.getUrn(cdp));
+        assertEq(ink, 0);
+        assertEq(art, 0);
+        (ink, art) = vat.urns("ETH", urn);
+        assertEq(ink, 1 ether);
+        assertEq(art, 50 ether);
+    }
 }

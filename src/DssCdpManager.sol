@@ -19,7 +19,9 @@
 pragma solidity >= 0.5.0;
 
 contract VatLike {
-    function frob(bytes32, bytes32, bytes32, bytes32, int256, int256) public;
+    function urns(bytes32, bytes32) public view returns (uint, uint);
+    function frob(bytes32, bytes32, bytes32, bytes32, int, int) public;
+    function fork(bytes32, bytes32, bytes32, int, int) public;
 }
 
 contract JoinLike {
@@ -176,6 +178,22 @@ contract DssCdpManager {
             urn,
             dink,
             dart
+        );
+    }
+
+    function quit(
+        address vat,
+        uint cdp,
+        bytes32 dst
+    ) public note isAllowed(cdp) {
+        bytes32 urn = getUrn(cdp);
+        (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urn);
+        VatLike(vat).fork(
+            ilks[cdp],
+            urn,
+            dst,
+            int(ink),
+            int(art)
         );
     }
 }
