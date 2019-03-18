@@ -90,6 +90,11 @@ contract DssCdpManager {
         _;
     }
 
+    function toInt(uint x) internal pure returns (int y) {
+        y = int(x);
+        require(y >= 0, "int-overflow");
+    }
+
     function allow(
         uint cdp,
         address guy,
@@ -192,8 +197,8 @@ contract DssCdpManager {
             ilks[cdp],
             urn,
             dst,
-            int(ink),
-            int(art)
+            toInt(ink),
+            toInt(art)
         );
     }
 }
