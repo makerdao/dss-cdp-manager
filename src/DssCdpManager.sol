@@ -19,12 +19,16 @@
 pragma solidity >= 0.5.0;
 
 contract VatLike {
+    function can(address, address) public view returns (bool);
     function urns(bytes32, bytes32) public view returns (uint, uint);
+    function wards(address) public view returns (uint);
+    function hope(address) public;
     function frob(bytes32, bytes32, bytes32, bytes32, int, int) public;
     function fork(bytes32, bytes32, bytes32, int, int) public;
 }
 
 contract JoinLike {
+    function vat() public view returns (address);
     function exit(bytes32, address, uint) public;
 }
 
@@ -166,6 +170,9 @@ contract DssCdpManager {
         address guy,
         uint wad
     ) public note isAllowed(cdp) {
+        VatLike vat = VatLike(JoinLike(join).vat());
+        require(vat.wards(join) == 1, "unkown-adapter");
+        if (!vat.can(address(this), join)) vat.hope(join);
         JoinLike(join).exit(getUrn(cdp), guy, wad);
     }
 
