@@ -19,17 +19,10 @@
 pragma solidity >= 0.5.0;
 
 contract VatLike {
-    function can(address, address) public view returns (bool);
     function urns(bytes32, bytes32) public view returns (uint, uint);
-    function wards(address) public view returns (uint);
     function hope(address) public;
     function frob(bytes32, bytes32, bytes32, bytes32, int, int) public;
     function fork(bytes32, bytes32, bytes32, int, int) public;
-}
-
-contract JoinLike {
-    function vat() public view returns (address);
-    function exit(bytes32, address, uint) public;
 }
 
 contract GetCdps {
@@ -59,16 +52,22 @@ contract UrnHandler {
 
 contract DssCdpManager {
     address vat;
-    uint public cdpi; // Auto incrementing CDP id
-    mapping (uint => bytes32) public urns; // CDP address (id => Urn Handler)
-    mapping (uint => List) public list; // CDPs linked list (id => data)
-    mapping (uint => address) public lads; // CDP owners (id => owner)
-    mapping (uint => bytes32) public ilks; // Ilk used by a CDP (id => ilk)
+    uint public cdpi;                           // Auto incremental
+    mapping (uint => bytes32) public urns;      // CDPId => UrnHandler
+    mapping (uint => List) public list;         // CDPId => Prev & Next CDPIds (double linked list)
+    mapping (uint => address) public lads;      // CDPId => Owner
+    mapping (uint => bytes32) public ilks;      // CDPId => Ilk
 
-    mapping (address => uint) public last; // Last Cdp from user (owner => id)
-    mapping (address => uint) public count; // Amount Cdps from user (owner => amount)
+    mapping (address => uint) public last;      // Owner => Last CDPId
+    mapping (address => uint) public count;     // Owner => Amount of CDPs
 
-    mapping (address => mapping (uint => mapping (address => bool))) public allows; // Allowance from owner + cdpId to another user
+    mapping (
+        address => mapping (
+            uint => mapping (
+                address => bool
+            )
+        )
+    ) public allows;                            // Owner => CDPId => Allowed Addr => True/False
 
     struct List {
         uint prev;
