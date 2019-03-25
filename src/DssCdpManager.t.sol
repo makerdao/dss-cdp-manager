@@ -4,12 +4,12 @@ import { DssDeployTestBase } from "dss-deploy/DssDeploy.t.base.sol";
 import "./DssCdpManager.sol";
 
 contract FakeUser {
-    function doMove(
+    function doGive(
         DssCdpManager manager,
         uint cdp,
         address dst
     ) public {
-        manager.move(cdp, dst);
+        manager.give(cdp, dst);
     }
 
     function doFrob(
@@ -50,39 +50,39 @@ contract DssCdpManagerTest is DssDeployTestBase {
 
     function testTransferCDP() public {
         uint cdp = manager.open("ETH");
-        manager.move(cdp, address(123));
+        manager.give(cdp, address(123));
         assertEq(manager.lads(cdp), address(123));
     }
 
     function testTransferAllowed() public {
         uint cdp = manager.open("ETH");
         manager.allow(cdp, address(user), true);
-        user.doMove(manager, cdp, address(123));
+        user.doGive(manager, cdp, address(123));
         assertEq(manager.lads(cdp), address(123));
     }
 
     function testFailTransferNotAllowed() public {
         uint cdp = manager.open("ETH");
-        user.doMove(manager, cdp, address(123));
+        user.doGive(manager, cdp, address(123));
     }
 
     function testFailTransferNotAllowed2() public {
         uint cdp = manager.open("ETH");
         manager.allow(cdp, address(user), true);
         manager.allow(cdp, address(user), false);
-        user.doMove(manager, cdp, address(123));
+        user.doGive(manager, cdp, address(123));
     }
 
     function testFailTransferNotAllowed3() public {
         uint cdp = manager.open("ETH");
         uint cdp2 = manager.open("ETH");
         manager.allow(cdp2, address(user), true);
-        user.doMove(manager, cdp, address(123));
+        user.doGive(manager, cdp, address(123));
     }
 
     function testFailTransferToSameOwner() public {
         uint cdp = manager.open("ETH");
-        manager.move(cdp, address(this));
+        manager.give(cdp, address(this));
     }
 
     function testDoubleLinkedList() public {
@@ -122,7 +122,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertTrue(prev == cdp6);
         assertTrue(next == 0);
 
-        manager.move(cdp2, address(user));
+        manager.give(cdp2, address(user));
 
         assertEq(manager.count(address(this)), 2);
         assertTrue(manager.last(address(this)) == cdp3);
@@ -139,7 +139,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertTrue(prev == cdp7);
         assertTrue(next == 0);
 
-        user.doMove(manager, cdp2, address(this));
+        user.doGive(manager, cdp2, address(this));
 
         assertEq(manager.count(address(this)), 3);
         assertTrue(manager.last(address(this)) == cdp2);
@@ -169,7 +169,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(ids[2], cdp1);
         assertTrue(ilks[2] == bytes32("ETH"));
 
-        manager.move(cdp2, address(user));
+        manager.give(cdp2, address(user));
         (ids,, ilks) = getCdps.getCdps(address(manager), address(this));
         assertEq(ids.length, 2);
         assertEq(ids[0], cdp3);

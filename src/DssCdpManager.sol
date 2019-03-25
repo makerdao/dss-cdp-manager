@@ -148,7 +148,7 @@ contract DssCdpManager {
         return cdpi;
     }
 
-    function move(
+    function give(
         uint cdp,
         address dst
     ) public note isAllowed(cdp) {
