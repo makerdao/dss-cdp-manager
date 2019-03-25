@@ -96,71 +96,115 @@ contract DssCdpManagerTest is DssDeployTestBase {
         uint cdp7 = manager.open("ETH", address(user));
 
         assertEq(manager.count(address(this)), 3);
-        assertTrue(manager.last(address(this)) == cdp3);
+        assertEq(manager.first(address(this)), cdp1);
+        assertEq(manager.last(address(this)), cdp3);
         (uint prev, uint next) = manager.list(cdp1);
-        assertTrue(prev == 0);
-        assertTrue(next == cdp2);
+        assertEq(prev, 0);
+        assertEq(next, cdp2);
         (prev, next) = manager.list(cdp2);
-        assertTrue(prev == cdp1);
-        assertTrue(next == cdp3);
+        assertEq(prev, cdp1);
+        assertEq(next, cdp3);
         (prev, next) = manager.list(cdp3);
-        assertTrue(prev == cdp2);
-        assertTrue(next == 0);
+        assertEq(prev, cdp2);
+        assertEq(next, 0);
 
         assertEq(manager.count(address(user)), 4);
-        assertTrue(manager.last(address(user)) == cdp7);
+        assertEq(manager.first(address(user)), cdp4);
+        assertEq(manager.last(address(user)), cdp7);
         (prev, next) = manager.list(cdp4);
-        assertTrue(prev == 0);
-        assertTrue(next == cdp5);
+        assertEq(prev, 0);
+        assertEq(next, cdp5);
         (prev, next) = manager.list(cdp5);
-        assertTrue(prev == cdp4);
-        assertTrue(next == cdp6);
+        assertEq(prev, cdp4);
+        assertEq(next, cdp6);
         (prev, next) = manager.list(cdp6);
-        assertTrue(prev == cdp5);
-        assertTrue(next == cdp7);
+        assertEq(prev, cdp5);
+        assertEq(next, cdp7);
         (prev, next) = manager.list(cdp7);
-        assertTrue(prev == cdp6);
-        assertTrue(next == 0);
+        assertEq(prev, cdp6);
+        assertEq(next, 0);
 
         manager.give(cdp2, address(user));
 
         assertEq(manager.count(address(this)), 2);
-        assertTrue(manager.last(address(this)) == cdp3);
+        assertEq(manager.first(address(this)), cdp1);
+        assertEq(manager.last(address(this)), cdp3);
         (prev, next) = manager.list(cdp1);
-        assertTrue(next == cdp3);
+        assertEq(next, cdp3);
         (prev, next) = manager.list(cdp3);
-        assertTrue(prev == cdp1);
+        assertEq(prev, cdp1);
 
         assertEq(manager.count(address(user)), 5);
-        assertTrue(manager.last(address(user)) == cdp2);
+        assertEq(manager.first(address(user)), cdp4);
+        assertEq(manager.last(address(user)), cdp2);
         (prev, next) = manager.list(cdp7);
-        assertTrue(next == cdp2);
+        assertEq(next, cdp2);
         (prev, next) = manager.list(cdp2);
-        assertTrue(prev == cdp7);
-        assertTrue(next == 0);
+        assertEq(prev, cdp7);
+        assertEq(next, 0);
 
         user.doGive(manager, cdp2, address(this));
 
         assertEq(manager.count(address(this)), 3);
-        assertTrue(manager.last(address(this)) == cdp2);
+        assertEq(manager.first(address(this)), cdp1);
+        assertEq(manager.last(address(this)), cdp2);
         (prev, next) = manager.list(cdp3);
-        assertTrue(next == cdp2);
+        assertEq(next, cdp2);
         (prev, next) = manager.list(cdp2);
-        assertTrue(prev == cdp3);
-        assertTrue(next == 0);
+        assertEq(prev, cdp3);
+        assertEq(next, 0);
 
         assertEq(manager.count(address(user)), 4);
-        assertTrue(manager.last(address(user)) == cdp7);
+        assertEq(manager.first(address(user)), cdp4);
+        assertEq(manager.last(address(user)), cdp7);
         (prev, next) = manager.list(cdp7);
-        assertTrue(next == 0);
+        assertEq(next, 0);
+
+        manager.give(cdp1, address(user));
+        assertEq(manager.count(address(this)), 2);
+        assertEq(manager.first(address(this)), cdp3);
+        assertEq(manager.last(address(this)), cdp2);
+
+        manager.give(cdp2, address(user));
+        assertEq(manager.count(address(this)), 1);
+        assertEq(manager.first(address(this)), cdp3);
+        assertEq(manager.last(address(this)), cdp3);
+
+        manager.give(cdp3, address(user));
+        assertEq(manager.count(address(this)), 0);
+        assertEq(manager.first(address(this)), 0);
+        assertEq(manager.last(address(this)), 0);
     }
 
-    function testGetCdps() public {
+    function testGetCdpsAsc() public {
         uint cdp1 = manager.open("ETH");
         uint cdp2 = manager.open("REP");
         uint cdp3 = manager.open("GOLD");
 
-        (uint[] memory ids,, bytes32[] memory ilks) = getCdps.getCdps(address(manager), address(this));
+        (uint[] memory ids,, bytes32[] memory ilks) = getCdps.getCdpsAsc(address(manager), address(this));
+        assertEq(ids.length, 3);
+        assertEq(ids[0], cdp1);
+        assertEq32(ilks[0], bytes32("ETH"));
+        assertEq(ids[1], cdp2);
+        assertEq32(ilks[1], bytes32("REP"));
+        assertEq(ids[2], cdp3);
+        assertEq32(ilks[2], bytes32("GOLD"));
+
+        manager.give(cdp2, address(user));
+        (ids,, ilks) = getCdps.getCdpsAsc(address(manager), address(this));
+        assertEq(ids.length, 2);
+        assertEq(ids[0], cdp1);
+        assertEq32(ilks[0], bytes32("ETH"));
+        assertEq(ids[1], cdp3);
+        assertEq32(ilks[1], bytes32("GOLD"));
+    }
+
+    function testGetCdpsDesc() public {
+        uint cdp1 = manager.open("ETH");
+        uint cdp2 = manager.open("REP");
+        uint cdp3 = manager.open("GOLD");
+
+        (uint[] memory ids,, bytes32[] memory ilks) = getCdps.getCdpsDesc(address(manager), address(this));
         assertEq(ids.length, 3);
         assertEq(ids[0], cdp3);
         assertTrue(ilks[0] == bytes32("GOLD"));
@@ -170,7 +214,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertTrue(ilks[2] == bytes32("ETH"));
 
         manager.give(cdp2, address(user));
-        (ids,, ilks) = getCdps.getCdps(address(manager), address(this));
+        (ids,, ilks) = getCdps.getCdpsDesc(address(manager), address(this));
         assertEq(ids.length, 2);
         assertEq(ids[0], cdp3);
         assertTrue(ilks[0] == bytes32("GOLD"));
