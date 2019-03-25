@@ -59,7 +59,7 @@ contract UrnHandler {
 
 contract DssCdpManager {
     address vat;
-    uint96 public cdpi; // Auto incrementing CDP id
+    uint public cdpi; // Auto incrementing CDP id
     mapping (uint => bytes32) public urns; // CDP address (id => Urn Handler)
     mapping (uint => List) public list; // CDPs linked list (id => data)
     mapping (uint => address) public lads; // CDP owners (id => owner)
@@ -131,7 +131,7 @@ contract DssCdpManager {
         address guy
     ) public note returns (uint) {
         cdpi++;
-        require(uint96(cdpi) > 0, "cdpi-overflow");
+        require(cdpi > 0, "cdpi-overflow");
         urns[cdpi] = bytes32(bytes20(address(new UrnHandler(vat))));
         lads[cdpi] = guy;
         ilks[cdpi] = ilk;
