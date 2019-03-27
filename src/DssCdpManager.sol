@@ -19,47 +19,75 @@
 pragma solidity >= 0.5.0;
 
 contract VatLike {
-    function can(address, address) public view returns (bool);
-    function urns(bytes32, bytes32) public view returns (uint, uint);
-    function wards(address) public view returns (uint);
+    function urns(bytes32, address) public view returns (uint, uint);
     function hope(address) public;
-    function frob(bytes32, bytes32, bytes32, bytes32, int, int) public;
-    function fork(bytes32, bytes32, bytes32, int, int) public;
-}
-
-contract JoinLike {
-    function vat() public view returns (address);
-    function exit(bytes32, address, uint) public;
+    function frob(bytes32, address, address, address, int, int) public;
+    function fork(bytes32, address, address, int, int) public;
 }
 
 contract GetCdps {
-    function getCdps(address manager, address guy) external view returns (uint[] memory ids, bytes32[] memory ilks) {
-        ids = new uint[](DssCdpManager(manager).count(guy));
-        ilks = new bytes32[](DssCdpManager(manager).count(guy));
+    function getCdpsAsc(address manager, address guy) external view returns (uint[] memory ids, address[] memory urns, bytes32[] memory ilks) {
+        uint count = DssCdpManager(manager).count(guy);
+        ids = new uint[](count);
+        urns = new address[](count);
+        ilks = new bytes32[](count);
         uint i = 0;
-        uint cdp = DssCdpManager(manager).last(guy);
+        uint id = DssCdpManager(manager).first(guy);
 
-        while (cdp > 0) {
-            ids[i] = cdp;
-            ilks[i] = DssCdpManager(manager).ilks(cdp);
-            (cdp,) = DssCdpManager(manager).cdps(cdp);
+        while (id > 0) {
+            ids[i] = id;
+            urns[i] = DssCdpManager(manager).urns(id);
+            ilks[i] = DssCdpManager(manager).ilks(id);
+            (,id) = DssCdpManager(manager).list(id);
+            i++;
+        }
+    }
+
+    function getCdpsDesc(address manager, address guy) external view returns (uint[] memory ids, address[] memory urns, bytes32[] memory ilks) {
+        uint count = DssCdpManager(manager).count(guy);
+        ids = new uint[](count);
+        urns = new address[](count);
+        ilks = new bytes32[](count);
+        uint i = 0;
+        uint id = DssCdpManager(manager).last(guy);
+
+        while (id > 0) {
+            ids[i] = id;
+            urns[i] = DssCdpManager(manager).urns(id);
+            ilks[i] = DssCdpManager(manager).ilks(id);
+            (id,) = DssCdpManager(manager).list(id);
             i++;
         }
     }
 }
 
+contract UrnHandler {
+    constructor(address vat) public {
+        VatLike(vat).hope(msg.sender);
+    }
+}
+
 contract DssCdpManager {
-    uint96 public cdpi; // Auto incrementing CDP id
-    mapping (uint => Cdp) public cdps; // CDPs linked list (id => data)
-    mapping (uint => address) public lads; // CDP owners (id => owner)
-    mapping (uint => bytes32) public ilks; // Ilk used by a CDP (id => ilk)
+    address vat;
+    uint public cdpi;                           // Auto incremental
+    mapping (uint => address) public urns;      // CDPId => UrnHandler
+    mapping (uint => List)    public list;      // CDPId => Prev & Next CDPIds (double linked list)
+    mapping (uint => address) public lads;      // CDPId => Owner
+    mapping (uint => bytes32) public ilks;      // CDPId => Ilk
 
-    mapping (address => uint) public last; // Last Cdp from user (owner => id)
-    mapping (address => uint) public count; // Amount Cdps from user (owner => amount)
+    mapping (address => uint) public first;     // Owner => First CDPId
+    mapping (address => uint) public last;      // Owner => Last CDPId
+    mapping (address => uint) public count;     // Owner => Amount of CDPs
 
-    mapping (address => mapping (uint => mapping (address => bool))) public allows; // Allowance from owner + cdpId to another user
+    mapping (
+        address => mapping (
+            uint => mapping (
+                address => bool
+            )
+        )
+    ) public allows;                            // Owner => CDPId => Allowed Addr => True/False
 
-    struct Cdp {
+    struct List {
         uint prev;
         uint next;
     }
@@ -94,6 +122,10 @@ contract DssCdpManager {
         _;
     }
 
+    constructor(address vat_) public {
+        vat = vat_;
+    }
+
     function toInt(uint x) internal pure returns (int y) {
         y = int(x);
         require(y >= 0, "int-overflow");
@@ -116,14 +148,18 @@ contract DssCdpManager {
         address guy
     ) public note returns (uint) {
         cdpi++;
-        require(uint96(cdpi) > 0, "cdpi-overflow");
+        require(cdpi > 0, "cdpi-overflow");
+        urns[cdpi] = address(new UrnHandler(vat));
         lads[cdpi] = guy;
         ilks[cdpi] = ilk;
 
-        // Add new CDP to double linked list
+        // Add new CDP to double linked list and pointers
+        if (first[guy] == 0) {
+            first[guy] = cdpi;
+        }
         if (last[guy] != 0) {
-            cdps[cdpi].prev = last[guy];
-            cdps[last[guy]].next = cdpi;
+            list[cdpi].prev = last[guy];
+            list[last[guy]].next = cdpi;
         }
         last[guy] = cdpi;
         count[guy] ++;
@@ -132,73 +168,60 @@ contract DssCdpManager {
         return cdpi;
     }
 
-    function move(
+    function give(
         uint cdp,
         address dst
     ) public note isAllowed(cdp) {
         require(lads[cdp] != dst, "dst-already-owner");
 
-        // Remove transferred CDP from double linked list of origin user
-        cdps[cdps[cdp].prev].next = cdps[cdp].next;
-        if (cdps[cdp].next != 0) {
-            cdps[cdps[cdp].next].prev = cdps[cdp].prev;
-        } else {
-            last[lads[cdp]] = cdps[cdp].prev;
+        // Remove transferred CDP from double linked list of origin user and pointers
+        list[list[cdp].prev].next = list[cdp].next;             // Set the next pointer of the prev cdp to the next of the transferred one
+        if (list[cdp].next != 0) {                              // If wasn't the last one
+            list[list[cdp].next].prev = list[cdp].prev;         // Set the prev pointer of the next cdp to the prev of the transferred one
+        } else {                                                // If was the last one
+            last[lads[cdp]] = list[cdp].prev;                   // Update last pointer of the owner
+        }
+        if (first[lads[cdp]] == cdp) {                          // If was the first one
+            first[lads[cdp]] = list[cdp].next;                  // Update first pointer of the owner
         }
         count[lads[cdp]] --;
 
         // Transfer ownership
         lads[cdp] = dst;
 
-        // Add transferred CDP to double linked list of destiny user
-        cdps[cdp].prev = last[dst];
-        cdps[cdp].next = 0;
-        cdps[last[dst]].next = cdp;
+        // Add transferred CDP to double linked list of destiny user and pointers
+        list[cdp].prev = last[dst];
+        list[cdp].next = 0;
+        list[last[dst]].next = cdp;
+        if (first[dst] == 0) {
+            first[dst] = cdp;
+        }
         last[dst] = cdp;
         count[dst] ++;
     }
 
-    function getUrn(
-        uint cdp
-    ) public view returns (bytes32 urn) {
-        urn = bytes32(uint(address(this)) * 2 ** (12 * 8) + uint96(cdp));
-    }
-
-    function exit(
-        address join,
-        uint cdp,
-        address guy,
-        uint wad
-    ) public note isAllowed(cdp) {
-        VatLike vat = VatLike(JoinLike(join).vat());
-        require(vat.wards(join) == 1, "unkown-adapter");
-        if (!vat.can(address(this), join)) vat.hope(join);
-        JoinLike(join).exit(getUrn(cdp), guy, wad);
-    }
-
     function frob(
-        address vat,
         uint cdp,
+        address dst,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
-        bytes32 urn = getUrn(cdp);
+        address urn = urns[cdp];
         VatLike(vat).frob(
             ilks[cdp],
             urn,
-            urn,
-            urn,
+            dink >= 0 ? urn : dst,
+            dart <= 0 ? urn : dst,
             dink,
             dart
         );
     }
 
     function quit(
-        address vat,
         uint cdp,
-        bytes32 dst
+        address dst
     ) public note isAllowed(cdp) {
-        bytes32 urn = getUrn(cdp);
+        address urn = urns[cdp];
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urn);
         VatLike(vat).fork(
             ilks[cdp],
