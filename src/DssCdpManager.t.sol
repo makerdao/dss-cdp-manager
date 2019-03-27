@@ -15,11 +15,10 @@ contract FakeUser {
     function doFrob(
         DssCdpManager manager,
         uint cdp,
-        address dst,
         int dink,
         int dart
     ) public {
-        manager.frob(cdp, dst, dink, dart);
+        manager.frob(cdp, dink, dart);
     }
 }
 
@@ -227,7 +226,11 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
-        manager.frob(cdp, address(this), 1 ether, 50 ether);
+        manager.frob(cdp, 1 ether, 50 ether);
+        assertEq(vat.dai(manager.urns(cdp)), 50 ether * ONE);
+        assertEq(vat.dai(address(this)), 0);
+        manager.move(cdp, address(this), 50 ether * ONE);
+        assertEq(vat.dai(manager.urns(cdp)), 0);
         assertEq(vat.dai(address(this)), 50 ether * ONE);
         assertEq(dai.balanceOf(address(this)), 0);
         vat.hope(address(daiJoin));
@@ -241,8 +244,8 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.allow(cdp, address(user), true);
-        user.doFrob(manager, cdp, address(this), 1 ether, 50 ether);
-        assertEq(vat.dai(address(this)), 50 ether * ONE);
+        user.doFrob(manager, cdp, 1 ether, 50 ether);
+        assertEq(vat.dai(manager.urns(cdp)), 50 ether * ONE);
     }
 
     function testFailFrobNotAllowed() public {
@@ -250,7 +253,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
-        user.doFrob(manager, cdp, address(this), 1 ether, 50 ether);
+        user.doFrob(manager, cdp, 1 ether, 50 ether);
     }
 
     function testFrobGetCollateralBack() public {
@@ -258,9 +261,13 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
-        manager.frob(cdp, manager.urns(cdp), 1 ether, 50 ether);
-        manager.frob(cdp, address(this),  -int(1 ether), -int(50 ether));
+        manager.frob(cdp, 1 ether, 50 ether);
+        manager.frob(cdp, -int(1 ether), -int(50 ether));
         assertEq(vat.dai(address(this)), 0);
+        assertEq(vat.gem("ETH", manager.urns(cdp)), 1 ether);
+        assertEq(vat.gem("ETH", address(this)), 0);
+        manager.flux(cdp, address(this), 1 ether);
+        assertEq(vat.gem("ETH", manager.urns(cdp)), 0);
         assertEq(vat.gem("ETH", address(this)), 1 ether);
         uint prevBalance = address(this).balance;
         ethJoin.exit(address(this), address(this), 1 ether);
@@ -273,7 +280,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
-        manager.frob(cdp, address(this), 1 ether, 50 ether);
+        manager.frob(cdp, 1 ether, 50 ether);
 
         (uint ink, uint art) = vat.urns("ETH", manager.urns(cdp));
         assertEq(ink, 1 ether);

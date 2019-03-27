@@ -21,6 +21,8 @@ pragma solidity >= 0.5.0;
 contract VatLike {
     function urns(bytes32, address) public view returns (uint, uint);
     function hope(address) public;
+    function flux(bytes32, address, address, uint) public;
+    function move(address, address, uint) public;
     function frob(bytes32, address, address, address, int, int) public;
     function fork(bytes32, address, address, int, int) public;
 }
@@ -202,7 +204,6 @@ contract DssCdpManager {
 
     function frob(
         uint cdp,
-        address dst,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
@@ -210,11 +211,27 @@ contract DssCdpManager {
         VatLike(vat).frob(
             ilks[cdp],
             urn,
-            dink >= 0 ? urn : dst,
-            dart <= 0 ? urn : dst,
+            urn,
+            urn,
             dink,
             dart
         );
+    }
+
+    function flux(
+        uint cdp,
+        address dst,
+        uint wad
+    ) public note isAllowed(cdp) {
+        VatLike(vat).flux(ilks[cdp], urns[cdp], dst, wad);
+    }
+
+    function move(
+        uint cdp,
+        address dst,
+        uint rad
+    ) public note isAllowed(cdp) {
+        VatLike(vat).move(urns[cdp], dst, rad);
     }
 
     function quit(
