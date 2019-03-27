@@ -68,8 +68,8 @@ contract UrnHandler {
 }
 
 contract DssCdpManager {
-    address vat;
-    uint public cdpi;                           // Auto incremental
+    address                   public vat;
+    uint                      public cdpi;      // Auto incremental
     mapping (uint => address) public urns;      // CDPId => UrnHandler
     mapping (uint => List)    public list;      // CDPId => Prev & Next CDPIds (double linked list)
     mapping (uint => address) public lads;      // CDPId => Owner
