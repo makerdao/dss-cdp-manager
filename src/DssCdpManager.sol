@@ -19,17 +19,17 @@
 pragma solidity >= 0.5.0;
 
 contract VatLike {
-    function urns(bytes32, bytes32) public view returns (uint, uint);
+    function urns(bytes32, address) public view returns (uint, uint);
     function hope(address) public;
-    function frob(bytes32, bytes32, bytes32, bytes32, int, int) public;
-    function fork(bytes32, bytes32, bytes32, int, int) public;
+    function frob(bytes32, address, address, address, int, int) public;
+    function fork(bytes32, address, address, int, int) public;
 }
 
 contract GetCdps {
-    function getCdpsAsc(address manager, address guy) external view returns (uint[] memory ids, bytes32[] memory urns, bytes32[] memory ilks) {
+    function getCdpsAsc(address manager, address guy) external view returns (uint[] memory ids, address[] memory urns, bytes32[] memory ilks) {
         uint count = DssCdpManager(manager).count(guy);
         ids = new uint[](count);
-        urns = new bytes32[](count);
+        urns = new address[](count);
         ilks = new bytes32[](count);
         uint i = 0;
         uint id = DssCdpManager(manager).first(guy);
@@ -43,10 +43,10 @@ contract GetCdps {
         }
     }
 
-    function getCdpsDesc(address manager, address guy) external view returns (uint[] memory ids, bytes32[] memory urns, bytes32[] memory ilks) {
+    function getCdpsDesc(address manager, address guy) external view returns (uint[] memory ids, address[] memory urns, bytes32[] memory ilks) {
         uint count = DssCdpManager(manager).count(guy);
         ids = new uint[](count);
-        urns = new bytes32[](count);
+        urns = new address[](count);
         ilks = new bytes32[](count);
         uint i = 0;
         uint id = DssCdpManager(manager).last(guy);
@@ -70,7 +70,7 @@ contract UrnHandler {
 contract DssCdpManager {
     address vat;
     uint public cdpi;                           // Auto incremental
-    mapping (uint => bytes32) public urns;      // CDPId => UrnHandler
+    mapping (uint => address) public urns;      // CDPId => UrnHandler
     mapping (uint => List)    public list;      // CDPId => Prev & Next CDPIds (double linked list)
     mapping (uint => address) public lads;      // CDPId => Owner
     mapping (uint => bytes32) public ilks;      // CDPId => Ilk
@@ -149,7 +149,7 @@ contract DssCdpManager {
     ) public note returns (uint) {
         cdpi++;
         require(cdpi > 0, "cdpi-overflow");
-        urns[cdpi] = bytes32(bytes20(address(new UrnHandler(vat))));
+        urns[cdpi] = address(new UrnHandler(vat));
         lads[cdpi] = guy;
         ilks[cdpi] = ilk;
 
@@ -202,11 +202,11 @@ contract DssCdpManager {
 
     function frob(
         uint cdp,
-        bytes32 dst,
+        address dst,
         int dink,
         int dart
     ) public note isAllowed(cdp) {
-        bytes32 urn = urns[cdp];
+        address urn = urns[cdp];
         VatLike(vat).frob(
             ilks[cdp],
             urn,
@@ -219,9 +219,9 @@ contract DssCdpManager {
 
     function quit(
         uint cdp,
-        bytes32 dst
+        address dst
     ) public note isAllowed(cdp) {
-        bytes32 urn = urns[cdp];
+        address urn = urns[cdp];
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urn);
         VatLike(vat).fork(
             ilks[cdp],
