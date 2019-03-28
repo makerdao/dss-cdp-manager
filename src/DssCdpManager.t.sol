@@ -234,7 +234,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(vat.dai(address(this)), 50 ether * ONE);
         assertEq(dai.balanceOf(address(this)), 0);
         vat.hope(address(daiJoin));
-        daiJoin.exit(address(this), address(this), 50 ether);
+        daiJoin.exit(address(this), 50 ether);
         assertEq(dai.balanceOf(address(this)), 50 ether);
     }
 
@@ -270,7 +270,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(vat.gem("ETH", manager.urns(cdp)), 0);
         assertEq(vat.gem("ETH", address(this)), 1 ether);
         uint prevBalance = address(this).balance;
-        ethJoin.exit(address(this), address(this), 1 ether);
+        ethJoin.exit(address(this), 1 ether);
         weth.withdraw(1 ether);
         assertEq(address(this).balance, prevBalance + 1 ether);
     }
