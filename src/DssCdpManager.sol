@@ -206,13 +206,22 @@ contract DssCdpManager {
         uint cdp,
         int dink,
         int dart
+    ) public {
+        frob(cdp, urns[cdp], dink, dart);
+    }
+
+    function frob(
+        uint cdp,
+        address dst,
+        int dink,
+        int dart
     ) public note isAllowed(cdp) {
         address urn = urns[cdp];
         VatLike(vat).frob(
             ilks[cdp],
             urn,
-            urn,
-            urn,
+            dink >= 0 ? urn : dst,
+            dart <= 0 ? urn : dst,
             dink,
             dart
         );
