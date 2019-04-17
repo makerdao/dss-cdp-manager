@@ -84,7 +84,7 @@ contract DssCdpManager {
     mapping (
         address => mapping (
             uint => mapping (
-                address => bool
+                address => uint
             )
         )
     ) public allows;                            // Owner => CDPId => Allowed Addr => True/False
@@ -120,7 +120,7 @@ contract DssCdpManager {
     modifier isAllowed(
         uint cdp
     ) {
-        require(msg.sender == lads[cdp] || allows[lads[cdp]][cdp][msg.sender], "not-allowed");
+        require(msg.sender == lads[cdp] || allows[lads[cdp]][cdp][msg.sender] == 1, "not-allowed");
         _;
     }
 
@@ -136,7 +136,7 @@ contract DssCdpManager {
     function allow(
         uint cdp,
         address guy,
-        bool ok
+        uint ok
     ) public {
         allows[msg.sender][cdp][guy] = ok;
     }

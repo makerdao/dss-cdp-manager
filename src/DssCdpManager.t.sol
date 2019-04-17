@@ -55,7 +55,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
 
     function testTransferAllowed() public {
         uint cdp = manager.open("ETH");
-        manager.allow(cdp, address(user), true);
+        manager.allow(cdp, address(user), 1);
         user.doGive(manager, cdp, address(123));
         assertEq(manager.lads(cdp), address(123));
     }
@@ -67,15 +67,15 @@ contract DssCdpManagerTest is DssDeployTestBase {
 
     function testFailTransferNotAllowed2() public {
         uint cdp = manager.open("ETH");
-        manager.allow(cdp, address(user), true);
-        manager.allow(cdp, address(user), false);
+        manager.allow(cdp, address(user), 1);
+        manager.allow(cdp, address(user), 0);
         user.doGive(manager, cdp, address(123));
     }
 
     function testFailTransferNotAllowed3() public {
         uint cdp = manager.open("ETH");
         uint cdp2 = manager.open("ETH");
-        manager.allow(cdp2, address(user), true);
+        manager.allow(cdp2, address(user), 1);
         user.doGive(manager, cdp, address(123));
     }
 
@@ -266,7 +266,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
-        manager.allow(cdp, address(user), true);
+        manager.allow(cdp, address(user), 1);
         user.doFrob(manager, cdp, 1 ether, 50 ether);
         assertEq(vat.dai(manager.urns(cdp)), 50 ether * ONE);
     }
