@@ -55,9 +55,17 @@ contract DssCdpManager is DSNote {
         vat = vat_;
     }
 
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, "add-overflow");
+    }
+
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x - y) <= x, "sub-overflow");
+    }
+
     function toInt(uint x) internal pure returns (int y) {
         y = int(x);
-        require(y >= 0, "int-overflow");
+        require(y >= 0, "uint-to-int-overflow");
     }
 
     function allow(
@@ -76,7 +84,7 @@ contract DssCdpManager is DSNote {
         bytes32 ilk,
         address guy
     ) public note returns (uint) {
-        cdpi++;
+        cdpi = add(cdpi, 1);
         require(cdpi > 0, "cdpi-overflow");
         urns[cdpi] = address(new UrnHandler(vat));
         lads[cdpi] = guy;
@@ -91,7 +99,7 @@ contract DssCdpManager is DSNote {
             list[last[guy]].next = cdpi;
         }
         last[guy] = cdpi;
-        count[guy] ++;
+        count[guy] = add(count[guy], 1);
 
         emit NewCdp(msg.sender, guy, cdpi);
         return cdpi;
@@ -113,7 +121,7 @@ contract DssCdpManager is DSNote {
         if (first[lads[cdp]] == cdp) {                          // If was the first one
             first[lads[cdp]] = list[cdp].next;                  // Update first pointer of the owner
         }
-        count[lads[cdp]] --;
+        count[lads[cdp]] = sub(count[lads[cdp]], 1);
 
         // Transfer ownership
         lads[cdp] = dst;
@@ -126,7 +134,7 @@ contract DssCdpManager is DSNote {
             first[dst] = cdp;
         }
         last[dst] = cdp;
-        count[dst] ++;
+        count[dst] = add(count[dst], 1);
     }
 
     function frob(
