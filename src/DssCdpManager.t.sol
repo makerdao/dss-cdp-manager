@@ -1,7 +1,7 @@
 pragma solidity >= 0.5.0;
 
 import { DssDeployTestBase } from "dss-deploy/DssDeploy.t.base.sol";
-import "./DssCdpManager.sol";
+import "./GetCdps.sol";
 
 contract FakeUser {
     function doGive(
