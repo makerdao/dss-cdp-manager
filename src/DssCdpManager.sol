@@ -1,5 +1,7 @@
 pragma solidity >= 0.5.0;
 
+import "dss/lib.sol";
+
 contract VatLike {
     function urns(bytes32, address) public view returns (uint, uint);
     function hope(address) public;
@@ -51,7 +53,7 @@ contract UrnHandler {
     }
 }
 
-contract DssCdpManager {
+contract DssCdpManager is DSNote {
     address                   public vat;
     uint                      public cdpi;      // Auto incremental
     mapping (uint => address) public urns;      // CDPId => UrnHandler
@@ -77,27 +79,6 @@ contract DssCdpManager {
     }
 
     event NewCdp(address indexed guy, address indexed lad, uint cdp);
-
-    event Note(
-        bytes4   indexed  sig,
-        bytes32  indexed  foo,
-        bytes32  indexed  bar,
-        bytes32  indexed  too,
-        bytes             fax
-    ) anonymous;
-
-    modifier note {
-        bytes32 foo;
-        bytes32 bar;
-        bytes32 too;
-        assembly {
-            foo := calldataload(4)
-            bar := calldataload(36)
-            too := calldataload(68)
-        }
-        emit Note(msg.sig, foo, bar, too, msg.data);
-        _;
-    }
 
     modifier isAllowed(
         uint cdp
