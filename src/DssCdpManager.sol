@@ -22,7 +22,7 @@ contract DssCdpManager is DSNote {
     uint                      public cdpi;      // Auto incremental
     mapping (uint => address) public urns;      // CDPId => UrnHandler
     mapping (uint => List)    public list;      // CDPId => Prev & Next CDPIds (double linked list)
-    mapping (uint => address) public lads;      // CDPId => Owner
+    mapping (uint => address) public owns;      // CDPId => Owner
     mapping (uint => bytes32) public ilks;      // CDPId => Ilk
 
     mapping (address => uint) public first;     // Owner => First CDPId
@@ -42,12 +42,12 @@ contract DssCdpManager is DSNote {
         uint next;
     }
 
-    event NewCdp(address indexed guy, address indexed lad, uint cdp);
+    event NewCdp(address indexed usr, address indexed own, uint cdp);
 
     modifier isAllowed(
         uint cdp
     ) {
-        require(msg.sender == lads[cdp] || allows[lads[cdp]][cdp][msg.sender] == 1, "not-allowed");
+        require(msg.sender == owns[cdp] || allows[owns[cdp]][cdp][msg.sender] == 1, "not-allowed");
         _;
     }
 
@@ -71,10 +71,10 @@ contract DssCdpManager is DSNote {
     // Allow/disallow a dst address to manage the cdp.
     function allow(
         uint cdp,
-        address guy,
+        address usr,
         uint ok
     ) public {
-        allows[msg.sender][cdp][guy] = ok;
+        allows[msg.sender][cdp][usr] = ok;
     }
 
     // Open a new cdp for the caller.
@@ -82,29 +82,30 @@ contract DssCdpManager is DSNote {
         cdp = open(ilk, msg.sender);
     }
 
-    // Open a new cdp for a given guy address.
+    // Open a new cdp for a given usr address.
     function open(
         bytes32 ilk,
-        address guy
+        address usr
     ) public note returns (uint) {
+        require(usr != address(0), "usr-address-0");
+
         cdpi = add(cdpi, 1);
-        require(cdpi > 0, "cdpi-overflow");
         urns[cdpi] = address(new UrnHandler(vat));
-        lads[cdpi] = guy;
+        owns[cdpi] = usr;
         ilks[cdpi] = ilk;
 
         // Add new CDP to double linked list and pointers
-        if (first[guy] == 0) {
-            first[guy] = cdpi;
+        if (first[usr] == 0) {
+            first[usr] = cdpi;
         }
-        if (last[guy] != 0) {
-            list[cdpi].prev = last[guy];
-            list[last[guy]].next = cdpi;
+        if (last[usr] != 0) {
+            list[cdpi].prev = last[usr];
+            list[last[usr]].next = cdpi;
         }
-        last[guy] = cdpi;
-        count[guy] = add(count[guy], 1);
+        last[usr] = cdpi;
+        count[usr] = add(count[usr], 1);
 
-        emit NewCdp(msg.sender, guy, cdpi);
+        emit NewCdp(msg.sender, usr, cdpi);
         return cdpi;
     }
 
@@ -113,22 +114,23 @@ contract DssCdpManager is DSNote {
         uint cdp,
         address dst
     ) public note isAllowed(cdp) {
-        require(lads[cdp] != dst, "dst-already-owner");
+        require(dst != address(0), "dst-address-0");
+        require(dst != owns[cdp], "dst-already-owner");
 
         // Remove transferred CDP from double linked list of origin user and pointers
         list[list[cdp].prev].next = list[cdp].next;             // Set the next pointer of the prev cdp to the next of the transferred one
         if (list[cdp].next != 0) {                              // If wasn't the last one
             list[list[cdp].next].prev = list[cdp].prev;         // Set the prev pointer of the next cdp to the prev of the transferred one
         } else {                                                // If was the last one
-            last[lads[cdp]] = list[cdp].prev;                   // Update last pointer of the owner
+            last[owns[cdp]] = list[cdp].prev;                   // Update last pointer of the owner
         }
-        if (first[lads[cdp]] == cdp) {                          // If was the first one
-            first[lads[cdp]] = list[cdp].next;                  // Update first pointer of the owner
+        if (first[owns[cdp]] == cdp) {                          // If was the first one
+            first[owns[cdp]] = list[cdp].next;                  // Update first pointer of the owner
         }
-        count[lads[cdp]] = sub(count[lads[cdp]], 1);
+        count[owns[cdp]] = sub(count[owns[cdp]], 1);
 
         // Transfer ownership
-        lads[cdp] = dst;
+        owns[cdp] = dst;
 
         // Add transferred CDP to double linked list of destiny user and pointers
         list[cdp].prev = last[dst];

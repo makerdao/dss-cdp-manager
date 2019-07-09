@@ -39,47 +39,56 @@ contract DssCdpManagerTest is DssDeployTestBase {
         uint cdp = manager.open("ETH");
         assertEq(cdp, 1);
         assertEq(vat.can(address(bytes20(manager.urns(cdp))), address(manager)), 1);
-        assertEq(manager.lads(cdp), address(this));
+        assertEq(manager.owns(cdp), address(this));
     }
 
     function testOpenCDPOtherAddress() public {
         uint cdp = manager.open("ETH", address(123));
-        assertEq(manager.lads(cdp), address(123));
+        assertEq(manager.owns(cdp), address(123));
     }
 
-    function testTransferCDP() public {
+    function testFailOpenCDPZeroAddress() public {
+        manager.open("ETH", address(0));
+    }
+
+    function testGiveCDP() public {
         uint cdp = manager.open("ETH");
         manager.give(cdp, address(123));
-        assertEq(manager.lads(cdp), address(123));
+        assertEq(manager.owns(cdp), address(123));
     }
 
-    function testTransferAllowed() public {
+    function testGiveAllowed() public {
         uint cdp = manager.open("ETH");
         manager.allow(cdp, address(user), 1);
         user.doGive(manager, cdp, address(123));
-        assertEq(manager.lads(cdp), address(123));
+        assertEq(manager.owns(cdp), address(123));
     }
 
-    function testFailTransferNotAllowed() public {
+    function testFailGiveNotAllowed() public {
         uint cdp = manager.open("ETH");
         user.doGive(manager, cdp, address(123));
     }
 
-    function testFailTransferNotAllowed2() public {
+    function testFailGiveNotAllowed2() public {
         uint cdp = manager.open("ETH");
         manager.allow(cdp, address(user), 1);
         manager.allow(cdp, address(user), 0);
         user.doGive(manager, cdp, address(123));
     }
 
-    function testFailTransferNotAllowed3() public {
+    function testFailGiveNotAllowed3() public {
         uint cdp = manager.open("ETH");
         uint cdp2 = manager.open("ETH");
         manager.allow(cdp2, address(user), 1);
         user.doGive(manager, cdp, address(123));
     }
 
-    function testFailTransferToSameOwner() public {
+    function testFailGiveToZeroAddress() public {
+        uint cdp = manager.open("ETH");
+        manager.give(cdp, address(0));
+    }
+
+    function testFailGiveToSameOwner() public {
         uint cdp = manager.open("ETH");
         manager.give(cdp, address(this));
     }
