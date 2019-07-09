@@ -222,4 +222,71 @@ contract DssCdpManager is DSNote {
             toInt(art)
         );
     }
+
+    // ERC721 standard compatibility functions
+
+    function _checkOnERC721Received(
+        address from,
+        address to,
+        uint tokenId,
+        bytes memory data
+    ) internal returns (bool) {
+        uint size;
+        assembly { size := extcodesize(to) }
+
+        if (size == 0) {
+            return true;
+        }
+
+        return IERC721Receiver(to).onERC721Received(msg.sender, from, tokenId, data) ==
+                bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
+    }
+
+    function balanceOf(
+        address owner
+    ) external view returns (uint) {
+        return count[owner];
+    }
+
+    function ownerOf(
+        uint tokenId
+    ) external view returns (address) {
+        return owns[tokenId];
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint tokenId
+    ) public {
+        require(from == owns[tokenId], "from-not-owner");
+        give(tokenId, to);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint tokenId,
+        bytes memory data
+    ) public {
+        transferFrom(from, to, tokenId);
+        require(_checkOnERC721Received(from, to, tokenId, data), "not-onERC721Received");
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint tokenId
+    ) public {
+        safeTransferFrom(from, to, tokenId, "");
+    }
+}
+
+contract IERC721Receiver {
+    function onERC721Received(
+        address,
+        address,
+        uint,
+        bytes memory
+    ) public returns (bytes4);
 }
