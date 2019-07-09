@@ -68,6 +68,7 @@ contract DssCdpManager is DSNote {
         require(y >= 0, "uint-to-int-overflow");
     }
 
+    // Allow/disallow a dst address to manage the cdp.
     function allow(
         uint cdp,
         address guy,
@@ -76,10 +77,12 @@ contract DssCdpManager is DSNote {
         allows[msg.sender][cdp][guy] = ok;
     }
 
+    // Open a new cdp for the caller.
     function open(bytes32 ilk) public returns (uint cdp) {
         cdp = open(ilk, msg.sender);
     }
 
+    // Open a new cdp for a given guy address.
     function open(
         bytes32 ilk,
         address guy
@@ -105,6 +108,7 @@ contract DssCdpManager is DSNote {
         return cdpi;
     }
 
+    // Give the cdp ownership to a dst address.
     function give(
         uint cdp,
         address dst
@@ -137,14 +141,24 @@ contract DssCdpManager is DSNote {
         count[dst] = add(count[dst], 1);
     }
 
+    // Frob the cdp keeping the generated DAI or collateral freed in the cdp urn address.
     function frob(
         uint cdp,
         int dink,
         int dart
-    ) public {
-        frob(cdp, urns[cdp], dink, dart);
+    ) public note isAllowed(cdp) {
+        address urn = urns[cdp];
+        VatLike(vat).frob(
+            ilks[cdp],
+            urn,
+            urn,
+            urn,
+            dink,
+            dart
+        );
     }
 
+    // Frob the cdp sending the generated DAI or collateral freed to a dst address.
     function frob(
         uint cdp,
         address dst,
@@ -162,6 +176,7 @@ contract DssCdpManager is DSNote {
         );
     }
 
+    // Transfer wad amount of cdp collateral from the cdp address to a dst address.
     function flux(
         uint cdp,
         address dst,
@@ -170,6 +185,18 @@ contract DssCdpManager is DSNote {
         VatLike(vat).flux(ilks[cdp], urns[cdp], dst, wad);
     }
 
+    // Transfer wad amount of any type of collateral (ilk) from the cdp address to a dst address.
+    // This function has the purpose to take away collateral from the system that doesn't correspond to the cdp but was sent there wrongly.
+    function flux(
+        bytes32 ilk,
+        uint cdp,
+        address dst,
+        uint wad
+    ) public note isAllowed(cdp) {
+        VatLike(vat).flux(ilk, urns[cdp], dst, wad);
+    }
+
+    // Transfer wad amount of DAI from the cdp address to a dst address.
     function move(
         uint cdp,
         address dst,
@@ -178,6 +205,7 @@ contract DssCdpManager is DSNote {
         VatLike(vat).move(urns[cdp], dst, rad);
     }
 
+    // Quit the system, migrating the cdp (ink, art) to a different dst urn
     function quit(
         uint cdp,
         address dst

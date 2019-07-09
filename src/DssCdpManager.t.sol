@@ -298,6 +298,18 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(address(this).balance, prevBalance + 1 ether);
     }
 
+    function testGetWrongCollateralBack() public {
+        uint cdp = manager.open("ETH");
+        col.mint(1 ether);
+        col.approve(address(colJoin), 1 ether);
+        colJoin.join(manager.urns(cdp), 1 ether);
+        assertEq(vat.gem("COL", manager.urns(cdp)), 1 ether);
+        assertEq(vat.gem("COL", address(this)), 0);
+        manager.flux("COL", cdp, address(this), 1 ether);
+        assertEq(vat.gem("COL", manager.urns(cdp)), 0);
+        assertEq(vat.gem("COL", address(this)), 1 ether);
+    }
+
     function testQuit() public {
         uint cdp = manager.open("ETH");
         weth.deposit.value(1 ether)();
