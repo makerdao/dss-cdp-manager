@@ -2,12 +2,6 @@
 
 **Summary:** The `DssCdpManager` (aka `manager`) was created to enable a formalized process for CDPs to be transferred between owners. In short, the `manager` works by having a `dss` wrapper that allows users to interact with their CDPs in an easy way, treating them as non-fungible tokens (NFTs).
 
-[](https://www.notion.so/d45618d41cef4578a39381333e62845b#1d4e7520c0a74084bcdaa0950d7b4997)
-
-MCD System Diagram: CDP User and CDP Manager interaction diagram 
-
-**Note:** The MCD system diagram above shows that the CDP user goes through the proxy in order to interact with the CDP Manager but it is also possible to directly use the CDP Manager contract.
-
 # 2. Contract Details
 
 ## Key Functionalities (as defined in the smart contract)
