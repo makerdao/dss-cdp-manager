@@ -4,6 +4,7 @@ import "dss/lib.sol";
 
 contract VatLike {
     function urns(bytes32, address) public view returns (uint, uint);
+    function can(address, address) public view returns (uint);
     function hope(address) public;
     function flux(bytes32, address, address, uint) public;
     function move(address, address, uint) public;
@@ -212,6 +213,7 @@ contract DssCdpManager is DSNote {
         uint cdp,
         address dst
     ) public note isAllowed(cdp) {
+        require(msg.sender == dst || VatLike(vat).can(dst, msg.sender) == 1, "sender-not-allowed-dst");
         address urn = urns[cdp];
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urn);
         VatLike(vat).fork(
