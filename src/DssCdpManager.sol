@@ -35,7 +35,13 @@ contract DssCdpManager is DSNote {
                 address => uint
             )
         )
-    ) public allows;                            // Owner => CDPId => Allowed Addr => True/False
+    ) public cdpCan;                            // Owner => CDPId => Allowed Addr => True/False
+
+    mapping (
+        address => mapping (
+            address => uint
+        )
+    ) public urnCan;                            // Urn => Allowed Addr => True/False
 
     struct List {
         uint prev;
@@ -44,10 +50,17 @@ contract DssCdpManager is DSNote {
 
     event NewCdp(address indexed usr, address indexed own, uint cdp);
 
-    modifier isAllowed(
+    modifier cdpAllowed(
         uint cdp
     ) {
-        require(msg.sender == owns[cdp] || allows[owns[cdp]][cdp][msg.sender] == 1, "not-allowed");
+        require(msg.sender == owns[cdp] || cdpCan[owns[cdp]][cdp][msg.sender] == 1, "not-allowed");
+        _;
+    }
+
+    modifier urnAllowed(
+        address urn
+    ) {
+        require(msg.sender == urn || urnCan[urn][msg.sender] == 1, "not-allowed");
         _;
     }
 
@@ -68,13 +81,21 @@ contract DssCdpManager is DSNote {
         require(y >= 0, "uint-to-int-overflow");
     }
 
-    // Allow/disallow a dst address to manage the cdp.
+    // Allow/disallow a usr address to manage the cdp.
     function allow(
         uint cdp,
         address usr,
         uint ok
     ) public {
-        allows[msg.sender][cdp][usr] = ok;
+        cdpCan[msg.sender][cdp][usr] = ok;
+    }
+
+    // Allow/disallow a usr address to quit to the the sender urn.
+    function allow(
+        address usr,
+        uint ok
+    ) public {
+        urnCan[msg.sender][usr] = ok;
     }
 
     // Open a new cdp for the caller.
@@ -113,7 +134,7 @@ contract DssCdpManager is DSNote {
     function give(
         uint cdp,
         address dst
-    ) public note isAllowed(cdp) {
+    ) public note cdpAllowed(cdp) {
         require(dst != address(0), "dst-address-0");
         require(dst != owns[cdp], "dst-already-owner");
 
@@ -148,7 +169,7 @@ contract DssCdpManager is DSNote {
         uint cdp,
         int dink,
         int dart
-    ) public note isAllowed(cdp) {
+    ) public note cdpAllowed(cdp) {
         address urn = urns[cdp];
         VatLike(vat).frob(
             ilks[cdp],
@@ -166,7 +187,7 @@ contract DssCdpManager is DSNote {
         address dst,
         int dink,
         int dart
-    ) public note isAllowed(cdp) {
+    ) public note cdpAllowed(cdp) {
         address urn = urns[cdp];
         VatLike(vat).frob(
             ilks[cdp],
@@ -183,7 +204,7 @@ contract DssCdpManager is DSNote {
         uint cdp,
         address dst,
         uint wad
-    ) public note isAllowed(cdp) {
+    ) public note cdpAllowed(cdp) {
         VatLike(vat).flux(ilks[cdp], urns[cdp], dst, wad);
     }
 
@@ -194,7 +215,7 @@ contract DssCdpManager is DSNote {
         uint cdp,
         address dst,
         uint wad
-    ) public note isAllowed(cdp) {
+    ) public note cdpAllowed(cdp) {
         VatLike(vat).flux(ilk, urns[cdp], dst, wad);
     }
 
@@ -203,7 +224,7 @@ contract DssCdpManager is DSNote {
         uint cdp,
         address dst,
         uint rad
-    ) public note isAllowed(cdp) {
+    ) public note cdpAllowed(cdp) {
         VatLike(vat).move(urns[cdp], dst, rad);
     }
 
@@ -211,7 +232,7 @@ contract DssCdpManager is DSNote {
     function quit(
         uint cdp,
         address dst
-    ) public note isAllowed(cdp) {
+    ) public note cdpAllowed(cdp) urnAllowed(dst) {
         address urn = urns[cdp];
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urn);
         VatLike(vat).fork(
