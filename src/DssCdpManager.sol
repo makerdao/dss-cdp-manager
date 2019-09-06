@@ -69,16 +69,16 @@ contract DssCdpManager is DSNote {
     }
 
     function add(uint x, uint y) internal pure returns (uint z) {
-        require((z = x + y) >= x, "add-overflow");
+        require((z = x + y) >= x);
     }
 
     function sub(uint x, uint y) internal pure returns (uint z) {
-        require((z = x - y) <= x, "sub-overflow");
+        require((z = x - y) <= x);
     }
 
     function toInt(uint x) internal pure returns (int y) {
         y = int(x);
-        require(y >= 0, "uint-to-int-overflow");
+        require(y >= 0);
     }
 
     // Allow/disallow a usr address to manage the cdp.
