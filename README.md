@@ -6,7 +6,8 @@
 
 ## Key Functionalities (as defined in the smart contract)
 
-- `allow(uint cdp, address usr. uint ok)`: Allow/Disallow (`ok`) `usr` to manage `cdp`.
+- `cdpAllow(uint cdp, address usr, uint ok)`: Allow/Disallow (`ok`) `usr` to manage `cdp`.
+- `urnAllow(address usr, uint ok)`: Allow/Disallow (`ok`) `usr` to access `msg.sender` space (for sending a position in `quit`).
 - `open(bytes32 ilk, address usr)`: Opens a new CDP for `usr` to be used for an `ilk` collateral type.
 - `give(uint cdp, address dst)`: Transfers `cdp` to `dst`.
 - `frob(uint cdp, int dink, int dart)`: Increments/decrements the `dink` amount of collateral locked and increments/decrements the `dart` amount of debt in the `cdp` depositing the generated DAI or collateral freed in the `cdp` address.
@@ -29,7 +30,8 @@
 - `first` : Mapping `Owner => First CDPId`
 - `last`: Mapping `Owner => Last CDPId`
 - `count`: Mapping `Owner => Amount of CDPs`
-- `allows`: Mapping `Owner => CDPId => Allowed Addr => True/False`
+- `cdpCan`: Mapping `Owner => CDPId => Allowed Addr => True/False`
+- `urnCan`: Mapping `Urn => Allowed Addr => True/False`
 
 # 3. Key Mechanisms & Concepts
 

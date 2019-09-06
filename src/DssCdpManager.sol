@@ -82,16 +82,16 @@ contract DssCdpManager is DSNote {
     }
 
     // Allow/disallow a usr address to manage the cdp.
-    function allow(
+    function cdpAllow(
         uint cdp,
         address usr,
         uint ok
-    ) public {
-        cdpCan[msg.sender][cdp][usr] = ok;
+    ) public cdpAllowed(cdp) {
+        cdpCan[owns[cdp]][cdp][usr] = ok;
     }
 
     // Allow/disallow a usr address to quit to the the sender urn.
-    function allow(
+    function urnAllow(
         address usr,
         uint ok
     ) public {
