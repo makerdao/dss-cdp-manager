@@ -53,14 +53,14 @@ contract DssCdpManager is DSNote {
     modifier cdpAllowed(
         uint cdp
     ) {
-        require(msg.sender == owns[cdp] || cdpCan[owns[cdp]][cdp][msg.sender] == 1, "not-allowed");
+        require(msg.sender == owns[cdp] || cdpCan[owns[cdp]][cdp][msg.sender] == 1, "cdp-not-allowed");
         _;
     }
 
     modifier urnAllowed(
         address urn
     ) {
-        require(msg.sender == urn || urnCan[urn][msg.sender] == 1, "not-allowed");
+        require(msg.sender == urn || urnCan[urn][msg.sender] == 1, "urn-not-allowed");
         _;
     }
 
@@ -237,12 +237,42 @@ contract DssCdpManager is DSNote {
         uint cdp,
         address dst
     ) public note cdpAllowed(cdp) urnAllowed(dst) {
-        address urn = urns[cdp];
-        (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urn);
+        (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urns[cdp]);
         VatLike(vat).fork(
             ilks[cdp],
-            urn,
+            urns[cdp],
             dst,
+            toInt(ink),
+            toInt(art)
+        );
+    }
+
+    // Import a position from org urn to the urn owned by cdp
+    function enter(
+        address org,
+        uint cdp
+    ) public note urnAllowed(org) cdpAllowed(cdp) {
+        (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], org);
+        VatLike(vat).fork(
+            ilks[cdp],
+            org,
+            urns[cdp],
+            toInt(ink),
+            toInt(art)
+        );
+    }
+
+    // Move a position from cdpOrg urn to the cdpDst urn
+    function shift(
+        uint cdpOrg,
+        uint cdpDst
+    ) public note cdpAllowed(cdpOrg) cdpAllowed(cdpDst) {
+        require(ilks[cdpOrg] == ilks[cdpDst], "non-matching-cdps");
+        (uint ink, uint art) = VatLike(vat).urns(ilks[cdpOrg], urns[cdpOrg]);
+        VatLike(vat).fork(
+            ilks[cdpOrg],
+            urns[cdpOrg],
+            urns[cdpDst],
             toInt(ink),
             toInt(art)
         );
