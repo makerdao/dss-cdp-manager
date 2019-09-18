@@ -247,31 +247,31 @@ contract DssCdpManager is DSNote {
         );
     }
 
-    // Import a position from org urn to the urn owned by cdp
+    // Import a position from src urn to the urn owned by cdp
     function enter(
-        address org,
+        address src,
         uint cdp
-    ) public note urnAllowed(org) cdpAllowed(cdp) {
-        (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], org);
+    ) public note urnAllowed(src) cdpAllowed(cdp) {
+        (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], src);
         VatLike(vat).fork(
             ilks[cdp],
-            org,
+            src,
             urns[cdp],
             toInt(ink),
             toInt(art)
         );
     }
 
-    // Move a position from cdpOrg urn to the cdpDst urn
+    // Move a position from cdpSrc urn to the cdpDst urn
     function shift(
-        uint cdpOrg,
+        uint cdpSrc,
         uint cdpDst
-    ) public note cdpAllowed(cdpOrg) cdpAllowed(cdpDst) {
-        require(ilks[cdpOrg] == ilks[cdpDst], "non-matching-cdps");
-        (uint ink, uint art) = VatLike(vat).urns(ilks[cdpOrg], urns[cdpOrg]);
+    ) public note cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
+        require(ilks[cdpSrc] == ilks[cdpDst], "non-matching-cdps");
+        (uint ink, uint art) = VatLike(vat).urns(ilks[cdpSrc], urns[cdpSrc]);
         VatLike(vat).fork(
-            ilks[cdpOrg],
-            urns[cdpOrg],
+            ilks[cdpSrc],
+            urns[cdpSrc],
             urns[cdpDst],
             toInt(ink),
             toInt(art)

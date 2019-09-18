@@ -16,8 +16,8 @@
 - `flux(uint cdp, address dst, uint wad)`: Moves `wad` amount of `cdp` collateral from `cdp` to `dst`.
 - `move(uint cdp, address dst, uint rad)`: Moves `rad` (precision 45) amount of DAI from `cdp` to `dst`.
 - `quit(uint cdp, address dst)`: Moves the collateral locked and debt generated from `cdp` to `dst`.
-- `enter(address org, uint cdp)`: Moves the collateral locked and debt generated from `org` to `cdp`.
-- `shift(uint cdpOrg, uint cdpDst)`: Moves the collateral locked and debt generated from `cdpOrg` to `cdpDst`.
+- `enter(address src, uint cdp)`: Moves the collateral locked and debt generated from `src` to `cdp`.
+- `shift(uint cdpSrc, uint cdpDst)`: Moves the collateral locked and debt generated from `cdpSrc` to `cdpDst`.
 
 **Note:** `dst` refers to the destination address. 
 
