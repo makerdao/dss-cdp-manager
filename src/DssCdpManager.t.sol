@@ -462,7 +462,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(art, 0);
     }
 
-    function testEnterOtherOrg() public {
+    function testEnterOtherSrc() public {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
@@ -491,7 +491,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(art, 0);
     }
 
-    function testFailEnterOtherOrg() public {
+    function testFailEnterOtherSrc() public {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
@@ -503,7 +503,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         manager.enter(address(user), cdp);
     }
 
-    function testFailEnterOtherOrg2() public {
+    function testFailEnterOtherSrc2() public {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
@@ -571,26 +571,26 @@ contract DssCdpManagerTest is DssDeployTestBase {
     function testShift() public {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
-        uint cdpOrg = manager.open("ETH");
-        ethJoin.join(address(manager.urns(cdpOrg)), 1 ether);
-        manager.frob(cdpOrg, 1 ether, 50 ether);
+        uint cdpSrc = manager.open("ETH");
+        ethJoin.join(address(manager.urns(cdpSrc)), 1 ether);
+        manager.frob(cdpSrc, 1 ether, 50 ether);
         uint cdpDst = manager.open("ETH");
 
         (uint ink, uint art) = vat.urns("ETH", manager.urns(cdpDst));
         assertEq(ink, 0);
         assertEq(art, 0);
 
-        (ink, art) = vat.urns("ETH", manager.urns(cdpOrg));
+        (ink, art) = vat.urns("ETH", manager.urns(cdpSrc));
         assertEq(ink, 1 ether);
         assertEq(art, 50 ether);
 
-        manager.shift(cdpOrg, cdpDst);
+        manager.shift(cdpSrc, cdpDst);
 
         (ink, art) = vat.urns("ETH", manager.urns(cdpDst));
         assertEq(ink, 1 ether);
         assertEq(art, 50 ether);
 
-        (ink, art) = vat.urns("ETH", manager.urns(cdpOrg));
+        (ink, art) = vat.urns("ETH", manager.urns(cdpSrc));
         assertEq(ink, 0);
         assertEq(art, 0);
     }
@@ -598,9 +598,9 @@ contract DssCdpManagerTest is DssDeployTestBase {
     function testShiftOtherCdpDst() public {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
-        uint cdpOrg = manager.open("ETH");
-        ethJoin.join(address(manager.urns(cdpOrg)), 1 ether);
-        manager.frob(cdpOrg, 1 ether, 50 ether);
+        uint cdpSrc = manager.open("ETH");
+        ethJoin.join(address(manager.urns(cdpSrc)), 1 ether);
+        manager.frob(cdpSrc, 1 ether, 50 ether);
         uint cdpDst = manager.open("ETH");
         manager.give(cdpDst, address(user));
 
@@ -608,18 +608,18 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(ink, 0);
         assertEq(art, 0);
 
-        (ink, art) = vat.urns("ETH", manager.urns(cdpOrg));
+        (ink, art) = vat.urns("ETH", manager.urns(cdpSrc));
         assertEq(ink, 1 ether);
         assertEq(art, 50 ether);
 
         user.doCdpAllow(manager, cdpDst, address(this), 1);
-        manager.shift(cdpOrg, cdpDst);
+        manager.shift(cdpSrc, cdpDst);
 
         (ink, art) = vat.urns("ETH", manager.urns(cdpDst));
         assertEq(ink, 1 ether);
         assertEq(art, 50 ether);
 
-        (ink, art) = vat.urns("ETH", manager.urns(cdpOrg));
+        (ink, art) = vat.urns("ETH", manager.urns(cdpSrc));
         assertEq(ink, 0);
         assertEq(art, 0);
     }
@@ -627,53 +627,53 @@ contract DssCdpManagerTest is DssDeployTestBase {
     function testFailShiftOtherCdpDst() public {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
-        uint cdpOrg = manager.open("ETH");
-        ethJoin.join(address(manager.urns(cdpOrg)), 1 ether);
-        manager.frob(cdpOrg, 1 ether, 50 ether);
+        uint cdpSrc = manager.open("ETH");
+        ethJoin.join(address(manager.urns(cdpSrc)), 1 ether);
+        manager.frob(cdpSrc, 1 ether, 50 ether);
         uint cdpDst = manager.open("ETH");
         manager.give(cdpDst, address(user));
 
-        manager.shift(cdpOrg, cdpDst);
+        manager.shift(cdpSrc, cdpDst);
     }
 
-    function testShiftOtherCdpOrg() public {
+    function testShiftOtherCdpSrc() public {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
-        uint cdpOrg = manager.open("ETH");
-        ethJoin.join(address(manager.urns(cdpOrg)), 1 ether);
-        manager.frob(cdpOrg, 1 ether, 50 ether);
+        uint cdpSrc = manager.open("ETH");
+        ethJoin.join(address(manager.urns(cdpSrc)), 1 ether);
+        manager.frob(cdpSrc, 1 ether, 50 ether);
         uint cdpDst = manager.open("ETH");
-        manager.give(cdpOrg, address(user));
+        manager.give(cdpSrc, address(user));
 
         (uint ink, uint art) = vat.urns("ETH", manager.urns(cdpDst));
         assertEq(ink, 0);
         assertEq(art, 0);
 
-        (ink, art) = vat.urns("ETH", manager.urns(cdpOrg));
+        (ink, art) = vat.urns("ETH", manager.urns(cdpSrc));
         assertEq(ink, 1 ether);
         assertEq(art, 50 ether);
 
-        user.doCdpAllow(manager, cdpOrg, address(this), 1);
-        manager.shift(cdpOrg, cdpDst);
+        user.doCdpAllow(manager, cdpSrc, address(this), 1);
+        manager.shift(cdpSrc, cdpDst);
 
         (ink, art) = vat.urns("ETH", manager.urns(cdpDst));
         assertEq(ink, 1 ether);
         assertEq(art, 50 ether);
 
-        (ink, art) = vat.urns("ETH", manager.urns(cdpOrg));
+        (ink, art) = vat.urns("ETH", manager.urns(cdpSrc));
         assertEq(ink, 0);
         assertEq(art, 0);
     }
 
-    function testFailShiftOtherCdpOrg() public {
+    function testFailShiftOtherCdpSrc() public {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
-        uint cdpOrg = manager.open("ETH");
-        ethJoin.join(address(manager.urns(cdpOrg)), 1 ether);
-        manager.frob(cdpOrg, 1 ether, 50 ether);
+        uint cdpSrc = manager.open("ETH");
+        ethJoin.join(address(manager.urns(cdpSrc)), 1 ether);
+        manager.frob(cdpSrc, 1 ether, 50 ether);
         uint cdpDst = manager.open("ETH");
-        manager.give(cdpOrg, address(user));
+        manager.give(cdpSrc, address(user));
 
-        manager.shift(cdpOrg, cdpDst);
+        manager.shift(cdpSrc, cdpDst);
     }
 }
