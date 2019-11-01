@@ -1,6 +1,6 @@
 pragma solidity 0.5.11;
 
-import "dss/lib.sol";
+import { LibNote } from "dss/lib.sol";
 
 contract VatLike {
     function urns(bytes32, address) public view returns (uint, uint);
@@ -17,7 +17,7 @@ contract UrnHandler {
     }
 }
 
-contract DssCdpManager is DSNote {
+contract DssCdpManager is LibNote {
     address                   public vat;
     uint                      public cdpi;      // Auto incremental
     mapping (uint => address) public urns;      // CDPId => UrnHandler
