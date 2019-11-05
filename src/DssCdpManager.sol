@@ -98,11 +98,6 @@ contract DssCdpManager is LibNote {
         urnCan[msg.sender][usr] = ok;
     }
 
-    // Open a new cdp for the caller.
-    function open(bytes32 ilk) public returns (uint cdp) {
-        cdp = open(ilk, msg.sender);
-    }
-
     // Open a new cdp for a given usr address.
     function open(
         bytes32 ilk,
