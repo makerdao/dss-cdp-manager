@@ -11,7 +11,6 @@
 - `open(bytes32 ilk, address usr)`: Opens a new CDP for `usr` to be used for an `ilk` collateral type.
 - `give(uint cdp, address dst)`: Transfers `cdp` to `dst`.
 - `frob(uint cdp, int dink, int dart)`: Increments/decrements the `dink` amount of collateral locked and increments/decrements the `dart` amount of debt in the `cdp` depositing the generated DAI or collateral freed in the `cdp` address.
-- `frob(uint cdp, address dst, int dink, int dart)`: Increments/decrements the `dink` amount of collateral locked and increments/decrements the `dart` amount of debt in the `cdp` depositing the generated DAI or collateral freed into a **specified** `dst` address.
 - `flux(bytes32 ilk, uint cdp, address dst, uint wad)`: Moves `wad` (precision 18) amount of collateral `ilk` from `cdp` to `dst`.
 - `flux(uint cdp, address dst, uint wad)`: Moves `wad` amount of `cdp` collateral from `cdp` to `dst`.
 - `move(uint cdp, address dst, uint rad)`: Moves `rad` (precision 45) amount of DAI from `cdp` to `dst`.
@@ -52,18 +51,17 @@ The CDP manager was created as a way to enable CDPs to be treated more like asse
 
 - A User executes `open` and gets a `CDPId` in return.
 - After this, the `CDPId` gets associated with an `urn` with `manager.urns(cdpId)` and then `join`'s collateral to it.
-- The user can then execute `frob` to choose which `dst` address they want to use to send the generated DAI to.
-- If the user executes `frob` without `dst` then the generated DAI will remain in the CDP's `urn`. In this case, the user can `move` it at a later point in time.
-    - Note that this is the same process for collateral that is freed after `frob` (for the `frob` function that doesn't require the `dst` address). The user can `flux` it to another address at a later time.
+- After the user executes `frob`, the generated DAI will remain in the CDP's `urn`. Then the user can `move` it at a later point in time.
+    - Note that this is the same process for collateral that is freed after `frob`. The user can `flux` it to another address at a later time.
 - In the case where a user wants to abandon the `manager`, they can use `quit` as a way to migrate their position of their CDP to another `dst` address.
 
 # 4. Gotchas (Potential source of user error)
 
 - For the developers who want to integrate with the `manager`, they will need to understand that the CDP actions are still in the `urn` environment. Regardless of this, the `manager` tries to abstract the `urn` usage by a `CDPId`. This means that developers will need to get the `urn` (`urn = manager.urns(cdpId)`) to allow the `join`ing of collateral to that CDP.
 - As the `manager` assigns a specific `ilk` per `CDPId` and doesn't allow others to use it for theirs, there is a second `flux` function which expects an `ilk` parameter. This function has the simple purpose of taking out collateral that was wrongly sent to a CDP that can't handle it/is incompatible.
-- **Frob Function(s):**
-    - When you `frob` in the CDP manager, you generate new DAI in the `vat` via the CDP manager which is then deposited in the `urn` that the CDP manager manages. This process depends on which `frob` function you use (there exist **two** `frob` functions). In short, one allows a destiny (destination) address and the other doesn’t require it.
-    - If you use the `frob` function that has the destiny (`dst`) address, you are saying that you can send any Dai generated or collateral that has been freed. The second `frob` function is meant for leaving the collateral in the `urn` address because the `urn` is owned by the CDP manager. In this case, you would need to manually use the `flux` or `move` functions to get the DAI or collateral out. These functions (`flux` and `move`) may be more beneficial for a developer working with the proxy function, as it allows for more flexibility. For example, by using these functions you can move a specific amount of collateral and can use the other functions to do it. Overall, it can make working with it a little more flexible on specific developer needs.
+- **Frob Function:**
+    - When you `frob` in the CDP manager, you generate new DAI in the `vat` via the CDP manager which is then deposited in the `urn` that the CDP manager manages.
+    - You would need to manually use the `flux` or `move` functions to get the DAI or collateral out.
 
 # 5. Failure Modes (Bounds on Operating Conditions & External Risk Factors)
 

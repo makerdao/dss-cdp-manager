@@ -185,24 +185,6 @@ contract DssCdpManager is LibNote {
         );
     }
 
-    // Frob the cdp sending the generated DAI or collateral freed to a dst address.
-    function frob(
-        uint cdp,
-        address dst,
-        int dink,
-        int dart
-    ) public note cdpAllowed(cdp) {
-        address urn = urns[cdp];
-        VatLike(vat).frob(
-            ilks[cdp],
-            urn,
-            dink >= 0 ? urn : dst,
-            dart <= 0 ? urn : dst,
-            dink,
-            dart
-        );
-    }
-
     // Transfer wad amount of cdp collateral from the cdp address to a dst address.
     function flux(
         uint cdp,

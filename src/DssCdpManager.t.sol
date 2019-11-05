@@ -296,29 +296,6 @@ contract DssCdpManagerTest is DssDeployTestBase {
         assertEq(dai.balanceOf(address(this)), 50 ether);
     }
 
-    function testFrobDaiOtherDst() public {
-        uint cdp = manager.open("ETH");
-        weth.deposit.value(1 ether)();
-        weth.approve(address(ethJoin), 1 ether);
-        ethJoin.join(manager.urns(cdp), 1 ether);
-        manager.frob(cdp, address(this), 1 ether, 50 ether);
-        assertEq(vat.dai(manager.urns(cdp)), 0);
-        assertEq(vat.dai(address(this)), 50 ether * ONE);
-    }
-
-    function testFrobGemOtherDst() public {
-        uint cdp = manager.open("ETH");
-        weth.deposit.value(1 ether)();
-        weth.approve(address(ethJoin), 1 ether);
-        ethJoin.join(manager.urns(cdp), 1 ether);
-        manager.frob(cdp, 1 ether, 50 ether);
-        assertEq(vat.gem("ETH", manager.urns(cdp)), 0);
-        assertEq(vat.gem("ETH", address(this)), 0);
-        manager.frob(cdp, address(this), -int(1 ether), -int(50 ether));
-        assertEq(vat.gem("ETH", manager.urns(cdp)), 0);
-        assertEq(vat.gem("ETH", address(this)), 1 ether);
-    }
-
     function testFrobAllowed() public {
         uint cdp = manager.open("ETH");
         weth.deposit.value(1 ether)();
