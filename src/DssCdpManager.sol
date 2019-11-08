@@ -48,7 +48,7 @@ contract DssCdpManager is LibNote {
         uint next;
     }
 
-    event NewCdp(address indexed usr, address indexed own, uint cdp);
+    event NewCdp(address indexed usr, address indexed own, uint indexed cdp);
 
     modifier cdpAllowed(
         uint cdp
