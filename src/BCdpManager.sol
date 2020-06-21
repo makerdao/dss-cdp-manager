@@ -129,5 +129,6 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
 
     function quitB(uint cdp) note external cdpAllowed(cdp) {
         quitBScore(cdp);
+        quitBLiquidation(cdp);
     }
 }

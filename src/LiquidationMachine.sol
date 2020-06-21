@@ -47,6 +47,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
     }
 
     function quitBLiquidation(uint cdp) internal {
+        untop(cdp);
         out[cdp] = true;
     }
 
