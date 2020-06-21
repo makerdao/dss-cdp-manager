@@ -89,7 +89,7 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
 
         untop(cdp);
         (uint ink,) = vat.urns(ilk, urn);
-        updateScore(cdp,-int(ink),now);
+        updateScore(cdp,-toInt(ink),now);
 
         super.quit(cdp,dst);
     }
@@ -102,7 +102,7 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
         bytes32 ilk = ilks[cdp];
 
         (uint ink,) = vat.urns(ilk, src);
-        updateScore(cdp,int(ink),now);
+        updateScore(cdp,toInt(ink),now);
 
         super.enter(src,cdp);
     }
@@ -121,8 +121,8 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
 
         (uint inkSrc,) = vat.urns(ilkSrc, src);
 
-        updateScore(cdpSrc,-int(inkSrc),now);
-        updateScore(cdpDst, int(inkSrc),now);
+        updateScore(cdpSrc,-toInt(inkSrc),now);
+        updateScore(cdpDst, toInt(inkSrc),now);
 
         super.shift(cdpSrc,cdpDst);
     }
