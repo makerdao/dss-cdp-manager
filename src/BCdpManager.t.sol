@@ -217,17 +217,17 @@ contract BCdpManagerTest is DssDeployTestBase {
 
         liquidator.doTopup(pool,cdp);
 
-        assertEq(manager.topupInArt(cdp),uint(dart));
+        assertEq(manager.cushion(cdp),uint(dart));
 
         manager.frob(cdp, 0, 1 ether);
 
-        assertEq(manager.topupInArt(cdp),0);
+        assertEq(manager.cushion(cdp),0);
 
         manager.frob(cdp, 0, -1 ether);
 
         liquidator.doTopup(pool,cdp);
 
-        assertEq(manager.topupInArt(cdp),uint(dart));
+        assertEq(manager.cushion(cdp),uint(dart));
 
 
         // change actual price to enable liquidation
@@ -249,7 +249,7 @@ contract BCdpManagerTest is DssDeployTestBase {
         assertTrue(vat.gem("ETH",address(liquidator)) > 77e16);
         assertTrue(vat.gem("ETH",address(jar)) > 77e14);
     }
-/*
+
     function testOpenCDP() public {
         uint cdp = manager.open("ETH", address(this));
         assertEq(cdp, 1);
@@ -831,6 +831,4 @@ contract BCdpManagerTest is DssDeployTestBase {
 
         manager.shift(cdpSrc, cdpDst);
     }
-
-    */
 }

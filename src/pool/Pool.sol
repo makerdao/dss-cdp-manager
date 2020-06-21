@@ -194,7 +194,7 @@ contract Pool is Math, DSAuth {
 
 
     function topup(uint cdp) external onlyMember {
-        require(man.topupInArt(cdp) == 0, "topup: already-topped");
+        require(man.cushion(cdp) == 0, "topup: already-topped");
         require(! man.bitten(cdp), "topup: already-bitten");
 
         (int dart, int dtab, uint art) = topAmount(cdp);

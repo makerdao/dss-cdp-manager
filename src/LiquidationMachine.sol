@@ -27,7 +27,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
     PriceFeedLike             public real;
 
     mapping(uint => uint)     public tic;  // time of bite
-    mapping(uint => uint)     public topupInArt; // how much was topped
+    mapping(uint => uint)     public cushion; // how much was topped in art units
 
     uint constant             public GRACE = 1 hours;
 
@@ -62,7 +62,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
         vat.move(address(pool),address(this),dtab);
         vat.frob(ilk,urn,urn,address(this),0,-int(dtopup));
 
-        topupInArt[cdp] = add(topupInArt[cdp], dtopup);
+        cushion[cdp] = add(cushion[cdp], dtopup);
     }
 
     function bitten(uint cdp) public view returns(bool) {
@@ -70,7 +70,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
     }
 
     function untop(uint cdp) internal {
-        uint top = topupInArt[cdp];
+        uint top = cushion[cdp];
         if(top == 0) return; // nothing to do
 
         require(! bitten(cdp), "untop: cdp was already bitten");
@@ -81,7 +81,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
         (,uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, top); // TODO - check resolution
 
-        topupInArt[cdp] = 0;
+        cushion[cdp] = 0;
 
         // move topping to self
         vat.frob(ilk, urn, urn, urn, 0, toInt(top));
@@ -109,7 +109,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
         bytes32 ilk = man.ilks(cdp);
 
         (uint ink, uint art) = vat.urns(ilk,urn);
-        art = add(art, topupInArt[cdp]);
+        art = add(art, cushion[cdp]);
         (,uint rate,uint spotValue,,) = vat.ilks(ilk);
 
         require(dart <= art, "debt is too low");
@@ -117,7 +117,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
         // verify cdp is unsafe now
         if(! bitten(cdp)) {
             require(mul(art,rate) > mul(ink,spotValue), "bite: cdp is safe");
-            require(topupInArt[cdp] > 0, "bite: not-topped");
+            require(cushion[cdp] > 0, "bite: not-topped");
             tic[cdp] = now;
         }
 
@@ -127,12 +127,12 @@ contract LiquidationMachine is LibNote, ScoringMachine {
 
         dink = rmul(tab, 1e18) / uint(realtimePrice); // TODO probably need to adjust from rad to wad
 
-        if(dart >= topupInArt[cdp]) {
-            dart = sub(dart, topupInArt[cdp]);
-            topupInArt[cdp] = 0;
+        if(dart >= cushion[cdp]) {
+            dart = sub(dart, cushion[cdp]);
+            cushion[cdp] = 0;
         }
         else {
-            topupInArt[cdp] = sub(topupInArt[cdp],dart);
+            cushion[cdp] = sub(cushion[cdp],dart);
             dart = 0;
         }
 
