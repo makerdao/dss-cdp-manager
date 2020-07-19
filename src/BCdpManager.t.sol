@@ -614,6 +614,18 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testQuitOtherDst() public {
+        testQuitOtherDst(false,false);
+    }
+
+    function testQuitOtherDstWithTopup() public {
+        testQuitOtherDst(true,false);
+    }
+
+    function testFailQuitOtherDstWithBite() public {
+        testQuitOtherDst(false,true);
+    }
+
+    function testQuitOtherDst(bool withTopup, bool withBite) internal {
         uint cdp = manager.open("ETH", address(this));
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
@@ -629,7 +641,10 @@ contract BCdpManagerTest is DssDeployTestBase {
 
         user.doHope(vat, address(manager));
         user.doUrnAllow(manager, address(this), 1);
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
         manager.quit(cdp, address(user));
+        assertEq(LiquidationMachine(manager).cushion(cdp), 0);
         (ink, art) = vat.urns("ETH", manager.urns(cdp));
         assertEq(ink, 0);
         assertEq(art, 0);
@@ -657,6 +672,18 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testEnter() public {
+        testEnter(false,false);
+    }
+
+    function testEnterWithtopup() public {
+        testEnter(true,false);
+    }
+
+    function testFailedEnterWithBite() public {
+        testEnter(false,true);
+    }
+
+    function testEnter(bool withTopup, bool withBite) internal {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
@@ -672,11 +699,19 @@ contract BCdpManagerTest is DssDeployTestBase {
         assertEq(art, 50 ether);
 
         vat.hope(address(manager));
+
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
+
+        (uint inkPre, uint artPre) = vat.urns("ETH", manager.urns(cdp));
+        artPre += LiquidationMachine(manager).cushion(cdp);
+
         manager.enter(address(this), cdp);
+        assertEq(LiquidationMachine(manager).cushion(cdp), 0);
 
         (ink, art) = vat.urns("ETH", manager.urns(cdp));
-        assertEq(ink, 1 ether);
-        assertEq(art, 50 ether);
+        assertEq(ink, 1 ether + inkPre);
+        assertEq(art, 50 ether + artPre);
 
         (ink, art) = vat.urns("ETH", address(this));
         assertEq(ink, 0);
@@ -684,6 +719,18 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testEnterOtherSrc() public {
+        testEnter(false,false);
+    }
+
+    function testEnterOtherSrcWithtopup() public {
+        testEnter(true,false);
+    }
+
+    function testFailedEnterOtherSrcWithBite() public {
+        testEnter(false,true);
+    }
+
+    function testEnterOtherSrc(bool withTopup, bool withBite) internal {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
@@ -701,11 +748,20 @@ contract BCdpManagerTest is DssDeployTestBase {
 
         user.doHope(vat, address(manager));
         user.doUrnAllow(manager, address(this), 1);
+
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
+
+        (uint inkPre, uint artPre) = vat.urns("ETH", manager.urns(cdp));
+        artPre += LiquidationMachine(manager).cushion(cdp);
+
         manager.enter(address(user), cdp);
 
+        assertEq(LiquidationMachine(manager).cushion(cdp), 0);
+
         (ink, art) = vat.urns("ETH", manager.urns(cdp));
-        assertEq(ink, 1 ether);
-        assertEq(art, 50 ether);
+        assertEq(ink, 1 ether + inkPre);
+        assertEq(art, 50 ether + artPre);
 
         (ink, art) = vat.urns("ETH", address(user));
         assertEq(ink, 0);
@@ -737,6 +793,18 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testEnterOtherCdp() public {
+        testEnterOtherCdp(false,false);
+    }
+
+    function testEnterOtherCdpWithTopup() public {
+        testEnterOtherCdp(true,false);
+    }
+
+    function testFailedEnterOtherCdpWithBite() public {
+        testEnterOtherCdp(false,true);
+    }
+
+    function testEnterOtherCdp(bool withTopup, bool withBite) internal {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
@@ -754,11 +822,19 @@ contract BCdpManagerTest is DssDeployTestBase {
 
         vat.hope(address(manager));
         user.doCdpAllow(manager, cdp, address(this), 1);
+
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
+        (uint inkPre, uint artPre) = vat.urns("ETH", manager.urns(cdp));
+        artPre += LiquidationMachine(manager).cushion(cdp);
+
         manager.enter(address(this), cdp);
 
+        assertEq(LiquidationMachine(manager).cushion(cdp), 0);
+
         (ink, art) = vat.urns("ETH", manager.urns(cdp));
-        assertEq(ink, 1 ether);
-        assertEq(art, 50 ether);
+        assertEq(ink, 1 ether + inkPre);
+        assertEq(art, 50 ether + artPre);
 
         (ink, art) = vat.urns("ETH", address(this));
         assertEq(ink, 0);
@@ -790,6 +866,34 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testShift() public {
+        testShift(false,false,false,false);
+    }
+
+    function testShiftSrcTopup() public {
+        testShift(true,false,false,false);
+    }
+
+    function testShiftDstTopup() public {
+        testShift(false,true,false,false);
+    }
+
+    function testShiftSrcDstTopup() public {
+        testShift(true,true,false,false);
+    }
+
+    function testFailedShiftSrcBite() public {
+        testShift(false,false,true,false);
+    }
+
+    function testFailedShiftDstBite() public {
+        testShift(false,false,false,true);
+    }
+
+    function testFailedShiftSrcDstBite() public {
+        testShift(false,false,true,true);
+    }
+
+    function testShift(bool srcTopup, bool dstTopup, bool srcBite, bool dstBite) internal {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.open("ETH", address(this));
@@ -805,11 +909,22 @@ contract BCdpManagerTest is DssDeployTestBase {
         assertEq(ink, 1 ether);
         assertEq(art, 50 ether);
 
+        if(srcTopup) reachTopup(cdpSrc);
+        if(dstTopup) reachTopup(cdpDst);
+        if(srcBite) reachBite(cdpSrc);
+        if(dstBite) reachBite(cdpDst);
+
+        (uint inkPre, uint artPre) = vat.urns("ETH", manager.urns(cdpDst));
+        artPre += LiquidationMachine(manager).cushion(cdpDst);
+
         manager.shift(cdpSrc, cdpDst);
 
+        assertEq(LiquidationMachine(manager).cushion(cdpSrc), 0);
+        assertEq(LiquidationMachine(manager).cushion(cdpDst), 0);
+
         (ink, art) = vat.urns("ETH", manager.urns(cdpDst));
-        assertEq(ink, 1 ether);
-        assertEq(art, 50 ether);
+        assertEq(ink, 1 ether + inkPre);
+        assertEq(art, 50 ether + artPre);
 
         (ink, art) = vat.urns("ETH", manager.urns(cdpSrc));
         assertEq(ink, 0);
