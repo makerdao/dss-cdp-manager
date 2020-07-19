@@ -71,10 +71,10 @@ contract LiquidationMachine is LibNote, ScoringMachine {
     }
 
     function untop(uint cdp) internal {
+        require(! bitten(cdp), "untop: cdp was already bitten");
+
         uint top = cushion[cdp];
         if(top == 0) return; // nothing to do
-
-        require(! bitten(cdp), "untop: cdp was already bitten");
 
         bytes32 ilk = man.ilks(cdp);
         address urn = man.urns(cdp);
@@ -84,7 +84,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
 
         cushion[cdp] = 0;
 
-        // move topping to self
+        // move topping to pool
         vat.frob(ilk, urn, urn, urn, 0, toInt(top));
         vat.move(urn,address(pool),dtab);
     }

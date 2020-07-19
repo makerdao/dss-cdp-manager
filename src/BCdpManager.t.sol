@@ -3,6 +3,7 @@ pragma solidity ^0.5.12;
 import { DssDeployTestBase, Vat } from "dss-deploy/DssDeploy.t.base.sol";
 import "./GetCdps.sol";
 import {BCdpManager} from "./BCdpManager.sol";
+import {LiquidationMachine} from "./LiquidationMachine.sol";
 import {Pool} from "./pool/Pool.sol";
 
 
@@ -187,6 +188,55 @@ contract BCdpManagerTest is DssDeployTestBase {
         getCdps = new GetCdps();
 
         liquidator.doHope(vat, address(pool));
+    }
+
+    function reachTopup(uint cdp) internal {
+        address urn = manager.urns(cdp);
+        (uint ink, uint artPre) = vat.urns("ETH", urn);
+
+        if(ink == 0 && artPre == 0) {
+            weth.deposit.value(1 ether)();
+            weth.approve(address(ethJoin), 1 ether);
+            ethJoin.join(manager.urns(cdp), 1 ether);
+            manager.frob(cdp, 1 ether, 50 ether);
+        }
+
+        uint liquidatorCdp = manager.open("ETH", address(this));
+        weth.deposit.value(1 ether)();
+        weth.approve(address(ethJoin), 1 ether);
+        ethJoin.join(manager.urns(liquidatorCdp), 1 ether);
+        manager.frob(liquidatorCdp, 1 ether, 50 ether);
+        manager.move(liquidatorCdp, address(this), 50 ether * ONE);
+        vat.move(address(this), address(liquidator), 50 ether * ONE);
+
+        liquidator.doDeposit(pool, 50 ether * ONE);
+
+        osm.setPrice(70 * 1e18); // 1 ETH = 50 DAI
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        assertEq(uint(dtab) / ONE, 3333333333333333334 /* 3.333 DAI */);
+        assertEq(uint(dart), 3333333333333333334 /* 3.333 DAI */);
+
+        liquidator.doTopup(pool,cdp);
+
+        assertEq(manager.cushion(cdp),uint(dart));
+    }
+
+    function reachBite(uint cdp) internal {
+        reachTopup(cdp);
+
+        // change actual price to enable liquidation
+        pipETH.poke(bytes32(uint(70 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",70 * 1e18);
+        this.file(address(cat), "ETH", "chop", ONE + ONE/10);
+
+        // bite
+        address urn = manager.urns(cdp);
+        (, uint art) = vat.urns("ETH", urn);
+        liquidator.doBite(pool,cdp,art/2,0);
+
+        assert(LiquidationMachine(manager).bitten(cdp));
+
     }
 
     function testFrobAndTopup() public {
@@ -524,6 +574,19 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testQuit() public {
+        testQuit(false,false);
+    }
+
+    function testQuitWithTopup() public {
+        testQuit(true,false);
+    }
+
+    function testFailQuitWithBite() public {
+        testQuit(false,true);
+    }
+
+
+    function testQuit(bool withTopup, bool withBite) internal {
         uint cdp = manager.open("ETH", address(this));
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
@@ -538,7 +601,10 @@ contract BCdpManagerTest is DssDeployTestBase {
         assertEq(art, 0);
 
         vat.hope(address(manager));
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
         manager.quit(cdp, address(this));
+        assertEq(LiquidationMachine(manager).cushion(cdp), 0);
         (ink, art) = vat.urns("ETH", manager.urns(cdp));
         assertEq(ink, 0);
         assertEq(art, 0);

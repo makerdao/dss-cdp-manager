@@ -101,6 +101,7 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
     ) public note urnAllowed(src) cdpAllowed(cdp) {
         bytes32 ilk = ilks[cdp];
 
+        untop(cdp);
         (uint ink,) = vat.urns(ilk, src);
         updateScore(cdp,toInt(ink),now);
 
