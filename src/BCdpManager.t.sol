@@ -119,41 +119,8 @@ contract FakeOSM {
     }
 }
 
-contract PoolSetup {
-    address constant VAT = 0xbA987bDB501d131f766fEe8180Da5d81b34b69d9;
-    address constant JAR = 0x712b62b5284904C42909C86b84971f4B0Cbc741A;
-    address constant SPOT = 0x3a042de6413eDB15F2784f2f97cC68C7E9750b2D;
-    /*
-    constructor() public {
-        Pool pool = new Pool(VAT, JAR, SPOT);
-    }*/
-}
 
-contract BSetup is PoolSetup {
-    address constant CAT  = 0x0511674A67192FE51e86fE55Ed660eB4f995BDd6;
-
-    event Addresses(BCdpManager B, Pool pool, FakeOSM osm, FakePriceFeed realPrice);
-
-    constructor() public {
-        Pool pool = new Pool(VAT, JAR, SPOT);
-
-        FakePriceFeed realPrice = new FakePriceFeed();
-        FakeOSM osm = new FakeOSM();
-
-        BCdpManager B = new BCdpManager(VAT, CAT, address(pool), address(realPrice));
-
-        pool.setOsm("ETH-A",address(osm));
-        pool.setCdpManager(B);
-
-        address[] memory members = new address[](1);
-        members[0] = address(msg.sender);
-        pool.setMembers(members);
-
-        emit Addresses(B,pool,osm,realPrice);
-    }
-}
-
-contract BCdpManagerTest is DssDeployTestBase {
+contract BCdpManagerTestBase is DssDeployTestBase {
     BCdpManager manager;
     GetCdps getCdps;
     FakeUser user;
@@ -241,7 +208,9 @@ contract BCdpManagerTest is DssDeployTestBase {
 
         assert(LiquidationMachine(manager).bitten(cdp));
     }
+}
 
+contract BCdpManagerTest is BCdpManagerTestBase {
     function testFrobAndTopup() public {
         uint cdp = manager.open("ETH", address(this));
         weth.deposit.value(1 ether)();
