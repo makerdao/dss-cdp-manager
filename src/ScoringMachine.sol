@@ -45,10 +45,10 @@ contract ScoringMachine is DSAuth, Math {
     mapping(uint => Round) roundData;
 
     function spin(uint start, uint end) external auth { // start a new round
+        round++;
+
         roundData[round].start = start;
         roundData[round].end = end;
-
-        round++;
     }
 
     function infoScore(Info storage info, uint start, uint time) internal view returns(uint) {
