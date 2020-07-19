@@ -85,4 +85,25 @@ contract ScordingMachineTest is BCdpManagerTestBase {
         assertEq(newScore2, 27 * 2 ether - 7 * 1 ether);
         assertEq(newTotalScore2, expectedTotalScore);
     }
+
+    function testEnd() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin(currTime,currTime + 3 weeks);
+
+        uint cdp1 = openCdp(1 ether);
+        forwardTime(10);
+
+        (uint score1, uint totalScore1) = score.getScore(cdp1, score.round(), currTime);
+        assertEq(score1, 10 * 1 ether);
+
+        forwardTime(10 weeks);
+        assertEq(time + 10 weeks + 10, currTime);
+
+        (uint score2, uint totalScore2) = score.getScore(cdp1, score.round(), currTime);
+        assertEq(score2, 3 weeks * 1 ether);
+        assertEq(score2, totalScore2);        
+    }
 }
