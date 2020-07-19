@@ -194,7 +194,7 @@ contract BCdpManagerTest is DssDeployTestBase {
         address urn = manager.urns(cdp);
         (uint ink, uint artPre) = vat.urns("ETH", urn);
 
-        if(ink == 0 && artPre == 0) {
+        if(artPre == 0) {
             weth.deposit.value(1 ether)();
             weth.approve(address(ethJoin), 1 ether);
             ethJoin.join(manager.urns(cdp), 1 ether);
@@ -221,7 +221,7 @@ contract BCdpManagerTest is DssDeployTestBase {
         assertEq(manager.cushion(cdp),uint(dart));
     }
 
-    function reachBite(uint cdp) internal {
+    function reachBitePrice(uint cdp) internal {
         reachTopup(cdp);
 
         // change actual price to enable liquidation
@@ -229,6 +229,10 @@ contract BCdpManagerTest is DssDeployTestBase {
         spotter.poke("ETH");
         realPrice.set("ETH",70 * 1e18);
         this.file(address(cat), "ETH", "chop", ONE + ONE/10);
+    }
+
+    function reachBite(uint cdp) internal {
+        reachBitePrice(cdp);
 
         // bite
         address urn = manager.urns(cdp);
@@ -236,7 +240,6 @@ contract BCdpManagerTest is DssDeployTestBase {
         liquidator.doBite(pool,cdp,art/2,0);
 
         assert(LiquidationMachine(manager).bitten(cdp));
-
     }
 
     function testFrobAndTopup() public {
@@ -317,9 +320,25 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testGiveCDP() public {
+        testGiveCDP(false,false);
+    }
+
+    function testGiveCDPWithTopup() public {
+        testGiveCDP(true,false);
+    }
+
+    function testGiveCDPWithBite() public {
+        testGiveCDP(false,true);
+    }
+
+    function testGiveCDP(bool withTopup, bool withBite) internal {
         uint cdp = manager.open("ETH", address(this));
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
+        uint cushion = LiquidationMachine(manager).cushion(cdp);
         manager.give(cdp, address(123));
         assertEq(manager.owns(cdp), address(123));
+        assertEq(cushion, LiquidationMachine(manager).cushion(cdp));
     }
 
     function testAllowAllowed() public {
@@ -508,15 +527,39 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testFrob() public {
+        testFrob(false,false);
+    }
+
+    function testFrobWithTopup() public {
+        testFrob(true,false);
+    }
+
+    function testFailedFrobWithBite() public {
+        testFrob(false,true);
+    }
+
+    function testFrob(bool withTopup, bool withBite) internal {
         uint cdp = manager.open("ETH", address(this));
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
+
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
+
+        (uint inkPre, uint artPre) = vat.urns("ETH", manager.urns(cdp));
+        artPre += LiquidationMachine(manager).cushion(cdp);
+
+        if(! withTopup && ! withBite) assertEq(artPre,0);
+
         manager.frob(cdp, 1 ether, 50 ether);
-        assertEq(vat.dai(manager.urns(cdp)), 50 ether * ONE);
+
+        assertEq(LiquidationMachine(manager).cushion(cdp), 0);
+
+        assertEq(vat.dai(manager.urns(cdp)), (50 ether + artPre)* ONE);
         assertEq(vat.dai(address(this)), 0);
         manager.move(cdp, address(this), 50 ether * ONE);
-        assertEq(vat.dai(manager.urns(cdp)), 0);
+        assertEq(vat.dai(manager.urns(cdp)), artPre * ONE);
         assertEq(vat.dai(address(this)), 50 ether * ONE);
         assertEq(dai.balanceOf(address(this)), 0);
         vat.hope(address(daiJoin));
@@ -543,6 +586,18 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testFrobGetCollateralBack() public {
+        testFrobGetCollateralBack(false,false);
+    }
+
+    function testFrobGetCollateralBackWithTopup() public {
+        testFrobGetCollateralBack(true,false);
+    }
+
+    function testFrobGetCollateralBackWithBite() public {
+        testFrobGetCollateralBack(false,true);
+    }
+
+    function testFrobGetCollateralBack(bool withTopup, bool withBite) internal {
         uint cdp = manager.open("ETH", address(this));
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
@@ -552,7 +607,11 @@ contract BCdpManagerTest is DssDeployTestBase {
         assertEq(vat.dai(address(this)), 0);
         assertEq(vat.gem("ETH", manager.urns(cdp)), 1 ether);
         assertEq(vat.gem("ETH", address(this)), 0);
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
+        uint cushion = LiquidationMachine(manager).cushion(cdp);
         manager.flux(cdp, address(this), 1 ether);
+        assertEq(cushion,LiquidationMachine(manager).cushion(cdp));
         assertEq(vat.gem("ETH", manager.urns(cdp)), 0);
         assertEq(vat.gem("ETH", address(this)), 1 ether);
         uint prevBalance = address(this).balance;
@@ -562,31 +621,80 @@ contract BCdpManagerTest is DssDeployTestBase {
     }
 
     function testGetWrongCollateralBack() public {
+        testGetWrongCollateralBack(false,false);
+    }
+
+    function testGetWrongCollateralBackWithTopup() public {
+        testGetWrongCollateralBack(true,false);
+    }
+
+    function testGetWrongCollateralBackWithBite() public {
+        testGetWrongCollateralBack(false,true);
+    }
+
+    function testGetWrongCollateralBack(bool withTopup, bool withBite) internal {
         uint cdp = manager.open("ETH", address(this));
         col.mint(1 ether);
         col.approve(address(colJoin), 1 ether);
         colJoin.join(manager.urns(cdp), 1 ether);
         assertEq(vat.gem("COL", manager.urns(cdp)), 1 ether);
         assertEq(vat.gem("COL", address(this)), 0);
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
+        uint cushion = LiquidationMachine(manager).cushion(cdp);
         manager.flux("COL", cdp, address(this), 1 ether);
+        assertEq(cushion,LiquidationMachine(manager).cushion(cdp));
         assertEq(vat.gem("COL", manager.urns(cdp)), 0);
         assertEq(vat.gem("COL", address(this)), 1 ether);
     }
 
+    function testMove() public {
+        testMove(false,false);
+    }
+
+    function testMoveWithTopup() public {
+        testMove(true,false);
+    }
+
+    function testMoveWithBite() public {
+        testMove(false,true);
+    }
+
+    function testMove(bool withTopup, bool withBite) internal {
+        uint cdp = manager.open("ETH", address(this));
+        weth.deposit.value(1 ether)();
+        weth.approve(address(ethJoin), 1 ether);
+        ethJoin.join(manager.urns(cdp), 1 ether);
+
+        manager.frob(cdp, 1 ether, 50 ether);
+
+        if(withTopup) reachTopup(cdp);
+        if(withBite) reachBite(cdp);
+        uint cushion = LiquidationMachine(manager).cushion(cdp);
+
+        manager.move(cdp, address(this), 50 ether * ONE);
+
+        assertEq(vat.dai(address(this)), 50 ether * ONE);
+        assertEq(LiquidationMachine(manager).cushion(cdp), cushion);
+    }
+
     function testQuit() public {
-        testQuit(false,false);
+        testQuit(false,false,false);
     }
 
     function testQuitWithTopup() public {
-        testQuit(true,false);
+        testQuit(true,false,false);
     }
 
     function testFailQuitWithBite() public {
-        testQuit(false,true);
+        testQuit(false,true,false);
     }
 
+    function testFailQuitWithBitePrice() public {
+        testQuit(false,false,true);
+    }
 
-    function testQuit(bool withTopup, bool withBite) internal {
+    function testQuit(bool withTopup, bool withBite, bool withBitePrice) internal {
         uint cdp = manager.open("ETH", address(this));
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
@@ -603,6 +711,7 @@ contract BCdpManagerTest is DssDeployTestBase {
         vat.hope(address(manager));
         if(withTopup) reachTopup(cdp);
         if(withBite) reachBite(cdp);
+        if(withBitePrice) reachBitePrice(cdp);
         manager.quit(cdp, address(this));
         assertEq(LiquidationMachine(manager).cushion(cdp), 0);
         (ink, art) = vat.urns("ETH", manager.urns(cdp));
