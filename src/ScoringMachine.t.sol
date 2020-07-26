@@ -85,6 +85,34 @@ contract ScordingMachineTest is BCdpManagerTestBase {
         assertEq(score.getInkGlobalScore("ETH",currTime), expectedTotalInkScore);
         assertEq(score.getArtGlobalScore("ETH",currTime), expectedTotalArtScore);
     }
+
+    function testFrob() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(100 ether, 10 ether);
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime), 10 * 100 ether);
+        assertEq(score.getArtScore(cdp,"ETH",currTime), 10 * 10 ether);
+
+        manager.frob(cdp, -1 ether, 1 ether);
+
+        forwardTime(15);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime), 25 * 100 ether - 15 ether);
+        assertEq(score.getArtScore(cdp,"ETH",currTime), 25 * 10 ether + 15 ether);
+
+        manager.frob(cdp, 1 ether, -1 ether);
+
+        forwardTime(17);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime), 25 * 100 ether - 15 ether + 100 * 17 ether);
+        assertEq(score.getArtScore(cdp,"ETH",currTime), 25 * 10 ether + 15 ether + 10 * 17 ether);
+    }
 /*
     function testEnd() public {
         timeReset();
