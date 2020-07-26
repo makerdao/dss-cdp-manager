@@ -3,9 +3,9 @@ pragma solidity ^0.5.12;
 import { LibNote } from "dss/lib.sol";
 import {DssCdpManager} from "./DssCdpManager.sol";
 import "./LiquidationMachine.sol";
-import {ScoringMachine} from "./ScoringMachine.sol";
+import {BCdpScore} from "./BCdpScore.sol";
 
-contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
+contract BCdpManager is DssCdpManager, BCdpScore, LiquidationMachine {
     constructor(address vat_, address cat_, address pool_, address real_) public
         DssCdpManager(vat_)
         LiquidationMachine(this,VatLike(vat_),CatLike(cat_),pool_,PriceFeedLike(real_))
@@ -45,8 +45,10 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
     ) public note cdpAllowed(cdp) {
         super.frob(cdp,dink,dart);
 
+        bytes32 ilk = ilks[cdp];
+
         untop(cdp);
-        updateScore(cdp,dink,now);
+        updateScore(cdp,ilk,dink,dart,now);
     }
 
     // Transfer wad amount of cdp collateral from the cdp address to a dst address.
@@ -88,8 +90,8 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
         bytes32 ilk = ilks[cdp];
 
         untop(cdp);
-        (uint ink,) = vat.urns(ilk, urn);
-        updateScore(cdp,-toInt(ink),now);
+        (uint ink, uint art) = vat.urns(ilk, urn);
+        updateScore(cdp,ilk,-toInt(ink),-toInt(art),now);
 
         super.quit(cdp,dst);
     }
@@ -102,8 +104,8 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
         bytes32 ilk = ilks[cdp];
 
         untop(cdp);
-        (uint ink,) = vat.urns(ilk, src);
-        updateScore(cdp,toInt(ink),now);
+        (uint ink, uint art) = vat.urns(ilk, src);
+        updateScore(cdp,ilk,toInt(ink),toInt(art),now);
 
         super.enter(src,cdp);
     }
@@ -120,16 +122,16 @@ contract BCdpManager is DssCdpManager, ScoringMachine, LiquidationMachine {
 
         address src = urns[cdpSrc];
 
-        (uint inkSrc,) = vat.urns(ilkSrc, src);
+        (uint inkSrc, uint artSrc) = vat.urns(ilkSrc, src);
 
-        updateScore(cdpSrc,-toInt(inkSrc),now);
-        updateScore(cdpDst, toInt(inkSrc),now);
+        updateScore(cdpSrc,ilkSrc,-toInt(inkSrc),-toInt(artSrc),now);
+        updateScore(cdpDst,ilkSrc,toInt(inkSrc),toInt(artSrc),now);
 
         super.shift(cdpSrc,cdpDst);
     }
 
     function quitB(uint cdp) note external cdpAllowed(cdp) {
-        quitBScore(cdp);
+        //quitBScore(cdp);
         quitBLiquidation(cdp);
     }
 }

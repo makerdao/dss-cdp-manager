@@ -1,7 +1,7 @@
 pragma solidity ^0.5.12;
 
 import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol_";
-import {ScoringMachine} from "./ScoringMachine.sol";
+import {BCdpScore} from "./BCdpScore.sol";
 
 contract ScordingMachineTest is BCdpManagerTestBase {
     FakeUser user1;
@@ -10,7 +10,7 @@ contract ScordingMachineTest is BCdpManagerTestBase {
 
     uint currTime;
 
-    ScoringMachine score;
+    BCdpScore score;
 
     function setUp() public {
         super.setUp();
@@ -18,17 +18,17 @@ contract ScordingMachineTest is BCdpManagerTestBase {
         currTime = now;
         hevm.warp(currTime);
 
-        score = ScoringMachine(manager);
+        score = BCdpScore(manager);
     }
 
-    function openCdp(uint ink) internal returns(uint){
+    function openCdp(uint ink,uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
 
         weth.deposit.value(ink)();
         weth.approve(address(ethJoin), ink);
         ethJoin.join(manager.urns(cdp), ink);
 
-        manager.frob(cdp, int(ink), 0);
+        manager.frob(cdp, int(ink), int(art));
 
         return cdp;
     }
@@ -48,44 +48,44 @@ contract ScordingMachineTest is BCdpManagerTestBase {
 
         uint time = now;
 
-        score.spin(currTime,currTime + 3 weeks);
+        score.spin();
 
-        uint cdp1 = openCdp(1 ether);
+        uint cdp1 = openCdp(10 ether,1 ether);
         forwardTime(10);
-        uint cdp2 = openCdp(2 ether);
+        uint cdp2 = openCdp(20 ether,2 ether);
         forwardTime(10);
-        uint cdp3 = openCdp(3 ether);
+        uint cdp3 = openCdp(30 ether,3 ether);
         forwardTime(10);
 
-
-        assertEq(score.round(), 1);
         assertEq(currTime, time + 30);
 
-        uint expectedTotalScore = (30 + 20 * 2 + 10 * 3) * 1 ether;
+        uint expectedTotalInkScore = (30 + 20 * 2 + 10 * 3) * 10 ether;
+        uint expectedTotalArtScore = expectedTotalInkScore / 10;
 
-        (uint score1, uint totalScore1) = score.getScore(cdp1, score.round(), currTime);
-        assertEq(score1, 30 * 1 ether);
-        assertEq(totalScore1, expectedTotalScore);
+        assertEq(score.getInkScore(cdp1,"ETH",currTime), 30 * 10 ether);
+        assertEq(score.getInkScore(cdp2,"ETH",currTime), 20 * 20 ether);
+        assertEq(score.getInkScore(cdp3,"ETH",currTime), 10 * 30 ether);
+        assertEq(score.getInkGlobalScore("ETH",currTime), expectedTotalInkScore);
 
-        (uint score2, uint totalScore2) = score.getScore(cdp2, score.round(), currTime);
-        assertEq(score2, 20 * 2 ether);
-        assertEq(totalScore2, expectedTotalScore);
+        assertEq(score.getArtScore(cdp1,"ETH",currTime), 30 * 1 ether);
+        assertEq(score.getArtScore(cdp2,"ETH",currTime), 20 * 2 ether);
+        assertEq(score.getArtScore(cdp3,"ETH",currTime), 10 * 3 ether);
+        assertEq(score.getArtGlobalScore("ETH",currTime), expectedTotalArtScore);
 
-        (uint score3, uint totalScore3) = score.getScore(cdp3, score.round(), currTime);
-        assertEq(score3, 10 * 3 ether);
-        assertEq(totalScore3, expectedTotalScore);
-
-        manager.frob(cdp2, -1 * 1 ether, 0);
+        manager.frob(cdp2, -1 * 10 ether, -1 * 1 ether);
 
         forwardTime(7);
 
-        expectedTotalScore += (1 + 2 + 3) * 7 ether - 7 ether;
+        expectedTotalInkScore += (1 + 2 + 3) * 70 ether - 70 ether;
+        expectedTotalArtScore += (1 + 2 + 3) * 7 ether - 7 ether;
 
-        (uint newScore2, uint newTotalScore2) = score.getScore(cdp2, score.round(), currTime);
-        assertEq(newScore2, 27 * 2 ether - 7 * 1 ether);
-        assertEq(newTotalScore2, expectedTotalScore);
+        assertEq(score.getInkScore(cdp2,"ETH",currTime), 27 * 20 ether - 7 * 10 ether);
+        assertEq(score.getArtScore(cdp2,"ETH",currTime), 27 * 2 ether - 7 * 1 ether);
+
+        assertEq(score.getInkGlobalScore("ETH",currTime), expectedTotalInkScore);
+        assertEq(score.getArtGlobalScore("ETH",currTime), expectedTotalArtScore);
     }
-
+/*
     function testEnd() public {
         timeReset();
 
@@ -104,6 +104,29 @@ contract ScordingMachineTest is BCdpManagerTestBase {
 
         (uint score2, uint totalScore2) = score.getScore(cdp1, score.round(), currTime);
         assertEq(score2, 3 weeks * 1 ether);
-        assertEq(score2, totalScore2);        
+        assertEq(score2, totalScore2);
     }
+
+    function testNewRound() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin(currTime,currTime + 3 weeks);
+
+        uint cdp = openCdp(1 ether);
+        forwardTime(4 weeks);
+
+        (uint score1, uint totalScore1) = score.getScore(cdp, score.round(), currTime);
+        assertEq(score1, 3 weeks * 1 ether);
+
+        score.spin(time + 3 weeks,currTime + 3 weeks);
+        forwardTime(1 weeks);
+
+        assertEq(score.round(),2);
+
+        (score1, totalScore1) = score.getScore(cdp, score.round(), currTime);
+        assertEq(score1, 1 weeks * 1 ether);
+        assertEq(score1, totalScore1);
+    }*/
 }

@@ -2,7 +2,7 @@ pragma solidity ^0.5.12;
 
 import { LibNote } from "dss/lib.sol";
 import {DssCdpManager} from "./DssCdpManager.sol";
-import {ScoringMachine} from "./ScoringMachine.sol";
+import {BCdpScore} from "./BCdpScore.sol";
 
 contract VatLike {
     function urns(bytes32 ilk, address u) public view returns (uint ink, uint art);
@@ -19,7 +19,7 @@ contract PriceFeedLike {
     function read(bytes32 ilk) external view returns(bytes32);
 }
 
-contract LiquidationMachine is LibNote, ScoringMachine {
+contract LiquidationMachine is LibNote, BCdpScore {
     VatLike                   public vat;
     CatLike                   public cat;
     DssCdpManager             public man;
@@ -102,7 +102,7 @@ contract LiquidationMachine is LibNote, ScoringMachine {
         vat.frob(ilk,urn,urn,address(this),0,-int(dart));
         vat.frob(ilk,urn,msg.sender,urn,-int(dink),0);
 
-        updateScore(cdp,toInt(dink),now);
+        updateScore(cdp,ilk,-toInt(dink),toInt(dart),now);
     }
 
     function bite(uint cdp, uint dart) external onlyPool returns(uint dink){

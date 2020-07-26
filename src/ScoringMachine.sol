@@ -4,99 +4,92 @@ pragma solidity ^0.5.12;
 import { DSAuth } from "ds-auth/auth.sol";
 import { Math } from "./Math.sol";
 
-// TODO - safe math, auth
 contract ScoringMachine is DSAuth, Math {
     // get out of the user rating system - TODO - move to scoring machine
-    mapping (uint => bool) public out;
+    mapping (bytes32 => bool) public out;
 
-    struct Out {
-        uint cdp;
-        uint time;
-    }
-
-    Out[] public quitters;
-
-    function quitBScore(uint cdp) internal {
-        quitters.push(Out({cdp:cdp, time:now}));
-        out[cdp] = true;
-    }
-
-    struct Info {
+    struct AssetScore {
         // total score so far
         uint score;
 
-        // current ink
-        uint ink;
+        // current balance
+        uint balance;
 
-        // time when last score update was made
+        // time when last update was
         uint last;
     }
 
-    struct Round {
-        // global data
-        uint start;
-        uint end;
+    // user is bytes32 (will be the sha3 of address or cdp number)
+    mapping(bytes32 => mapping(bytes32 => AssetScore[])) checkpoints;
 
-        Info global; // global data
-        mapping(uint => Info) cdp; // per cdp data
+    mapping(bytes32 => mapping(bytes32 => AssetScore)) userScore;
+
+    bytes32 constant public GLOBAL_USER = bytes32(0x0);
+
+    uint public start; // start time of the campaign;
+
+    function spin() external auth { // start a new round
+        start = now;
     }
 
-    uint                   public round;
-    mapping(uint => Round) roundData;
-
-    function spin(uint start, uint end) external auth { // start a new round
-        round++;
-
-        roundData[round].start = start;
-        roundData[round].end = end;
-    }
-
-    function infoScore(Info storage info, uint start, uint time) internal view returns(uint) {
-        uint last = info.last;
+    function assetScore(AssetScore storage score, uint time) internal view returns(uint) {
+        uint last = score.last;
         if(last == 0) last = start;
 
-        return add(info.score, mul(info.ink, sub(time,last)));
+        return add(score.score, mul(score.balance, sub(time,last)));
     }
 
-    function updateInfo(Info storage info, int dink, uint time, uint start) internal {
-        uint last = info.last;
-        if(last == 0) last = start;
-
-        info.score = infoScore(info, start, time);
-        info.ink = add(info.ink, dink);
-        info.last = time;
+    function addCheckpoint(bytes32 user, bytes32 asset) internal {
+        checkpoints[user][asset].push(userScore[user][asset]);
     }
 
-    function updateScore(uint cdp, int dink, uint time) internal {
-        if(out[cdp]) return;
+    function slashAssetScore(bytes32 user, bytes32 asset, int dbalance, uint time) internal {
+        AssetScore storage score = userScore[user][asset];
+        int dscore = mul(sub(time,start),dbalance);
 
-        uint start = roundData[round].start;
-        uint end   = roundData[round].end;
-
-        // check that round started
-        if(time < start) return;
-        if(time > end)   return;
-
-        Info storage global = roundData[round].global;
-        Info storage local  = roundData[round].cdp[cdp];
-
-        updateInfo(global, dink, time, start);
-        updateInfo(local, dink, time, start);
+        score.score = add(score.score, dscore);
+        score.balance = add(score.balance, dbalance);
     }
 
-    function getScore(uint cdp, uint roundNum, uint time) external view returns(uint cdpScore, uint score) {
-        uint start = roundData[roundNum].start;
-        uint end   = roundData[roundNum].end;
+    function updateAssetScore(bytes32 user, bytes32 asset, int dbalance, uint time) internal {
+        AssetScore storage score = userScore[user][asset];
 
-        // check that round started
-        if(time < start) return (0, 0);
-        if(time > end)   time = end;
+        uint last = score.last;
+        if(last < start) {
+            addCheckpoint(user,asset);
+            last = start;
+        }
 
-        Info storage global = roundData[roundNum].global;
-        Info storage local  = roundData[roundNum].cdp[cdp];
+        score.score = assetScore(score, time);
+        score.balance = add(score.balance, dbalance);
+        score.last = time;
+    }
 
+    function updateScore(bytes32 user, bytes32 asset, int dbalance, uint time) internal {
+        if(out[user]) return;
 
-        cdpScore = infoScore(local, start, time);
-        score    = infoScore(global, start, time);
+        updateAssetScore(user,asset,dbalance,time);
+        updateAssetScore(GLOBAL_USER,asset,dbalance,time);
+    }
+
+    function getScore(bytes32 user, bytes32 asset, uint time, uint checkPointHint) public view returns(uint score) {
+        if(time >= userScore[user][asset].last) return assetScore(userScore[user][asset],time);
+
+        // else - check the checkpoints
+
+        // hint is invalid
+        if(checkpoints[user][asset][checkPointHint].last < time) checkPointHint = checkpoints[user][asset].length;
+
+        for(uint i = checkPointHint ; ; i--){
+            if(checkpoints[user][asset][i].last <= time) return assetScore(checkpoints[user][asset][i],time);
+        }
+
+        // this supposed to be unreachable
+        return 0;
+    }
+
+    function slash(bytes32 user, bytes32 asset, int dbalance, uint time) external auth {
+        slashAssetScore(user,asset,dbalance,time);
+        slashAssetScore(GLOBAL_USER,asset,dbalance,time);
     }
 }
