@@ -20,19 +20,19 @@ contract BCdpScore is ScoringMachine {
         updateScore(user(cdp), artAsset(ilk), dart, time);
     }
 
-    function getInkScore(uint cdp, bytes32 ilk, uint time) public view returns(uint) {
-        return getScore(user(cdp),inkAsset(ilk),time,0);
+    function getInkScore(uint cdp, bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
+        return getScore(user(cdp),inkAsset(ilk),time,spinStart,0);
     }
 
-    function getInkGlobalScore(bytes32 ilk, uint time) public view returns(uint) {
-        return getScore(GLOBAL_USER,inkAsset(ilk),time,0);
+    function getInkGlobalScore(bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
+        return getScore(GLOBAL_USER,inkAsset(ilk),time,spinStart,0);
     }
 
-    function getArtScore(uint cdp, bytes32 ilk, uint time) public view returns(uint) {
-        return getScore(user(cdp),artAsset(ilk),time,0);
+    function getArtScore(uint cdp, bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
+        return getScore(user(cdp),artAsset(ilk),time,spinStart,0);
     }
 
-    function getArtGlobalScore(bytes32 ilk, uint time) public view returns(uint) {
-        return getScore(GLOBAL_USER,artAsset(ilk),time,0);
+    function getArtGlobalScore(bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
+        return getScore(GLOBAL_USER,artAsset(ilk),time,spinStart,0);
     }
 }

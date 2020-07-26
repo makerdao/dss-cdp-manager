@@ -32,11 +32,15 @@ contract ScoringMachine is DSAuth, Math {
         start = now;
     }
 
-    function assetScore(AssetScore storage score, uint time) internal view returns(uint) {
+    function assetScore(AssetScore storage score, uint time, uint spinStart) internal view returns(uint) {
         uint last = score.last;
-        if(last == 0) last = start;
+        uint currentScore = score.score;
+        if(last < spinStart) {
+            last = spinStart;
+            currentScore = 0;
+        }
 
-        return add(score.score, mul(score.balance, sub(time,last)));
+        return add(currentScore, mul(score.balance, sub(time,last)));
     }
 
     function addCheckpoint(bytes32 user, bytes32 asset) internal {
@@ -54,13 +58,11 @@ contract ScoringMachine is DSAuth, Math {
     function updateAssetScore(bytes32 user, bytes32 asset, int dbalance, uint time) internal {
         AssetScore storage score = userScore[user][asset];
 
-        uint last = score.last;
-        if(last < start) {
+        if(score.last < start) {
             addCheckpoint(user,asset);
-            last = start;
         }
 
-        score.score = assetScore(score, time);
+        score.score = assetScore(score, time, start);
         score.balance = add(score.balance, dbalance);
         score.last = time;
     }
@@ -72,16 +74,17 @@ contract ScoringMachine is DSAuth, Math {
         updateAssetScore(GLOBAL_USER,asset,dbalance,time);
     }
 
-    function getScore(bytes32 user, bytes32 asset, uint time, uint checkPointHint) public view returns(uint score) {
-        if(time >= userScore[user][asset].last) return assetScore(userScore[user][asset],time);
+    function getScore(bytes32 user, bytes32 asset, uint time, uint spinStart, uint checkPointHint) public view returns(uint score) {
+        if(time >= userScore[user][asset].last) return assetScore(userScore[user][asset],time,spinStart);
 
         // else - check the checkpoints
+        if(checkpoints[user][asset].length == 0) return 0;
 
         // hint is invalid
-        if(checkpoints[user][asset][checkPointHint].last < time) checkPointHint = checkpoints[user][asset].length;
+        if(checkpoints[user][asset][checkPointHint].last < time) checkPointHint = checkpoints[user][asset].length - 1;
 
         for(uint i = checkPointHint ; ; i--){
-            if(checkpoints[user][asset][i].last <= time) return assetScore(checkpoints[user][asset][i],time);
+            if(checkpoints[user][asset][i].last <= time) return assetScore(checkpoints[user][asset][i],time,spinStart);
         }
 
         // this supposed to be unreachable
