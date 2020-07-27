@@ -4,7 +4,6 @@ import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol_";
 import {BCdpScore} from "./BCdpScore.sol";
 
 contract FakeSlasher {
-    function f() public {}
     function doSlash(BCdpScore score, uint cdp, bytes32 ilk, int dart, uint time) public {
         score.slashScore(cdp,ilk,dart,time);
     }
@@ -47,6 +46,166 @@ contract ScordingMachineTest is BCdpManagerTestBase {
     }
 
     function testOpenCdp() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(0 ether,0 ether);
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 0);
+        assertEq(score.getInkGlobalScore("ETH",currTime,score.start()), 0);
+
+        assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 0);
+        assertEq(score.getArtGlobalScore("ETH",currTime,score.start()), 0);
+    }
+
+    function testShiftCdp() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(1 ether,1 ether);
+        forwardTime(10);
+        manager.give(cdp, address(123));
+        assertEq(manager.owns(cdp), address(123));
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 20 ether);
+        assertEq(score.getInkGlobalScore("ETH",currTime,score.start()), 20 ether);
+
+        assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 20 ether);
+        assertEq(score.getArtGlobalScore("ETH",currTime,score.start()), 20 ether);
+    }
+
+    function testFluxCdp() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(12 ether,1 ether);
+        manager.frob(cdp, -int(2 ether), 0);
+
+        forwardTime(10);
+        manager.flux(cdp, address(this), 1 ether);
+        manager.flux("ETH", cdp, address(this), 1 ether);
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 200 ether);
+        assertEq(score.getInkGlobalScore("ETH",currTime,score.start()), 200 ether);
+
+        assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 20 ether);
+        assertEq(score.getArtGlobalScore("ETH",currTime,score.start()), 20 ether);
+    }
+
+    function testMove() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether,1 ether);
+
+        forwardTime(10);
+        manager.move(cdp, address(this), 1 ether * ONE);
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 200 ether);
+        assertEq(score.getInkGlobalScore("ETH",currTime,score.start()), 200 ether);
+
+        assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 20 ether);
+        assertEq(score.getArtGlobalScore("ETH",currTime,score.start()), 20 ether);
+    }
+
+    function testQuit() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether,1 ether);
+
+        forwardTime(10);
+        vat.hope(address(manager));
+        manager.quit(cdp, address(this));
+        forwardTime(15);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 100 ether);
+        assertEq(score.getInkGlobalScore("ETH",currTime,score.start()), 100 ether);
+
+        assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 10 ether);
+        assertEq(score.getArtGlobalScore("ETH",currTime,score.start()), 10 ether);
+    }
+
+    function testEnter() public {
+        weth.deposit.value(10 ether)();
+        weth.approve(address(ethJoin), 10 ether);
+        ethJoin.join(address(this), 10 ether);
+        vat.frob("ETH", address(this), address(this), address(this), 10 ether, 1 ether);
+        vat.hope(address(manager));
+
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(0 ether,0 ether);
+
+        forwardTime(15);
+        manager.enter(address(this), cdp);
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 100 ether);
+        assertEq(score.getInkGlobalScore("ETH",currTime,score.start()), 100 ether);
+
+        assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 10 ether);
+        assertEq(score.getArtGlobalScore("ETH",currTime,score.start()), 10 ether);
+    }
+
+    function testShift() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp1 = openCdp(10 ether,1 ether);
+        uint cdp2 = openCdp(20 ether,2 ether);
+
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp1,"ETH",currTime,score.start()), 100 ether);
+        assertEq(score.getInkScore(cdp2,"ETH",currTime,score.start()), 200 ether);
+        assertEq(score.getInkGlobalScore("ETH",currTime,score.start()), 300 ether);
+
+        assertEq(score.getArtScore(cdp1,"ETH",currTime,score.start()), 10 ether);
+        assertEq(score.getArtScore(cdp2,"ETH",currTime,score.start()), 20 ether);
+        assertEq(score.getArtGlobalScore("ETH",currTime,score.start()), 30 ether);
+
+        manager.shift(cdp1,cdp2);
+
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp1,"ETH",currTime,score.start()), 100 ether);
+        assertEq(score.getInkScore(cdp2,"ETH",currTime,score.start()), 400 ether + 100 ether);
+        assertEq(score.getInkGlobalScore("ETH",currTime,score.start()), 600 ether);
+
+        assertEq(score.getArtScore(cdp1,"ETH",currTime,score.start()), 10 ether);
+        assertEq(score.getArtScore(cdp2,"ETH",currTime,score.start()), 40 ether + 10 ether);
+        assertEq(score.getArtGlobalScore("ETH",currTime,score.start()), 60 ether);
+    }
+
+
+    function testMultipleUsers() public {
         timeReset();
 
         uint time = now;
@@ -199,52 +358,4 @@ contract ScordingMachineTest is BCdpManagerTestBase {
         FakeSlasher fakeSlasher = new FakeSlasher();
         fakeSlasher.doSlash(score,cdp,"ETH",10 ether,time);
     }
-
-
-    /*
-
-    // TODO - test new round
-    function testEnd() public {
-        timeReset();
-
-        uint time = now;
-
-        score.spin(currTime,currTime + 3 weeks);
-
-        uint cdp1 = openCdp(1 ether);
-        forwardTime(10);
-
-        (uint score1, uint totalScore1) = score.getScore(cdp1, score.round(), currTime);
-        assertEq(score1, 10 * 1 ether);
-
-        forwardTime(10 weeks);
-        assertEq(time + 10 weeks + 10, currTime);
-
-        (uint score2, uint totalScore2) = score.getScore(cdp1, score.round(), currTime);
-        assertEq(score2, 3 weeks * 1 ether);
-        assertEq(score2, totalScore2);
-    }
-
-    function testNewRound() public {
-        timeReset();
-
-        uint time = now;
-
-        score.spin(currTime,currTime + 3 weeks);
-
-        uint cdp = openCdp(1 ether);
-        forwardTime(4 weeks);
-
-        (uint score1, uint totalScore1) = score.getScore(cdp, score.round(), currTime);
-        assertEq(score1, 3 weeks * 1 ether);
-
-        score.spin(time + 3 weeks,currTime + 3 weeks);
-        forwardTime(1 weeks);
-
-        assertEq(score.round(),2);
-
-        (score1, totalScore1) = score.getScore(cdp, score.round(), currTime);
-        assertEq(score1, 1 weeks * 1 ether);
-        assertEq(score1, totalScore1);
-    }*/
 }
