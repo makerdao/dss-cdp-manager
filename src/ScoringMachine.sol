@@ -17,9 +17,9 @@ contract ScoringMachine is DSAuth, Math {
     }
 
     // user is bytes32 (will be the sha3 of address or cdp number)
-    mapping(bytes32 => mapping(bytes32 => AssetScore[])) checkpoints;
+    mapping(bytes32 => mapping(bytes32 => AssetScore[])) public checkpoints;
 
-    mapping(bytes32 => mapping(bytes32 => AssetScore)) userScore;
+    mapping(bytes32 => mapping(bytes32 => AssetScore)) public userScore;
 
     bytes32 constant public GLOBAL_USER = bytes32(0x0);
 
