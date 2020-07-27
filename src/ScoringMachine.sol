@@ -5,9 +5,6 @@ import { DSAuth } from "ds-auth/auth.sol";
 import { Math } from "./Math.sol";
 
 contract ScoringMachine is DSAuth, Math {
-    // get out of the user rating system - TODO - move to scoring machine
-    mapping (bytes32 => bool) public out;
-
     struct AssetScore {
         // total score so far
         uint score;
@@ -47,20 +44,10 @@ contract ScoringMachine is DSAuth, Math {
         checkpoints[user][asset].push(userScore[user][asset]);
     }
 
-    function slashAssetScore(bytes32 user, bytes32 asset, int dbalance, uint time) internal {
-        AssetScore storage score = userScore[user][asset];
-        int dscore = mul(sub(time,start),dbalance);
-
-        score.score = add(score.score, dscore);
-        score.balance = add(score.balance, dbalance);
-    }
-
     function updateAssetScore(bytes32 user, bytes32 asset, int dbalance, uint time) internal {
         AssetScore storage score = userScore[user][asset];
 
-        if(score.last < start) {
-            addCheckpoint(user,asset);
-        }
+        if(score.last < start) addCheckpoint(user,asset);
 
         score.score = assetScore(score, time, start);
         score.balance = add(score.balance, dbalance);
@@ -68,8 +55,6 @@ contract ScoringMachine is DSAuth, Math {
     }
 
     function updateScore(bytes32 user, bytes32 asset, int dbalance, uint time) internal {
-        if(out[user]) return;
-
         updateAssetScore(user,asset,dbalance,time);
         updateAssetScore(GLOBAL_USER,asset,dbalance,time);
     }
@@ -89,10 +74,5 @@ contract ScoringMachine is DSAuth, Math {
 
         // this supposed to be unreachable
         return 0;
-    }
-
-    function slash(bytes32 user, bytes32 asset, int dbalance, uint time) external auth {
-        slashAssetScore(user,asset,dbalance,time);
-        slashAssetScore(GLOBAL_USER,asset,dbalance,time);
     }
 }

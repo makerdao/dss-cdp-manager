@@ -3,11 +3,14 @@ pragma solidity ^0.5.12;
 import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol_";
 import {BCdpScore} from "./BCdpScore.sol";
 
-contract ScordingMachineTest is BCdpManagerTestBase {
-    FakeUser user1;
-    FakeUser user2;
-    FakeUser user3;
+contract FakeSlasher {
+    function f() public {}
+    function doSlash(BCdpScore score, uint cdp, bytes32 ilk, int dart, uint time) public {
+        score.slashScore(cdp,ilk,dart,time);
+    }
+}
 
+contract ScordingMachineTest is BCdpManagerTestBase {
     uint currTime;
 
     BCdpScore score;
@@ -166,9 +169,41 @@ contract ScordingMachineTest is BCdpManagerTestBase {
         assertEq(score.getInkScore(cdp,"ETH",time + 25 + 19,time+25), 17 * 100 ether + 2 * 99 ether);
     }
 
+    function testSlash() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether,1 ether);
+        forwardTime(10);
+
+        score.slashScore(cdp,"ETH",10 ether,time);
+
+        forwardTime(15);
+
+        assertEq(score.getSlashScore(cdp,"ETH",now,time),10 ether * 25);
+        assertEq(score.getSlashGlobalScore("ETH",now,time),10 ether * 25);
+    }
+
+    function testFailedSlashNotFromAdmin() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether,1 ether);
+        forwardTime(10);
+        FakeSlasher fakeSlasher = new FakeSlasher();
+        fakeSlasher.doSlash(score,cdp,"ETH",10 ether,time);
+    }
+
+
+    /*
 
     // TODO - test new round
-/*
     function testEnd() public {
         timeReset();
 

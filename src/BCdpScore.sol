@@ -15,9 +15,17 @@ contract BCdpScore is ScoringMachine {
         return keccak256(abi.encodePacked("BCdpScore","art",ilk));
     }
 
+    function slashAsset(bytes32 ilk) public pure returns(bytes32) {
+        return keccak256(abi.encodePacked("BCdpScore","slash-art",ilk));
+    }
+
     function updateScore(uint cdp, bytes32 ilk, int dink, int dart, uint time) internal {
         updateScore(user(cdp), inkAsset(ilk), dink, time);
         updateScore(user(cdp), artAsset(ilk), dart, time);
+    }
+
+    function slashScore(uint cdp, bytes32 ilk, int dart, uint time) external auth {
+        updateScore(user(cdp), slashAsset(ilk), dart, time);
     }
 
     function getInkScore(uint cdp, bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
@@ -34,5 +42,13 @@ contract BCdpScore is ScoringMachine {
 
     function getArtGlobalScore(bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
         return getScore(GLOBAL_USER,artAsset(ilk),time,spinStart,0);
+    }
+
+    function getSlashScore(uint cdp, bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
+        return getScore(user(cdp),slashAsset(ilk),time,spinStart,0);
+    }
+
+    function getSlashGlobalScore(bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
+        return getScore(GLOBAL_USER,slashAsset(ilk),time,spinStart,0);
     }
 }
