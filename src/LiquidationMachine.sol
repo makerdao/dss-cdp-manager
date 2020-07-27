@@ -101,8 +101,6 @@ contract LiquidationMachine is LibNote, BCdpScore {
 
         vat.frob(ilk,urn,urn,address(this),0,-int(dart));
         vat.frob(ilk,urn,msg.sender,urn,-int(dink),0);
-
-        updateScore(cdp,ilk,-toInt(dink),toInt(dart),now);
     }
 
     function bite(uint cdp, uint dart) external onlyPool returns(uint dink){
@@ -127,6 +125,7 @@ contract LiquidationMachine is LibNote, BCdpScore {
         bytes32 realtimePrice = real.read(ilk);
 
         dink = rmul(tab, 1e18) / uint(realtimePrice); // TODO probably need to adjust from rad to wad
+        updateScore(cdp,ilk,-toInt(dink),-toInt(dart),now);
 
         if(dart >= cushion[cdp]) {
             dart = sub(dart, cushion[cdp]);

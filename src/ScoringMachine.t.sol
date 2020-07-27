@@ -2,6 +2,8 @@ pragma solidity ^0.5.12;
 
 import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol_";
 import {BCdpScore} from "./BCdpScore.sol";
+import {LiquidationMachine} from "./LiquidationMachine.sol";
+
 
 contract FakeSlasher {
     function doSlash(BCdpScore score, uint cdp, bytes32 ilk, int dart, uint time) public {
@@ -357,5 +359,32 @@ contract ScordingMachineTest is BCdpManagerTestBase {
         forwardTime(10);
         FakeSlasher fakeSlasher = new FakeSlasher();
         fakeSlasher.doSlash(score,cdp,"ETH",10 ether,time);
+    }
+
+    function testBite() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(0 ether,0 ether);
+        reachBitePrice(cdp);
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 10 * 1 ether);
+        assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 10 * 50 ether);
+
+        // bite
+        address urn = manager.urns(cdp);
+        (uint inkBefore,) = vat.urns("ETH", urn);
+        liquidator.doBite(pool,cdp,25 ether,0);
+        assert(LiquidationMachine(manager).bitten(cdp));
+        (uint inkAfter,) = vat.urns("ETH", urn);
+
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 20 * 1 ether - 10 * (inkBefore - inkAfter));
+        assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 10 * 50 ether + 10 * 25 ether);
     }
 }
