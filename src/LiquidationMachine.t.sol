@@ -14,8 +14,8 @@ contract FakePool {
         lm.untopByPool(cdp);
     }
 
-    function doBite(LiquidationMachine lm, uint cdp, uint dart) public {
-        lm.bite(cdp,dart);
+    function doBite(LiquidationMachine lm, uint cdp, uint dart) public returns(uint){
+        return lm.bite(cdp,dart);
     }
 
     function doHope(Vat vat,address dst) public {
@@ -43,6 +43,8 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         // put funds in pool
         uint cdp = openCdp(100 ether, 100 ether);
         manager.move(cdp,address(fPool),100 ether * ONE);
+
+        this.file(address(cat), "ETH", "chop", 1130000000000000000000000000);
     }
 
     function timeReset() internal {
@@ -218,5 +220,47 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         assertEq(vat.dai(address(fPool)),100 ether * ONE + 11 ether * ONE / 10);
     }
 
-    // TODO - test bite
+    // test bite, happy path
+    function testBite() public {
+        uint cdp = openCdp(1 ether, 50 ether);
+        fPool.doTopup(lm,cdp,10 ether);
+
+        // reach bite state
+        osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
+        pipETH.poke(bytes32(uint(70 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",70 * 1e18);
+
+        uint daiBefore = vat.dai(address(fPool));
+        uint dink = fPool.doBite(lm,cdp,10 ether);
+        assert(lm.bitten(cdp));
+        uint daiAfter = vat.dai(address(fPool));
+
+        assertEq(dink,(10 ether * 113 / 100)/uint(70));
+        // consumes 1/5 of the cushion
+        assertEq(daiBefore - daiAfter, (10 ether - 2 ether)* ONE);
+        assertEq(vat.gem("ETH",address(fPool)), dink);
+    }
+
+    // test bite, liquidate in one shot
+    function testBiteAll() public {
+        uint cdp = openCdp(1 ether, 50 ether);
+        fPool.doTopup(lm,cdp,10 ether);
+
+        // reach bite state
+        osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
+        pipETH.poke(bytes32(uint(70 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",70 * 1e18);
+
+        uint daiBefore = vat.dai(address(fPool));
+        uint dink = fPool.doBite(lm,cdp,50 ether);
+        assert(lm.bitten(cdp));
+        uint daiAfter = vat.dai(address(fPool));
+
+        assertEq(dink,(50 ether * 113 / 100)/uint(70));
+        // 10 ETH were reused from the cushion
+        assertEq(daiBefore - daiAfter, (50 ether - 10 ether) * ONE);
+        assertEq(vat.gem("ETH",address(fPool)), dink);
+    }
 }

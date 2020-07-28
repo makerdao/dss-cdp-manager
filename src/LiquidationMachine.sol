@@ -103,6 +103,14 @@ contract LiquidationMachine is LibNote, BCdpScore {
         vat.frob(ilk,urn,msg.sender,urn,-int(dink),0);
     }
 
+    function calcDink(uint dart, uint rate, bytes32 ilk) internal returns(uint dink) {
+        (,uint chop,) = cat.ilks(ilk);
+        uint tab = rmul(mul(dart, rate), chop);
+        bytes32 realtimePrice = real.read(ilk);
+
+        dink = rmul(tab, 1e18) / uint(realtimePrice); // TODO probably need to adjust from rad to wad
+    }
+
     function bite(uint cdp, uint dart) external onlyPool returns(uint dink){
         address urn = man.urns(cdp);
         bytes32 ilk = man.ilks(cdp);
@@ -120,21 +128,12 @@ contract LiquidationMachine is LibNote, BCdpScore {
             tic[cdp] = now;
         }
 
-        (,uint chop,) = cat.ilks(ilk);
-        uint tab = rmul(mul(dart, rate), chop);
-        bytes32 realtimePrice = real.read(ilk);
-
-        dink = rmul(tab, 1e18) / uint(realtimePrice); // TODO probably need to adjust from rad to wad
+        dink = calcDink(dart,rate,ilk);
         updateScore(cdp,ilk,-toInt(dink),-toInt(dart),now);
 
-        if(dart >= cushion[cdp]) {
-            dart = sub(dart, cushion[cdp]);
-            cushion[cdp] = 0;
-        }
-        else {
-            cushion[cdp] = sub(cushion[cdp],dart);
-            dart = 0;
-        }
+        uint usedCushion = mul(cushion[cdp],dart) / art;
+        cushion[cdp] = sub(cushion[cdp], usedCushion);
+        dart = sub(dart,usedCushion);
 
         doBite(cdp, dart, ilk, urn, dink);
     }
