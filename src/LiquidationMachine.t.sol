@@ -313,6 +313,80 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
     }
 
+    function testBiteAfterPriceBounces() public {
+        uint cdp = openCdp(1 ether, 50 ether);
+        fPool.doTopup(lm,cdp,10 ether);
+
+        // reach bite state
+        osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
+        pipETH.poke(bytes32(uint(70 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",70 * 1e18);
+
+        // bite 10,15
+        uint daiBefore; uint dink; uint daiAfter;
+        uint expectedBalance = 0;
+
+        // bite 10
+        daiBefore = vat.dai(address(fPool));
+        dink = fPool.doBite(lm,cdp,10 ether);
+        expectedBalance += dink;
+        assert(lm.bitten(cdp));
+        daiAfter = vat.dai(address(fPool));
+        assertEq(dink,(10 ether * 113 / 100)/uint(70));
+        // 10/5 ETH were reused from the cushion
+        assertEq(daiBefore - daiAfter, (10 ether - 2 ether) * ONE);
+        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+
+        // reach bite state
+        osm.setPrice(700 * 1e18); // 1 ETH = 700 DAI
+        pipETH.poke(bytes32(uint(700 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",700 * 1e18);
+
+        // bite 15
+        daiBefore = vat.dai(address(fPool));
+        dink = fPool.doBite(lm,cdp,15 ether);
+        expectedBalance += dink;
+        assert(lm.bitten(cdp));
+        daiAfter = vat.dai(address(fPool));
+        assertEq(dink,(15 ether * 113 / 100)/uint(700));
+        // 10 * 15/50 ETH were reused from the cushion
+        assertEq(daiBefore - daiAfter, (15 ether - 10 ether * 15 / 50) * ONE);
+        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+    }
+
+    // test when rate is not 0
+    function testBiteWithNonOneRate() public {
+        setRateTo1p1();
+
+        uint cdp = openCdp(1 ether, 50 ether);
+        fPool.doTopup(lm,cdp,10 ether);
+
+        // reach bite state
+        osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
+        pipETH.poke(bytes32(uint(70 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",70 * 1e18);
+
+        // bite 10,15
+        uint daiBefore; uint dink; uint daiAfter;
+        uint expectedBalance = 0;
+
+        // bite 10
+        daiBefore = vat.dai(address(fPool));
+        dink = fPool.doBite(lm,cdp,10 ether);
+        expectedBalance += dink;
+        assert(lm.bitten(cdp));
+        daiAfter = vat.dai(address(fPool));
+        uint estimatedInk = 110 * ( (10 ether * 113 / 100)/uint(70) ) / 100;
+        assert(dink >= estimatedInk);
+        assert(dink <= estimatedInk + 1);
+        // 10/5 ETH were reused from the cushion
+        assertEq(daiBefore - daiAfter, (10 ether - 2 ether) * 110 * ONE/100);
+        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+    }
+
     // test bite sad paths
     function testFailedBiteWhenSafe() public {
         uint cdp = openCdp(1 ether, 50 ether);
@@ -368,8 +442,6 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         fPool.doBite(lm,cdp,10 ether);
 
     }
-
-    // TODO bite after price changed
 
     // test bitten function
     function testBitten() public {
