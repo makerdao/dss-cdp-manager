@@ -1,6 +1,6 @@
 pragma solidity ^0.5.12;
 
-import {Vat} from "dss-deploy/DssDeploy.t.base.sol";
+import {Vat, Jug} from "dss-deploy/DssDeploy.t.base.sol";
 import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol_";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
 import {BCdpManager} from "./BCdpManager.sol";
@@ -44,6 +44,37 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         uint cdp = openCdp(100 ether, 100 ether);
         manager.move(cdp,address(fPool),100 ether * ONE);
     }
+
+    function timeReset() internal {
+        currTime = now;
+        hevm.warp(currTime);
+    }
+
+    function forwardTime(uint deltaInSec) internal {
+        currTime += deltaInSec;
+        hevm.warp(currTime);
+    }
+
+    function setRateTo1p1() internal {
+        uint duty;
+        uint rho;
+        (duty,) = jug.ilks("ETH");
+        assertEq(ONE,duty);
+        assertEq(uint(address(vat)),uint(address(jug.vat())));
+        jug.drip("ETH");
+        forwardTime(1);
+        jug.drip("ETH");
+        this.file(address(jug),"ETH","duty",ONE + ONE/10);
+        (duty,) = jug.ilks("ETH");
+        assertEq(ONE + ONE / 10,duty);
+        forwardTime(1);
+        jug.drip("ETH");
+        (,rho) = jug.ilks("ETH");
+        assertEq(rho,now);
+        (,uint rate,,,) = vat.ilks("ETH");
+        assertEq(ONE + ONE/10,rate);
+    }
+
 
     function openCdp(uint ink,uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
@@ -137,7 +168,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
     }
 
     // untop when cushion is 0
-    function testUntopCushion0() public {
+    function testUntopCushionZero() public {
         uint cdp = openCdp(50 ether, 50 ether);
         fPool.doUntopByPool(lm,cdp);
 
@@ -149,6 +180,43 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         assertEq(vat.dai(address(fPool)),100 ether * ONE);
     }
 
-    // untop when rate is non zero
+    // top when rate is non one
+    function testTopupAndUntopWithRate() public {
+        setRateTo1p1();
+        uint cdp = openCdp(50 ether, 50 ether);
+        fPool.doTopup(lm,cdp,10 ether);
 
+        address urn = manager.urns(cdp);
+        (,uint art) = vat.urns("ETH", urn);
+        assertEq(art,40 ether);
+        assertEq(vat.dai(address(fPool)),(100 - 11) * 1 ether * ONE);
+
+        fPool.doUntopByPool(lm,cdp);
+        (,art) = vat.urns("ETH", urn);
+        assertEq(art,50 ether);
+        assertEq(vat.dai(address(fPool)),100 ether * ONE);
+    }
+
+    // top when rate is non one
+    function testTopupAndUntopWithAccumulatedInterest() public {
+        setRateTo1p1();
+        uint cdp = openCdp(50 ether, 50 ether);
+        fPool.doTopup(lm,cdp,10 ether);
+
+        address urn = manager.urns(cdp);
+        (,uint art) = vat.urns("ETH", urn);
+        assertEq(art,40 ether);
+        assertEq(vat.dai(address(fPool)),(100 - 11) * 1 ether * ONE);
+
+        forwardTime(1);
+        jug.drip("ETH");
+
+        fPool.doUntopByPool(lm,cdp);
+        (,art) = vat.urns("ETH", urn);
+        assertEq(art,50 ether);
+        // 10% interest per second
+        assertEq(vat.dai(address(fPool)),100 ether * ONE + 11 ether * ONE / 10);
+    }
+
+    // TODO - test bite
 }
