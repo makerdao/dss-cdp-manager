@@ -1,6 +1,6 @@
 pragma solidity ^0.5.12;
 
-import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol_";
+import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol";
 import {BCdpScore} from "./BCdpScore.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
 

@@ -1,7 +1,7 @@
 pragma solidity ^0.5.12;
 
 import {Vat, Jug} from "dss-deploy/DssDeploy.t.base.sol";
-import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol_";
+import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
 import {BCdpManager} from "./BCdpManager.sol";
 

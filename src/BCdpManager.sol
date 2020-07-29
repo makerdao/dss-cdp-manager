@@ -43,12 +43,12 @@ contract BCdpManager is DssCdpManager, BCdpScore, LiquidationMachine {
         int dink,
         int dart
     ) public note cdpAllowed(cdp) {
-        super.frob(cdp,dink,dart);
-
         bytes32 ilk = ilks[cdp];
 
         untop(cdp);
         updateScore(cdp,ilk,dink,dart,now);
+
+        super.frob(cdp,dink,dart);        
     }
 
     // Transfer wad amount of cdp collateral from the cdp address to a dst address.
