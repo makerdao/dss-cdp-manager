@@ -536,6 +536,22 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         assertEq(dai.balanceOf(address(this)), 50 ether);
     }
 
+    function testFrobRepayFullDebtWithCushion() public {
+        uint cdp = manager.open("ETH", address(this));
+        weth.deposit.value(1 ether)();
+        weth.approve(address(ethJoin), 1 ether);
+        ethJoin.join(manager.urns(cdp), 1 ether);
+
+        manager.frob(cdp, 1 ether, 50 ether);
+        reachTopup(cdp);
+        assert(LiquidationMachine(manager).cushion(cdp) > 0);
+
+        manager.frob(cdp, 0 ether, -50 ether);
+        (, uint art) = vat.urns("ETH", manager.urns(cdp));
+
+        assertEq(art,0);
+    }
+
     function testFrobAllowed() public {
         uint cdp = manager.open("ETH", address(this));
         weth.deposit.value(1 ether)();
