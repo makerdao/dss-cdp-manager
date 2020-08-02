@@ -12,6 +12,7 @@ contract VatLike {
     function flux(bytes32 ilk, address src, address dst, uint256 wad) external;
     function move(address src, address dst, uint256 rad) external;
     function hope(address usr) external;
+    function dai(address usr) external view returns(uint);
 }
 
 contract PriceFeedLike {
@@ -35,7 +36,6 @@ contract OSMLike {
 
 contract Pool is Math, DSAuth {
     struct CdpData {
-        uint       rad;        // topup in rad dai units
         uint       art;        // topup in art units
         address[]  members;    // liquidators that are in
         uint[]     bite;       // how much was already bitten
@@ -88,6 +88,7 @@ contract Pool is Math, DSAuth {
     function withdraw(uint radVal) external onlyMember {
         require(rad[msg.sender] >= radVal, "withdraw: insufficient balance");
         rad[msg.sender] = sub(rad[msg.sender],radVal);
+        vat.move(address(this),msg.sender,radVal);
     }
 
     function getIndex(address[] storage array, address elm) internal view returns(uint) {
@@ -166,27 +167,29 @@ contract Pool is Math, DSAuth {
 
         if(winners.length == 0) return;
 
-        uint refund = cdpData[cdp].rad / winners.length;
+        bytes32 ilk = man.ilks(cdp);
+        (,uint rate,,,) = vat.ilks(ilk);
 
-        if(winners.length == 0) return; // nothing to do
+        uint refund = cdpData[cdp].art / winners.length;
 
+        uint perUserArt = cdpData[cdp].art / winners.length;
         for(uint i = 0 ; i < winners.length ; i++) {
-            rad[winners[i]] = add(rad[winners[i]], sub(refund, cdpData[cdp].bite[i]));
+            if(perUserArt <= cdpData[cdp].bite[i]) continue; // nothing to refund
+            uint refundArt = sub(perUserArt,cdpData[cdp].bite[i]);
+            rad[winners[i]] = add(rad[winners[i]],mul(refundArt,rate));
         }
 
-        cdpData[cdp].rad = 0;
         cdpData[cdp].art = 0;
         delete cdpData[cdp].members;
         delete cdpData[cdp].bite;
     }
 
     function setCdp(uint cdp, address[] memory winners, uint art, uint dradVal) internal {
-        uint drad = dradVal / winners.length;
+        uint drad = add(1,dradVal / winners.length); // round up
         for(uint i = 0 ; i < winners.length ; i++) {
             rad[winners[i]] = sub(rad[winners[i]], drad);
         }
 
-        cdpData[cdp].rad = dradVal;
         cdpData[cdp].art = art;
         cdpData[cdp].members = winners;
         cdpData[cdp].bite = new uint[](winners.length);
@@ -206,9 +209,16 @@ contract Pool is Math, DSAuth {
         address[] memory winners = chooseMembers(uint(dtab), members);
         require(winners.length > 0, "topup: members-are-broke");
 
-        setCdp(cdp, winners, art, uint(dtab));
+        setCdp(cdp, winners, uint(art), uint(dtab));
 
         man.topup(cdp, uint(dart));
+    }
+
+    function untop(uint cdp) external onlyMember {
+        require(man.cushion(cdp) == 0, "untop: should-be-untopped-by-user");
+        require(! man.bitten(cdp), "topup: in-bite-process");
+
+        resetCdp(cdp);
     }
 
     function bite(uint cdp, uint dart, uint minInk) external onlyMember {
@@ -222,7 +232,13 @@ contract Pool is Math, DSAuth {
 
         cdpData[cdp].bite[index] = add(cdpData[cdp].bite[index], dart);
 
+        uint radBefore = vat.dai(address(this));
         uint dink = man.bite(cdp, dart);
+        uint radAfter = vat.dai(address(this));
+
+        // update user rad
+        rad[msg.sender] = sub(rad[msg.sender],sub(radBefore,radAfter));
+
         require(dink >= minInk, "bite: low-dink");
 
         uint userInk = dink / 100;
