@@ -95,22 +95,13 @@ contract Pool is Math, DSAuth {
         return uint(-1);
     }
 
-    function removeElement(address[] memory array, address elm) internal pure returns(address[] memory newArray) {
-        uint index = array.length;
-        uint i;
-        for(i = 0 ; i < array.length; i++) {
-            if(array[i] == elm) {
-                index = i;
-                break;
-            }
-        }
-
+    function removeElement(address[] memory array, uint index) internal pure returns(address[] memory newArray) {
         if(index >= array.length) {
             newArray = array;
         }
         else {
             newArray = new address[](array.length - 1);
-            for(i = 0 ; i < array.length ; i++) {
+            for(uint i = 0 ; i < array.length ; i++) {
                 if(i == index) continue;
                 if(i < index) newArray[i] = array[i];
                 else newArray[i-1] = array[i];
@@ -119,10 +110,12 @@ contract Pool is Math, DSAuth {
     }
 
     function chooseMembers(uint radVal, address[] memory candidates) public view returns(address[] memory winners) {
+        if(candidates.length == 0) return candidates;
+
         uint need = add(1,radVal / candidates.length);
         for(uint i = 0 ; i < candidates.length ; i++) {
             if(rad[candidates[i]] < need) {
-                return chooseMembers(radVal, removeElement(candidates, candidates[i]));
+                return chooseMembers(radVal, removeElement(candidates, i));
             }
         }
 

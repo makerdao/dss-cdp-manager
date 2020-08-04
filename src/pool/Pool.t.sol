@@ -59,6 +59,15 @@ contract PoolTest is BCdpManagerTestBase {
         member = members[0];
     }
 
+    function getMembers() internal view returns(address[] memory) {
+        address[] memory memoryMembers = new address[](members.length);
+        for(uint i = 0 ; i < members.length ; i++) {
+            memoryMembers[i] = address(members[i]);
+        }
+
+        return memoryMembers;
+    }
+
     function openCdp(uint ink,uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
 
@@ -114,5 +123,95 @@ contract PoolTest is BCdpManagerTestBase {
         member.doDeposit(pool,123);
         members[1].doDeposit(pool,123);
         member.doWithdraw(pool,123 + 1);
+    }
+
+    // 2 out of 4 are selected
+    function testchooseMembers1() public {
+        // sufficient
+        members[0].doDeposit(pool,1000);
+        members[2].doDeposit(pool,950);
+
+        // insufficient
+        members[1].doDeposit(pool,100);
+        members[3].doDeposit(pool,95);
+
+        address[] memory winners = pool.chooseMembers(404,getMembers());
+        assertEq(winners.length, 2);
+        assertEq(winners[0], address(members[0]));
+        assertEq(winners[1], address(members[2]));
+    }
+
+    // 2 out of 4 are selected, third user has enough when divided by 4, but not by 3.
+    function testchooseMembers2() public {
+        // sufficient
+        members[1].doDeposit(pool,1000);
+        members[3].doDeposit(pool,950);
+
+        // insufficient
+        members[0].doDeposit(pool,110);
+        members[2].doDeposit(pool,95);
+
+        address[] memory winners = pool.chooseMembers(400,getMembers());
+        assertEq(winners.length, 2);
+        assertEq(winners[0], address(members[1]));
+        assertEq(winners[1], address(members[3]));
+    }
+
+    // all are selected
+    function testchooseMembers3() public {
+        // sufficient
+        members[0].doDeposit(pool,1000);
+        members[1].doDeposit(pool,950);
+        members[2].doDeposit(pool,850);
+        members[3].doDeposit(pool,750);
+
+        address[] memory winners = pool.chooseMembers(400,getMembers());
+        assertEq(winners.length, 4);
+        assertEq(winners[0], address(members[0]));
+        assertEq(winners[1], address(members[1]));
+        assertEq(winners[2], address(members[2]));
+        assertEq(winners[3], address(members[3]));
+    }
+
+    // none are selected
+    function testchooseMembers4() public {
+        // insufficient
+        members[0].doDeposit(pool,99);
+        members[1].doDeposit(pool,399);
+        members[2].doDeposit(pool,101);
+        members[3].doDeposit(pool,199);
+
+        address[] memory winners = pool.chooseMembers(400,getMembers());
+        assertEq(winners.length, 0);
+    }
+
+    // test all possibilities
+    function testchooseMembers5() public {
+        uint rad = 1000;
+        for(uint i = 0 ; i < 16 ; i++) {
+            uint expectedNum = 0;
+            if(i & 0x1 > 0) expectedNum++;
+            if(i & 0x2 > 0) expectedNum++;
+            if(i & 0x4 > 0) expectedNum++;
+            if(i & 0x8 > 0) expectedNum++;
+
+            address[] memory expectedWinners = new address[](expectedNum);
+            uint assignedWinners = 0;
+
+            for(uint j = 0 ; j < members.length ; j++) {
+                members[j].doWithdraw(pool, pool.rad(address(members[j])));
+                if((i >> j) & 0x1 > 0) {
+                    members[j].doDeposit(pool,1 + rad/expectedNum);
+                    expectedWinners[assignedWinners++] = address(members[j]);
+                }
+                else members[j].doDeposit(pool,rad/members.length - 1);
+            }
+
+            address[] memory winners = pool.chooseMembers(rad,getMembers());
+            assertEq(winners.length, expectedNum);
+            for(uint k = 0 ; k < winners.length ; k++) {
+                assertEq(winners[k],expectedWinners[k]);
+            }
+        }
     }
 }
