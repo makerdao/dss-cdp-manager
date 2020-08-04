@@ -19,10 +19,6 @@ contract PriceFeedLike {
     function peek(bytes32 ilk) external view returns(bytes32,bool);
 }
 
-contract JugLike {
-    function drip(bytes32 ilk) external returns (uint rate); // update makerdao fees
-}
-
 contract SpotLike {
     function par() external view returns (uint256);
     function ilks(bytes32 ilk) external view returns (address pip, uint mat);
