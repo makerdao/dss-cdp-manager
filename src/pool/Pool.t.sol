@@ -55,6 +55,7 @@ contract PoolTest is BCdpManagerTestBase {
         }
 
         pool.setMembers(memoryMembers);
+        pool.setIlk("ETH",true);
 
         member = members[0];
     }
@@ -213,5 +214,22 @@ contract PoolTest is BCdpManagerTestBase {
                 assertEq(winners[k],expectedWinners[k]);
             }
         }
+    }
+
+    function testSetIlk() public {
+        pool.setIlk("ETH-A",true);
+        assert(pool.ilks("ETH-A") == true);
+        pool.setIlk("ETH-A",false);
+        assert(pool.ilks("ETH-A") == false);
+
+        pool.setIlk("ETH-B",false);
+        pool.setIlk("ETH-C",true);
+        pool.setIlk("ETH-D",false);
+        pool.setIlk("ETH-E",true);
+
+        assert(pool.ilks("ETH-B") == false);
+        assert(pool.ilks("ETH-C") == true);
+        assert(pool.ilks("ETH-D") == false);
+        assert(pool.ilks("ETH-E") == true);
     }
 }

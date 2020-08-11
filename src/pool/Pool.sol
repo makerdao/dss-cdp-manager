@@ -38,6 +38,7 @@ contract Pool is Math, DSAuth {
     }
 
     address[] public members;
+    mapping(bytes32 => bool) public ilks;
     mapping(address => uint) public rad; // mapping from member to its dai balance in rad
     mapping(uint => CdpData) public cdpData;
 
@@ -45,6 +46,7 @@ contract Pool is Math, DSAuth {
     BCdpManager               public man;
     SpotLike                  public spot;
     address                   public jar;
+
 
     mapping(bytes32 => OSMLike) public osm; // mapping from ilk to osm
 
@@ -74,6 +76,10 @@ contract Pool is Math, DSAuth {
 
     function setMembers(address[] calldata members_) external auth {
         members = members_;
+    }
+
+    function setIlk(bytes32 ilk, bool set) external auth {
+        ilks[ilk] = set;
     }
 
     function deposit(uint radVal) external onlyMember {
@@ -125,6 +131,8 @@ contract Pool is Math, DSAuth {
     function topAmount(uint cdp) public view returns(int dart, int dtab, uint art) {
         address urn = man.urns(cdp);
         bytes32 ilk = man.ilks(cdp);
+
+        if(! ilks[ilk]) return (0,0,0);
 
         (bytes32 peep, bool valid) = osm[ilk].peep();
 
