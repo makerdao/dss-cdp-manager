@@ -232,4 +232,38 @@ contract PoolTest is BCdpManagerTestBase {
         assert(pool.ilks("ETH-D") == false);
         assert(pool.ilks("ETH-E") == true);
     }
+
+    function testchooseMember1() public {
+        // sufficient
+        members[2].doDeposit(pool,1000);
+
+        address[] memory winners = pool.chooseMember(0,404,getMembers());
+        assertEq(winners.length, 1);
+        assertEq(winners[0], address(members[2]));
+    }
+
+    function testchooseMember2() public {
+        // sufficient
+        members[0].doDeposit(pool,1000);
+        members[1].doDeposit(pool,1000);
+        members[2].doDeposit(pool,1000);
+        members[3].doDeposit(pool,1000);
+
+        bool one = true; bool two = true; bool three = true; bool four = true;
+        uint maxNumIter = 1000;
+
+        timeReset();
+        while(one || two || three || four) {
+            assert(maxNumIter-- > 0);
+
+            address[] memory winners = pool.chooseMember(0,404,getMembers());
+            assertEq(winners.length, 1);
+            if(winners[0] == address(members[0])) one = false;
+            if(winners[0] == address(members[1])) two = false;
+            if(winners[0] == address(members[2])) three = false;
+            if(winners[0] == address(members[3])) four = false;
+
+            forwardTime(23 minutes);
+        }
+    }
 }
