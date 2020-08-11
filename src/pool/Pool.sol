@@ -120,8 +120,14 @@ contract Pool is Math, DSAuth {
         }
     }
 
-    function chooseMember(uint cdp, address[] memory candidates) public view returns(address[] memory winners) {
+    function chooseMember(uint cdp, uint radVal, address[] memory candidates) public view returns(address[] memory winners) {
+        if(candidates.length == 0) return candidates;
+
         uint chosen = uint(keccak256(abi.encodePacked(cdp,now / 1 hours))) % candidates.length;
+        address winner = candidates[chosen];
+
+        if(rad[winner] < radVal) return chooseMember(cdp,radVal, removeElement(candidates, chosen));
+
         winners = new address[](1);
         winners[0] = candidates[chosen];
         return winners;
@@ -215,7 +221,7 @@ contract Pool is Math, DSAuth {
         resetCdp(cdp);
 
         address[] memory winners;
-        if(art < minArt) winners = chooseMember(cdp, members);
+        if(art < minArt) winners = chooseMember(cdp, uint(dtab), members);
         else winners = chooseMembers(uint(dtab), members);
         require(winners.length > 0, "topup: members-are-broke");
 
