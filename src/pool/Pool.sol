@@ -39,6 +39,7 @@ contract Pool is Math, DSAuth {
 
     address[] public members;
     mapping(bytes32 => bool) public ilks;
+    uint                     public minArt; // min debt to share among members
     mapping(address => uint) public rad; // mapping from member to its dai balance in rad
     mapping(uint => CdpData) public cdpData;
 
@@ -82,6 +83,10 @@ contract Pool is Math, DSAuth {
         ilks[ilk] = set;
     }
 
+    function setMinArt(uint minArt_) external auth {
+        minArt = minArt_;
+    }
+
     function deposit(uint radVal) external onlyMember {
         vat.move(msg.sender, address(this),radVal);
         rad[msg.sender] = add(rad[msg.sender],radVal);
@@ -113,6 +118,13 @@ contract Pool is Math, DSAuth {
                 else newArray[i-1] = array[i];
             }
         }
+    }
+
+    function chooseMember(uint cdp, address[] memory candidates) public view returns(address[] memory winners) {
+        uint chosen = uint(keccak256(abi.encodePacked(cdp,now / 1 hours))) % candidates.length;
+        winners = new address[](1);
+        winners[0] = candidates[chosen];
+        return winners;
     }
 
     function chooseMembers(uint radVal, address[] memory candidates) public view returns(address[] memory winners) {
@@ -192,7 +204,6 @@ contract Pool is Math, DSAuth {
         cdpData[cdp].bite = new uint[](winners.length);
     }
 
-
     function topup(uint cdp) external onlyMember {
         require(man.cushion(cdp) == 0, "topup: already-topped");
         require(! man.bitten(cdp), "topup: already-bitten");
@@ -203,7 +214,9 @@ contract Pool is Math, DSAuth {
 
         resetCdp(cdp);
 
-        address[] memory winners = chooseMembers(uint(dtab), members);
+        address[] memory winners;
+        if(art < minArt) winners = chooseMember(cdp, members);
+        else winners = chooseMembers(uint(dtab), members);
         require(winners.length > 0, "topup: members-are-broke");
 
         setCdp(cdp, winners, uint(art), uint(dtab));
