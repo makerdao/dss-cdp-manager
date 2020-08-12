@@ -37,7 +37,21 @@ contract ScoringMachine is DSAuth, Math {
             currentScore = 0;
         }
 
-        return add(currentScore, mul(score.balance, sub(time,last)));
+        return _calcNewScore(currentScore, score.balance, time, last);
+    }
+
+    function _calcNewScore(uint currentScore, uint balance, uint time, uint last) private view returns (uint) {
+        MathError err; uint deltaTime; uint newScore; uint totalScore;
+        (err, deltaTime) = sub_(time,last);
+        if(err == MathError.ERROR) return 0;
+
+        (err, newScore) = mul_(balance, deltaTime);
+        if(err == MathError.ERROR) return 0;
+
+        (err, totalScore) = add_(currentScore, newScore);
+        if(err == MathError.ERROR) return 0;
+
+        return totalScore;
     }
 
     function addCheckpoint(bytes32 user, bytes32 asset) internal {
@@ -50,7 +64,14 @@ contract ScoringMachine is DSAuth, Math {
         if(score.last < start) addCheckpoint(user,asset);
 
         score.score = assetScore(score, time, start);
-        score.balance = add(score.balance, dbalance);
+        (MathError err, uint balance) = add_(score.balance, dbalance);
+        if(MathError.ERROR == err) {
+            score.score = 0;
+            score.balance = 0;
+        } else {
+            score.balance = balance;
+        }
+        
         score.last = time;
     }
 
@@ -63,10 +84,11 @@ contract ScoringMachine is DSAuth, Math {
         if(time >= userScore[user][asset].last) return assetScore(userScore[user][asset],time,spinStart);
 
         // else - check the checkpoints
-        if(checkpoints[user][asset].length == 0) return 0;
+        uint checkpointsLen = checkpoints[user][asset].length;
+        if(checkpointsLen == 0) return 0;
 
         // hint is invalid
-        if(checkpoints[user][asset][checkPointHint].last < time) checkPointHint = checkpoints[user][asset].length - 1;
+        if(checkpoints[user][asset][checkPointHint].last < time) checkPointHint = checkpointsLen - 1;
 
         for(uint i = checkPointHint ; ; i--){
             if(checkpoints[user][asset][i].last <= time) return assetScore(checkpoints[user][asset][i],time,spinStart);

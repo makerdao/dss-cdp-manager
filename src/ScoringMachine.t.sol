@@ -3,6 +3,7 @@ pragma solidity ^0.5.12;
 import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol";
 import {BCdpScore} from "./BCdpScore.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
+import { ScoringMachine } from "./ScoringMachine.sol";
 
 
 contract FakeSlasher {
@@ -11,10 +12,11 @@ contract FakeSlasher {
     }
 }
 
-contract ScordingMachineTest is BCdpManagerTestBase {
+contract ScoringMachineTest is BCdpManagerTestBase {
     uint currTime;
 
     BCdpScore score;
+    MockScoringMachine sm;
 
     function setUp() public {
         super.setUp();
@@ -23,6 +25,7 @@ contract ScordingMachineTest is BCdpManagerTestBase {
         hevm.warp(currTime);
 
         score = BCdpScore(manager);
+        sm = new MockScoringMachine();
     }
 
     function openCdp(uint ink,uint art) internal returns(uint){
@@ -386,5 +389,55 @@ contract ScordingMachineTest is BCdpManagerTestBase {
 
         assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 20 * 1 ether - 10 * (inkBefore - inkAfter));
         assertEq(score.getArtScore(cdp,"ETH",currTime,score.start()), 10 * 50 ether + 10 * 25 ether);
+    }
+
+    // Scoring Machine Unit Tests
+    // ============================
+    function testUpdateAssetScoreWithMinValue() public {
+        int256 _INT256_MIN = -2**255;
+        uint time = now;
+
+        resetAndMakeFakeScore(time);
+
+        sm._updateAssetScore("user", "ETH", _INT256_MIN, time);
+        uint score = sm._getScore("user", "ETH", now, time, time);
+        assert(score == 0);
+    }
+
+    function testUpdateAssetScoreWithMaxValue() public {
+        int256 _INT256_MAX = 2**255 - 1;
+        uint time = now;
+
+        resetAndMakeFakeScore(time);
+
+        sm._updateAssetScore("user", "ETH", _INT256_MAX, time);
+        uint score = sm._getScore("user", "ETH", now, time, time);
+        assert(score == 0);
+    }
+
+    function resetAndMakeFakeScore(uint time) internal {
+        hevm.warp(time);
+
+        sm.spin();
+        forwardTime(10);
+        sm._updateScore("user", "ETH", 1 ether, now);        
+        forwardTime(10);
+        sm._updateScore("user", "ETH", 1 ether, now);
+        uint score = sm._getScore("user", "ETH", now, time, time);
+        assert(score > 0);
+    }
+}
+
+contract MockScoringMachine is ScoringMachine {
+    function _updateAssetScore(bytes32 user, bytes32 asset, int dbalance, uint time) public {
+        super.updateAssetScore(user, asset, dbalance, time);
+    }
+
+    function _getScore(bytes32 user, bytes32 asset, uint time, uint spinStart, uint checkPointHint) public view returns(uint score) {
+        return super.getScore(user, asset, time, spinStart, checkPointHint);
+    }
+
+    function _updateScore(bytes32 user, bytes32 asset, int dbalance, uint time) public {
+        super.updateScore(user, asset, dbalance, time);
     }
 }
