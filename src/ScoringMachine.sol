@@ -2,9 +2,8 @@ pragma solidity ^0.5.12;
 
 
 import { DSAuth } from "ds-auth/auth.sol";
-import { Math } from "./Math.sol";
 
-contract ScoringMachine is DSAuth, Math {
+contract ScoringMachine is DSAuth {
     struct AssetScore {
         // total score so far
         uint score;
@@ -37,21 +36,7 @@ contract ScoringMachine is DSAuth, Math {
             currentScore = 0;
         }
 
-        return _calcNewScore(currentScore, score.balance, time, last);
-    }
-
-    function _calcNewScore(uint currentScore, uint balance, uint time, uint last) private view returns (uint) {
-        MathError err; uint deltaTime; uint newScore; uint totalScore;
-        (err, deltaTime) = sub_(time,last);
-        if(err == MathError.ERROR) return 0;
-
-        (err, newScore) = mul_(balance, deltaTime);
-        if(err == MathError.ERROR) return 0;
-
-        (err, totalScore) = add_(currentScore, newScore);
-        if(err == MathError.ERROR) return 0;
-
-        return totalScore;
+        return add(currentScore, mul(score.balance, sub(time,last)));
     }
 
     function addCheckpoint(bytes32 user, bytes32 asset) internal {
@@ -64,13 +49,7 @@ contract ScoringMachine is DSAuth, Math {
         if(score.last < start) addCheckpoint(user,asset);
 
         score.score = assetScore(score, time, start);
-        (MathError err, uint balance) = add_(score.balance, dbalance);
-        if(MathError.ERROR == err) {
-            score.score = 0;
-            score.balance = 0;
-        } else {
-            score.balance = balance;
-        }
+        score.balance = add(score.balance, dbalance);
         
         score.last = time;
     }
@@ -96,5 +75,37 @@ contract ScoringMachine is DSAuth, Math {
 
         // this supposed to be unreachable
         return 0;
+    }
+
+    // Math with error code
+    function add(uint x, uint y) internal pure returns (uint z) {
+        z = x + y;
+        if(!(z >= x)) return 0;
+
+        return z;
+    }
+
+    function add(uint x, int y) internal pure returns (uint z) {
+        z = x + uint(y);
+        if(!(y >= 0 || z <= x)) return 0;
+        if(!(y <= 0 || z >= x)) return 0;
+
+        return z;
+    }
+
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        if(!(y <= x)) return 0;
+        z = x - y;
+
+        return z;
+    }
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        if (x == 0) return 0;
+
+        z = x * y;
+        if(!(z / x == y)) return 0;
+
+        return z;
     }
 }

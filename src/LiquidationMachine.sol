@@ -3,6 +3,7 @@ pragma solidity ^0.5.12;
 import { LibNote } from "dss/lib.sol";
 import {DssCdpManager} from "./DssCdpManager.sol";
 import {BCdpScore} from "./BCdpScore.sol";
+import {Math} from "./Math.sol";
 
 contract VatLike {
     function urns(bytes32 ilk, address u) public view returns (uint ink, uint art);
@@ -19,7 +20,7 @@ contract PriceFeedLike {
     function read(bytes32 ilk) external view returns(bytes32);
 }
 
-contract LiquidationMachine is LibNote, BCdpScore {
+contract LiquidationMachine is LibNote, BCdpScore, Math {
     VatLike                   public vat;
     CatLike                   public cat;
     DssCdpManager             public man;

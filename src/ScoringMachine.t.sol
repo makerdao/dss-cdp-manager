@@ -399,9 +399,15 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
         resetAndMakeFakeScore(time);
 
+        uint score; uint balance;
+
         sm._updateAssetScore("user", "ETH", _INT256_MIN, time);
-        uint score = sm._getScore("user", "ETH", now, time, time);
-        assert(score == 0);
+        score = sm._getScore("user", "ETH", now, time, time);
+        assert(score > 0);
+        (score, balance,) = sm._getAssetScore("user", "ETH");
+        // Math calc would underflow when uint(_INT256_MIN) is performed.
+        // Hence, balance will be set to 0
+        assert(balance == 0);
     }
 
     function testUpdateAssetScoreWithMaxValue() public {
@@ -409,13 +415,22 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         uint time = now;
 
         resetAndMakeFakeScore(time);
+        
+        uint score; uint balance;
+        (, balance,) = sm._getAssetScore("user", "ETH");
+        assert(balance < (uint(-1) - uint(_INT256_MAX)));
 
         sm._updateAssetScore("user", "ETH", _INT256_MAX, time);
-        uint score = sm._getScore("user", "ETH", now, time, time);
-        assert(score == 0);
+        score = sm._getScore("user", "ETH", now, time, time);
+        assert(score > 0);
+        (score, balance,) = sm._getAssetScore("user", "ETH");
+        // Math calc would not overflow as uint(_INT256_MAX) is converted to 256 bit value
+        // which is less than 2^256-1, henve balance will be increased
+        assert(balance > 0);
     }
 
     function resetAndMakeFakeScore(uint time) internal {
+        uint score; uint balance;
         hevm.warp(time);
 
         sm.spin();
@@ -423,8 +438,10 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         sm._updateScore("user", "ETH", 1 ether, now);        
         forwardTime(10);
         sm._updateScore("user", "ETH", 1 ether, now);
-        uint score = sm._getScore("user", "ETH", now, time, time);
+        score = sm._getScore("user", "ETH", now, time, time);
         assert(score > 0);
+        (score, balance,) = sm._getAssetScore("user", "ETH");
+        assert(balance > 0);
     }
 }
 
@@ -439,5 +456,10 @@ contract MockScoringMachine is ScoringMachine {
 
     function _updateScore(bytes32 user, bytes32 asset, int dbalance, uint time) public {
         super.updateScore(user, asset, dbalance, time);
+    }
+
+    function _getAssetScore(bytes32 user, bytes32 asset) public returns (uint, uint, uint) {
+        AssetScore memory s = userScore[user][asset];
+        return (s.score, s.balance, s.last);
     }
 }
