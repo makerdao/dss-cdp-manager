@@ -1,6 +1,6 @@
 pragma solidity ^0.5.12;
 
-import {ScoringMachine} from "./ScoringMachine.sol";
+import {ScoringMachine} from "../user-rating/contracts/ScoringMachine.sol";
 
 contract BCdpScore is ScoringMachine {
     function user(uint cdp) public pure returns(bytes32) {

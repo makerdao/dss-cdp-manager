@@ -3,7 +3,7 @@ pragma solidity ^0.5.12;
 import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol";
 import {BCdpScore} from "./BCdpScore.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
-import { ScoringMachine } from "./ScoringMachine.sol";
+import { ScoringMachine } from "../user-rating/contracts/ScoringMachine.sol";
 
 
 contract FakeSlasher {
