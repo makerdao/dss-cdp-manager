@@ -97,6 +97,35 @@ contract PoolTest is BCdpManagerTestBase {
         hevm.warp(currTime);
     }
 
+    function setRateTo1p1() internal {
+        uint duty;
+        uint rho;
+        (duty,) = jug.ilks("ETH");
+        assertEq(ONE,duty);
+        assertEq(uint(address(vat)),uint(address(jug.vat())));
+        jug.drip("ETH");
+        forwardTime(1);
+        jug.drip("ETH");
+        this.file(address(jug),"ETH","duty",ONE + ONE/10);
+        (duty,) = jug.ilks("ETH");
+        assertEq(ONE + ONE / 10,duty);
+        forwardTime(1);
+        jug.drip("ETH");
+        (,rho) = jug.ilks("ETH");
+        assertEq(rho,now);
+        (,uint rate,,,) = vat.ilks("ETH");
+        assertEq(ONE + ONE/10,rate);
+    }
+
+    function almostEqual(uint a, uint b) internal returns(bool) {
+        assert(a < uint(1) << 200 && b < uint(1) << 200);
+
+        if(a > b) return almostEqual(b,a);
+        if(a * (1e6 + 1) < b * 1e6) return false;
+
+        return true;
+    }
+
     function testDeposit() public {
         uint userBalance = vat.dai(address(member));
         assertEq(pool.rad(address(member)), 0);
@@ -276,16 +305,107 @@ contract PoolTest is BCdpManagerTestBase {
         }
     }
 
-    function testTopAmountSimple() public {
+    function testTopAmount() public {
         // open cdp with rate  = 1, that hit liquidation state
         uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
 
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+        timeReset();
+        osm.setH(60 * 60);
+        osm.setZ(currTime - 40*60);
+
         (int dart, int dtab, uint art) = pool.topAmount(cdp);
 
         assertEq(uint(dtab),10 ether * ONE);
+        assertEq(art,110 ether);
+        assertEq(uint(dart) * ONE,uint(dtab));
     }
+
+    function testTopAmountWithRate() public {
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 100 ether); // 1 eth, 100 dai
+
+        // debt increased to 110 dai
+        setRateTo1p1();
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+        timeReset();
+        osm.setH(60 * 60);
+        osm.setZ(currTime - 40*60);
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assert(almostEqual(uint(dtab),10 ether * ONE));
+        assertEq(art,100 ether);
+        assert(almostEqual(uint(dart),10 ether * uint(100) / 110));
+    }
+
+    function testTopAmountNoCushion() public {
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 90 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of -10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+        timeReset();
+        osm.setH(60 * 60);
+        osm.setZ(currTime - 40*60);
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(dtab,-10 ether * int(ONE));
+        assertEq(art,90 ether);
+        assertEq(dart * int(ONE),dtab);
+    }
+
+    function testTopAmountTooEarly() public {
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 90 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of -10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+        osm.setH(60 * 60);
+        osm.setZ(currTime - 10*60);
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(dtab,0);
+        assertEq(art,90 ether);
+        assertEq(dart,0);
+    }
+
+    function testTopAmountInvalidIlk() public {
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 90 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of -10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        pool.setIlk("ETH",false);
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(dtab,0);
+        assertEq(art,90 ether);
+        assertEq(dart,0);
+    }
+
+    function testTopAmountInvalidOsmPrice() public {
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 90 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of -10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+        osm.setValid(false);
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(dtab,0);
+        assertEq(art,90 ether);
+        assertEq(dart,0);
+    }
+
 
     // tests to do
     // topamount
