@@ -151,6 +151,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
         pool.setMembers(members);
+        pool.setProfitParams(1,100);        
         pool.setIlk("ETH",true);
         pool.setOsm("ETH",address(osm));
         getCdps = new GetCdps();

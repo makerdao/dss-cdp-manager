@@ -55,6 +55,7 @@ contract PoolTest is BCdpManagerTestBase {
         }
 
         pool.setMembers(memoryMembers);
+        pool.setProfitParams(1,100);
         pool.setIlk("ETH",true);
 
         member = members[0];
@@ -216,6 +217,7 @@ contract PoolTest is BCdpManagerTestBase {
         }
     }
 
+    // todo test real functionallity
     function testSetIlk() public {
         pool.setIlk("ETH-A",true);
         assert(pool.ilks("ETH-A") == true);
@@ -231,6 +233,13 @@ contract PoolTest is BCdpManagerTestBase {
         assert(pool.ilks("ETH-C") == true);
         assert(pool.ilks("ETH-D") == false);
         assert(pool.ilks("ETH-E") == true);
+    }
+
+    // TODO - test real functionallity
+    function testSetProfitParams() public {
+        pool.setProfitParams(123,456);
+        assertEq(pool.shrn(),123);
+        assertEq(pool.shrd(),456);
     }
 
     function testchooseMember1() public {
@@ -266,4 +275,21 @@ contract PoolTest is BCdpManagerTestBase {
             forwardTime(23 minutes);
         }
     }
+
+    function testTopAmountSimple() public {
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(uint(dtab),10 ether * ONE);
+    }
+
+    // tests to do
+    // topamount
+    // topup
+    // untop
+    // bite
 }

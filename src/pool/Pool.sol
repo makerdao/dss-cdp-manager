@@ -40,6 +40,8 @@ contract Pool is Math, DSAuth {
     address[] public members;
     mapping(bytes32 => bool) public ilks;
     uint                     public minArt; // min debt to share among members
+    uint                     public shrn; // share profit % numerator
+    uint                     public shrd; // share profit % denumerator
     mapping(address => uint) public rad; // mapping from member to its dai balance in rad
     mapping(uint => CdpData) public cdpData;
 
@@ -85,6 +87,11 @@ contract Pool is Math, DSAuth {
 
     function setMinArt(uint minArt_) external auth {
         minArt = minArt_;
+    }
+
+    function setProfitParams(uint num, uint den) external auth {
+        shrn = num;
+        shrd = den;
     }
 
     function deposit(uint radVal) external onlyMember {
@@ -257,7 +264,7 @@ contract Pool is Math, DSAuth {
 
         require(dink >= minInk, "bite: low-dink");
 
-        uint userInk = dink / 100;
+        uint userInk = mul(dink,shrn) / shrd;
         bytes32 ilk = man.ilks(cdp);
 
         vat.flux(ilk, address(this), jar, userInk);
