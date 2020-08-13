@@ -406,9 +406,39 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(dart,0);
     }
 
+    function testHappyTopup() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        pool.setMinArt(1 ether);
+
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(uint(dtab),10 ether * ONE);
+        assertEq(art,110 ether);
+        assertEq(uint(dart) * ONE,uint(dtab));
+
+        members[0].doTopup(pool,cdp);
+
+        (uint cdpArt, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        assertEq(art,cdpArt);
+        assertEq(winners.length,4);
+        assertEq(address(winners[0]),address(members[0]));
+        assertEq(address(winners[1]),address(members[1]));
+        assertEq(address(winners[2]),address(members[2]));
+        assertEq(address(winners[3]),address(members[3]));
+    }
 
     // tests to do
-    // topamount
+
     // topup
     // untop
     // bite
