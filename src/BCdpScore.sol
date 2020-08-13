@@ -24,7 +24,7 @@ contract BCdpScore is ScoringMachine {
         updateScore(user(cdp), artAsset(ilk), dart, time);
     }
 
-    function slashScore(uint cdp, bytes32 ilk, int dart, uint time) external auth {
+    function slashScore(uint cdp, bytes32 ilk, int dart, uint time) external onlyOwner {
         updateScore(user(cdp), slashAsset(ilk), dart, time);
     }
 
