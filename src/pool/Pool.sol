@@ -31,20 +31,30 @@ contract OSMLike {
 }
 
 contract Pool is Math, DSAuth {
+    address[] public members;
+    mapping(bytes32 => bool) public ilks;
+    uint                     public minArt; // min debt to share among members
+    uint                     public shrn; // share profit % numerator
+    uint                     public shrd; // share profit % denumerator
+    mapping(address => uint) public rad; // mapping from member to its dai balance in rad
+
+    VatLike                   public vat;
+    BCdpManager               public man;
+    SpotLike                  public spot;
+    address                   public jar;
+
+    mapping(uint => CdpData) cdpData;
     struct CdpData {
         uint       art;        // topup in art units
         address[]  members;    // liquidators that are in
         uint[]     bite;       // how much was already bitten
     }
 
-    address[] public members;
-    mapping(address => uint) public rad; // mapping from member to its dai balance in rad
-    mapping(uint => CdpData) public cdpData;
-
-    VatLike                   public vat;
-    BCdpManager               public man;
-    SpotLike                  public spot;
-    address                   public jar;
+    function getCdpData(uint cdp) external view returns(uint art, address[] memory members, uint[] memory bite) {
+        art = cdpData[cdp].art;
+        members = cdpData[cdp].members;
+        bite = cdpData[cdp].bite;        
+    }
 
     mapping(bytes32 => OSMLike) public osm; // mapping from ilk to osm
 
@@ -74,6 +84,19 @@ contract Pool is Math, DSAuth {
 
     function setMembers(address[] calldata members_) external auth {
         members = members_;
+    }
+
+    function setIlk(bytes32 ilk, bool set) external auth {
+        ilks[ilk] = set;
+    }
+
+    function setMinArt(uint minArt_) external auth {
+        minArt = minArt_;
+    }
+
+    function setProfitParams(uint num, uint den) external auth {
+        shrn = num;
+        shrd = den;
     }
 
     function deposit(uint radVal) external onlyMember {
@@ -109,6 +132,19 @@ contract Pool is Math, DSAuth {
         }
     }
 
+    function chooseMember(uint cdp, uint radVal, address[] memory candidates) public view returns(address[] memory winners) {
+        if(candidates.length == 0) return candidates;
+
+        uint chosen = uint(keccak256(abi.encodePacked(cdp,now / 1 hours))) % candidates.length;
+        address winner = candidates[chosen];
+
+        if(rad[winner] < radVal) return chooseMember(cdp,radVal, removeElement(candidates, chosen));
+
+        winners = new address[](1);
+        winners[0] = candidates[chosen];
+        return winners;
+    }
+
     function chooseMembers(uint radVal, address[] memory candidates) public view returns(address[] memory winners) {
         if(candidates.length == 0) return candidates;
 
@@ -126,16 +162,19 @@ contract Pool is Math, DSAuth {
         address urn = man.urns(cdp);
         bytes32 ilk = man.ilks(cdp);
 
+        (uint ink, uint curArt) = vat.urns(ilk,urn);
+        art = curArt;
+
+        if(! ilks[ilk]) return (0,0,art);
+
         (bytes32 peep, bool valid) = osm[ilk].peep();
 
         // price feed invalid
-        if(! valid) return (0,0,0);
+        if(! valid) return (0,0,art);
 
         // too early to topup
-        if(now < add(uint(osm[ilk].zzz()),uint(osm[ilk].hop())/2)) return (0,0,0);
+        if(now < add(uint(osm[ilk].zzz()),uint(osm[ilk].hop())/2)) return (0,0,art);
 
-        (uint ink, uint curArt) = vat.urns(ilk,urn);
-        art = curArt;
         (,uint rate,,,) = vat.ilks(ilk);
 
         (, uint mat) = spot.ilks(ilk);
@@ -184,7 +223,6 @@ contract Pool is Math, DSAuth {
         cdpData[cdp].bite = new uint[](winners.length);
     }
 
-
     function topup(uint cdp) external onlyMember {
         require(man.cushion(cdp) == 0, "topup: already-topped");
         require(! man.bitten(cdp), "topup: already-bitten");
@@ -195,7 +233,9 @@ contract Pool is Math, DSAuth {
 
         resetCdp(cdp);
 
-        address[] memory winners = chooseMembers(uint(dtab), members);
+        address[] memory winners;
+        if(art < minArt) winners = chooseMember(cdp, uint(dtab), members);
+        else winners = chooseMembers(uint(dtab), members);
         require(winners.length > 0, "topup: members-are-broke");
 
         setCdp(cdp, winners, uint(art), uint(dtab));
@@ -230,7 +270,7 @@ contract Pool is Math, DSAuth {
 
         require(dink >= minInk, "bite: low-dink");
 
-        uint userInk = dink / 100;
+        uint userInk = mul(dink,shrn) / shrd;
         bytes32 ilk = man.ilks(cdp);
 
         vat.flux(ilk, address(this), jar, userInk);

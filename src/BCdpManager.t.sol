@@ -101,21 +101,36 @@ contract FakePriceFeed {
 
 contract FakeOSM {
     bytes32 price;
+    bool valid = true;
+    uint z = 0;
+    uint h = 0;
 
     function setPrice(uint price_) public {
         price = bytes32(price_);
     }
 
     function peep() external view returns(bytes32,bool) {
-        return (price, true);
+        return (price, valid);
     }
 
     function hop() external view returns(uint16) {
-        return uint16(0);
+        return uint16(h);
     }
 
     function zzz() external view returns(uint64) {
-        return uint64(0);
+        return uint64(z);
+    }
+
+    function setH(uint h_) external {
+        h = h_;
+    }
+
+    function setZ(uint z_) external {
+        z = z_;
+    }
+
+    function setValid(bool v) external {
+        valid = v;
     }
 }
 
@@ -151,6 +166,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
         pool.setMembers(members);
+        pool.setProfitParams(1,100);
+        pool.setIlk("ETH",true);
         pool.setOsm("ETH",address(osm));
         getCdps = new GetCdps();
 
