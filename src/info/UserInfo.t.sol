@@ -250,6 +250,23 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.spotPrice(),123e18);
     }
 
+    function testCushion() public {
+        FakeProxy proxy = registry.build();
+        uint bCdp = openCdp(address(manager),0 ether, 0 ether);
+        reachTopup(bCdp);
+        manager.give(bCdp,address(proxy));
+
+        address urn = manager.urns(bCdp);
+        (uint ink, uint art) = vat.urns("ETH",urn);
+        assert(art < 50 ether); // make sure there is a cushion
+
+        userInfo.setInfo(address(this), "ETH", manager, dsManager,getCdps,vatLike,
+                         spotterLike, registryLike, address(123));
+
+        assert(userInfo.hasCdp());
+        assertEq(userInfo.daiDebt(),50 ether);
+    }
+
     // todo - test cushion
 
 
