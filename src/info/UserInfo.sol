@@ -2,6 +2,7 @@ pragma solidity ^0.5.12;
 pragma experimental ABIEncoderV2;
 
 import {BCdpManager} from "./../BCdpManager.sol";
+import {LiquidationMachine} from "./../LiquidationMachine.sol";
 import {DssCdpManager} from "./../DssCdpManager.sol";
 import {GetCdps} from "./../GetCdps.sol";
 import {Math} from "./../Math.sol";
@@ -47,7 +48,6 @@ contract UserInfoStorage {
         uint totalRatingProgressPerSec;
         uint jarSize;
     }
-
 
     struct UserState {
         ProxyInfo proxyInfo;
@@ -152,11 +152,12 @@ contract UserInfo is Math, UserInfoStorage {
         info.userProxy = registry.proxies(user);
     }
 
-    function getCdpInfo(address guy, address manager, bytes32 ilk, VatLike vat, GetCdps getCdp) public view returns(CdpInfo memory info) {
+    function getCdpInfo(address guy, address manager, bytes32 ilk, VatLike vat, GetCdps getCdp, bool b) public view returns(CdpInfo memory info) {
         info.cdp = getFirstCdp(getCdp,manager,guy,ilk);
         info.hasCdp = info.cdp > 0;
         if(info.hasCdp) {
             (uint ink, uint art) = vat.urns(ilk,DssCdpManager(manager).urns(info.cdp));
+            if(b) art = add(art,LiquidationMachine(manager).cushion(info.cdp));
             info.ethDeposit = ink;
             info.daiDebt = artToDaiDebt(vat,ilk,art);
             info.maxDaiDebt = calcMaxDebt(vat,ilk,ink);
@@ -185,10 +186,10 @@ contract UserInfo is Math, UserInfoStorage {
         address guy = address(state.proxyInfo.userProxy);
 
         // fill bprotocol info
-        state.bCdpInfo = getCdpInfo(guy,address(manager),ilk,vat,getCdp);
+        state.bCdpInfo = getCdpInfo(guy,address(manager),ilk,vat,getCdp, true);
 
         // fill makerdao info
-        state.makerdaoCdpInfo = getCdpInfo(guy,address(makerDAOManager),ilk,vat,getCdp);
+        state.makerdaoCdpInfo = getCdpInfo(guy,address(makerDAOManager),ilk,vat,getCdp, false);
 
         state.spotPrice = calcSpotPrice(vat,spot,ilk);
 

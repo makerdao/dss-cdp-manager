@@ -198,16 +198,36 @@ contract UserInfoTest is BCdpManagerTestBase {
 
     function testBothHaveCdpWithRateAndDifferentPrice() public {
         FakeProxy proxy = registry.build();
+
+        for(uint i = 0 ; i < 10 ; i++) {
+            uint cdp1 = dsManager.open("ETH-B", address(this));
+            uint cdp2 = manager.open("ETH-B", address(this));
+
+            dsManager.give(cdp1,address(proxy));
+            manager.give(cdp2,address(proxy));
+        }
+
         uint bCdp = openCdp(address(manager),1 ether, 20 ether);
         uint mCdp = openCdp(address(dsManager),2 ether, 30 ether);
+        uint mCdp2 = openCdp(address(dsManager),3 ether, 40 ether);
+
+        for(uint i = 0 ; i < 10 ; i++) {
+            uint cdp1 = dsManager.open("ETH-B", address(this));
+            uint cdp2 = manager.open("ETH-B", address(this));
+
+            dsManager.give(cdp1,address(proxy));
+            manager.give(cdp2,address(proxy));
+        }
 
         pipETH.poke(bytes32(uint(123 * 1e18)));
         spotter.poke("ETH");
 
-        setRateTo1p1();
 
+        setRateTo1p1();
         manager.give(bCdp,address(proxy));
         dsManager.give(mCdp,address(proxy));
+        dsManager.give(mCdp2,address(proxy));
+
         userInfo.setInfo(address(this), "ETH", manager, dsManager,getCdps,vatLike,
                          spotterLike, registryLike, address(123));
 
@@ -229,6 +249,9 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.makerdaoMaxDaiDebt(),164 ether - 1); // 150% with spot price of $123
         assertEq(userInfo.spotPrice(),123e18);
     }
+
+    // todo - test cushion
+
 
     function setRateTo1p1() internal {
         uint duty;
