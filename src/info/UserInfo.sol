@@ -67,10 +67,12 @@ contract UserInfoStorage {
     uint public maxDaiDebt;
 
     bool public makerdaoHasCdp;
-    uint public makerDaoCdp;
-    uint public makerDaoEthDeposit;
-    uint public makerDaoDaiDebt; // in wad - not in rad
-    uint public makerDaoMaxDaiDebt;
+    uint public makerdaoCdp;
+    uint public makerdaoEthDeposit;
+    uint public makerdaoDaiDebt; // in wad - not in rad
+    uint public makerdaoMaxDaiDebt;
+
+    uint public spotPrice;
 
     uint public userRating;
     uint public userRatingProgressPerSec;
@@ -89,10 +91,12 @@ contract UserInfoStorage {
         maxDaiDebt = state.bCdpInfo.maxDaiDebt;
 
         makerdaoHasCdp = state.makerdaoCdpInfo.hasCdp;
-        makerDaoCdp = state.makerdaoCdpInfo.cdp;
-        makerDaoEthDeposit = state.makerdaoCdpInfo.ethDeposit;
-        makerDaoDaiDebt = state.makerdaoCdpInfo.daiDebt;
-        makerDaoMaxDaiDebt = state.makerdaoCdpInfo.maxDaiDebt;
+        makerdaoCdp = state.makerdaoCdpInfo.cdp;
+        makerdaoEthDeposit = state.makerdaoCdpInfo.ethDeposit;
+        makerdaoDaiDebt = state.makerdaoCdpInfo.daiDebt;
+        makerdaoMaxDaiDebt = state.makerdaoCdpInfo.maxDaiDebt;
+
+        spotPrice = state.spotPrice;
 
         userRating = state.userRatingInfo.userRating;
         userRatingProgressPerSec = state.userRatingInfo.userRatingProgressPerSec;
