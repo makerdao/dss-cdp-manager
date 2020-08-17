@@ -76,6 +76,8 @@ contract UserInfoStorage {
         UserWalletInfo userWalletInfo;
     }
 
+    UserState userState;
+
     bool public hasProxy;
     address public userProxy;
 
@@ -134,6 +136,8 @@ contract UserInfoStorage {
         totalRating = state.userRatingInfo.totalRating;
         totalRatingProgressPerSec = state.userRatingInfo.totalRatingProgressPerSec;
         jarSize = state.userRatingInfo.jarSize;
+
+        userState = state;
     }
 }
 
@@ -239,6 +243,6 @@ contract UserInfo is Math, UserInfoStorage {
                      SpotLike spot, ProxyRegistryLike registry, address jar, address dai)
                      public returns(UserState memory state) {
         setInfo(user,ilk,manager,makerDAOManager,getCdp,vat,spot,registry,jar,dai);
-        return state;
+        return userState;
     }
 }
