@@ -26,6 +26,11 @@ contract SpotLike {
     function ilks(bytes32 ilk) external view returns (address pip, uint mat);
 }
 
+contract ERC20Like {
+    function balanceOf(address guy) public view returns(uint);
+    function allowance(address owner, address spender) public view returns (uint);
+}
+
 // this is just something to help avoiding solidity quirks
 contract UserInfoStorage {
     struct ProxyInfo {
@@ -39,6 +44,7 @@ contract UserInfoStorage {
         uint ethDeposit;
         uint daiDebt; // in wad - not in rad
         uint maxDaiDebt;
+        uint minEthDeposit;
     }
 
     struct UserRatingInfo {
@@ -49,12 +55,25 @@ contract UserInfoStorage {
         uint jarSize;
     }
 
+    struct MiscInfo {
+        uint spotPrice;
+        uint dustInWei;
+        uint blockNumber;
+    }
+
+    struct UserWalletInfo {
+        uint ethBalance;
+        uint daiBalance;
+        uint daiAllowance;
+    }
+
     struct UserState {
         ProxyInfo proxyInfo;
         CdpInfo bCdpInfo;
         CdpInfo makerdaoCdpInfo;
-        uint spotPrice;
         UserRatingInfo userRatingInfo;
+        MiscInfo miscInfo;
+        UserWalletInfo userWalletInfo;
     }
 
     bool public hasProxy;
@@ -72,13 +91,19 @@ contract UserInfoStorage {
     uint public makerdaoDaiDebt; // in wad - not in rad
     uint public makerdaoMaxDaiDebt;
 
-    uint public spotPrice;
-
     uint public userRating;
     uint public userRatingProgressPerSec;
     uint public totalRating;
     uint public totalRatingProgressPerSec;
     uint public jarSize;
+
+    uint public spotPrice;
+    uint public dustInWei;
+    uint public blockNumber;
+
+    uint public ethBalance;
+    uint public daiBalance;
+    uint public daiAllowance;
 
     function set(UserState memory state) public {
         hasProxy = state.proxyInfo.hasProxy;
@@ -96,13 +121,19 @@ contract UserInfoStorage {
         makerdaoDaiDebt = state.makerdaoCdpInfo.daiDebt;
         makerdaoMaxDaiDebt = state.makerdaoCdpInfo.maxDaiDebt;
 
-        spotPrice = state.spotPrice;
+        spotPrice = state.miscInfo.spotPrice;
+        dustInWei = state.miscInfo.dustInWei;
+        blockNumber = state.miscInfo.blockNumber;
+
+        ethBalance = state.userWalletInfo.ethBalance;
+        daiBalance = state.userWalletInfo.daiBalance;
+        daiAllowance = state.userWalletInfo.daiAllowance;
 
         userRating = state.userRatingInfo.userRating;
         userRatingProgressPerSec = state.userRatingInfo.userRatingProgressPerSec;
         totalRating = state.userRatingInfo.totalRating;
         totalRatingProgressPerSec = state.userRatingInfo.totalRatingProgressPerSec;
-        jarSize= state.userRatingInfo.jarSize;
+        jarSize = state.userRatingInfo.jarSize;
     }
 }
 
@@ -175,10 +206,9 @@ contract UserInfo is Math, UserInfoStorage {
     }
 
     function setInfo(address user, bytes32 ilk, BCdpManager manager, DssCdpManager makerDAOManager, GetCdps getCdp, VatLike vat,
-                     SpotLike spot, ProxyRegistryLike registry, address jar)
+                     SpotLike spot, ProxyRegistryLike registry, address jar, address dai)
                      public {
         UserState memory state;
-        if(registry.proxies(user) == DSProxyLike(0x0) || registry.proxies(user).owner() != user) return;// state;
 
         // fill proxy info
         state.proxyInfo = getProxyInfo(registry,user);
@@ -191,7 +221,14 @@ contract UserInfo is Math, UserInfoStorage {
         // fill makerdao info
         state.makerdaoCdpInfo = getCdpInfo(guy,address(makerDAOManager),ilk,vat,getCdp, false);
 
-        state.spotPrice = calcSpotPrice(vat,spot,ilk);
+        state.miscInfo.spotPrice = calcSpotPrice(vat,spot,ilk);
+        (,,,,uint dust) = vat.ilks(ilk);
+        state.miscInfo.dustInWei = dust / ONE;
+        state.miscInfo.blockNumber = block.number;
+
+        state.userWalletInfo.ethBalance = user.balance;
+        state.userWalletInfo.daiBalance = ERC20Like(dai).balanceOf(user);
+        state.userWalletInfo.daiAllowance = ERC20Like(dai).allowance(user,guy);
 
         state.userRatingInfo = getUserRatingInfo(guy,jar);
 
@@ -199,9 +236,9 @@ contract UserInfo is Math, UserInfoStorage {
     }
 
     function getInfo(address user, bytes32 ilk, BCdpManager manager, DssCdpManager makerDAOManager, GetCdps getCdp, VatLike vat,
-                     SpotLike spot, ProxyRegistryLike registry, address jar)
+                     SpotLike spot, ProxyRegistryLike registry, address jar, address dai)
                      public returns(UserState memory state) {
-        setInfo(user,ilk,manager,makerDAOManager,getCdp,vat,spot,registry,jar);
+        setInfo(user,ilk,manager,makerDAOManager,getCdp,vat,spot,registry,jar,dai);
         return state;
     }
 }
