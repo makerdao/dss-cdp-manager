@@ -46,14 +46,16 @@ contract Pool is Math, DSAuth {
     mapping(uint => CdpData) cdpData;
     struct CdpData {
         uint       art;        // topup in art units
+        uint       cushion;    // cushion in rad units
         address[]  members;    // liquidators that are in
         uint[]     bite;       // how much was already bitten
     }
 
-    function getCdpData(uint cdp) external view returns(uint art, address[] memory members, uint[] memory bite) {
+    function getCdpData(uint cdp) external view returns(uint art, uint cushion, address[] memory members, uint[] memory bite) {
         art = cdpData[cdp].art;
+        cushion = cdpData[cdp].cushion;
         members = cdpData[cdp].members;
-        bite = cdpData[cdp].bite;        
+        bite = cdpData[cdp].bite;
     }
 
     mapping(bytes32 => OSMLike) public osm; // mapping from ilk to osm
@@ -195,19 +197,18 @@ contract Pool is Math, DSAuth {
 
         if(winners.length == 0) return;
 
-        bytes32 ilk = man.ilks(cdp);
-        (,uint rate,,,) = vat.ilks(ilk);
-
-        uint refund = cdpData[cdp].art / winners.length;
+        uint art = cdpData[cdp].art;
+        uint cushion = cdpData[cdp].cushion;
 
         uint perUserArt = cdpData[cdp].art / winners.length;
         for(uint i = 0 ; i < winners.length ; i++) {
             if(perUserArt <= cdpData[cdp].bite[i]) continue; // nothing to refund
             uint refundArt = sub(perUserArt,cdpData[cdp].bite[i]);
-            rad[winners[i]] = add(rad[winners[i]],mul(refundArt,rate));
+            rad[winners[i]] = add(rad[winners[i]],mul(refundArt,cushion)/art);
         }
 
         cdpData[cdp].art = 0;
+        cdpData[cdp].cushion = 0;
         delete cdpData[cdp].members;
         delete cdpData[cdp].bite;
     }
@@ -219,6 +220,7 @@ contract Pool is Math, DSAuth {
         }
 
         cdpData[cdp].art = art;
+        cdpData[cdp].cushion = dradVal;
         cdpData[cdp].members = winners;
         cdpData[cdp].bite = new uint[](winners.length);
     }
@@ -234,7 +236,11 @@ contract Pool is Math, DSAuth {
         resetCdp(cdp);
 
         address[] memory winners;
-        if(art < minArt) winners = chooseMember(cdp, uint(dtab), members);
+        if(art < minArt) {
+            winners = chooseMember(cdp, uint(dtab), members);
+            // for small amounts, only winner can topup
+            require(winners[0] == msg.sender,"topup: only-winner-can-topup");
+        }
         else winners = chooseMembers(uint(dtab), members);
         require(winners.length > 0, "topup: members-are-broke");
 

@@ -406,13 +406,151 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(dart,0);
     }
 
-    function testHappyTopup() public {
+    function testHappyTopup() public returns(uint cdp) {
         members[0].doDeposit(pool,1000 ether * ONE);
         members[1].doDeposit(pool,950 ether * ONE);
         members[2].doDeposit(pool,900 ether * ONE);
         members[3].doDeposit(pool,850 ether * ONE);
 
         pool.setMinArt(1 ether);
+
+        // open cdp with rate  = 1, that hit liquidation state
+        cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(uint(dtab),10 ether * ONE);
+        assertEq(art,110 ether);
+        assertEq(uint(dart) * ONE,uint(dtab));
+
+        members[0].doTopup(pool,cdp);
+
+        (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        assertEq(art,cdpArt);
+        assertEq(cdpCushion,uint(dtab));
+        assertEq(winners.length,4);
+        assertEq(address(winners[0]),address(members[0]));
+        assertEq(address(winners[1]),address(members[1]));
+        assertEq(address(winners[2]),address(members[2]));
+        assertEq(address(winners[3]),address(members[3]));
+
+        // check balances
+        assertEq(pool.rad(address(members[0])),uint(1000 ether * ONE) - uint(1+ dtab/4));
+        assertEq(pool.rad(address(members[1])),uint(950 ether * ONE) - uint(1+ dtab/4));
+        assertEq(pool.rad(address(members[2])),uint(900 ether * ONE) - uint(1+ dtab/4));
+        assertEq(pool.rad(address(members[3])),uint(850 ether * ONE) - uint(1+ dtab/4));
+    }
+
+    function testSingleTopup() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        pool.setMinArt(10000 ether);
+
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(uint(dtab),10 ether * ONE);
+        assertEq(art,110 ether);
+        assertEq(uint(dart) * ONE,uint(dtab));
+
+        address[] memory singleMember = pool.chooseMember(cdp,uint(dtab),getMembers());
+
+        FakeMember(singleMember[0]).doTopup(pool,cdp);
+
+        (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        assertEq(art,cdpArt);
+        assertEq(cdpCushion,uint(dtab));
+        assertEq(winners.length,1);
+        assertEq(address(winners[0]),address(singleMember[0]));
+
+        for(uint i = 0 ; i < 4 ; i++) {
+            uint expectedRad = (1000 - 50 * i) * 1 ether * ONE;
+            if(address(members[i]) == address(singleMember[0])) expectedRad -= (uint(dtab) + 1);
+
+            assertEq(expectedRad,pool.rad(address(members[i])));
+        }
+    }
+
+    function testFailedSingleTopupWrongMemberTopup() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        pool.setMinArt(10000 ether);
+
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(uint(dtab),10 ether * ONE);
+        assertEq(art,110 ether);
+        assertEq(uint(dart) * ONE,uint(dtab));
+
+        address[] memory singleMember = pool.chooseMember(cdp,uint(dtab),getMembers());
+
+        if(address(singleMember[0]) == address(members[0])) members[1].doTopup(pool,cdp);
+        else members[0].doTopup(pool,cdp);
+    }
+
+    function testFailedTopupCushionExist() public {
+        uint cdp = testHappyTopup();
+        members[0].doTopup(pool,cdp);
+    }
+
+    function testFailedTopupNoNeed() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(uint(dtab),0);
+        assertEq(art,110 ether);
+        assertEq(uint(dart) * ONE,uint(dtab));
+
+        members[0].doTopup(pool,cdp);
+    }
+
+    function testFailedTopupPoorMembers() public {
+        // open cdp with rate  = 1, that hit liquidation state
+        uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+
+        assertEq(uint(dtab),10 ether * ONE);
+        assertEq(art,110 ether);
+        assertEq(uint(dart) * ONE,uint(dtab));
+
+        members[0].doTopup(pool,cdp);
+    }
+
+    function testUntopSingle() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+
+        pool.setMinArt(10000 ether);
 
         // open cdp with rate  = 1, that hit liquidation state
         uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
@@ -428,18 +566,59 @@ contract PoolTest is BCdpManagerTestBase {
 
         members[0].doTopup(pool,cdp);
 
-        (uint cdpArt, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
         assertEq(art,cdpArt);
-        assertEq(winners.length,4);
+        assertEq(cdpCushion,uint(dtab));
+        assertEq(winners.length,1);
         assertEq(address(winners[0]),address(members[0]));
-        assertEq(address(winners[1]),address(members[1]));
-        assertEq(address(winners[2]),address(members[2]));
-        assertEq(address(winners[3]),address(members[3]));
+
+        assertEq(pool.rad(address(members[0])),1000 ether * ONE - uint(dtab) - 1);
+
+        // do dummy frob, which will call topup
+        manager.frob(cdp, -1, 0);
+
+        // do untop
+        members[0].doUntop(pool,cdp);
+
+        (uint cdpArt2, uint cdpCushion2, address[] memory winners2, uint[] memory bite2) = pool.getCdpData(cdp);
+        assertEq(0,cdpArt2);
+        assertEq(cdpCushion2,0);
+        assertEq(winners2.length,0);
+
+        assertEq(pool.rad(address(members[0])),1000 ether * ONE - 1);
     }
+
+    function testUntopHappy() public {
+        uint cdp = testHappyTopup();
+
+        // do dummy frob, which will call topup
+        manager.frob(cdp, -1, 0);
+
+        // do untop
+        members[0].doUntop(pool,cdp);
+
+        (uint cdpArt2, uint cdpCushion2, address[] memory winners2, uint[] memory bite2) = pool.getCdpData(cdp);
+        assertEq(cdpArt2,0);
+        assertEq(cdpCushion2,0);
+        assertEq(winners2.length,0);
+
+        assertEq(pool.rad(address(members[0])),1000 ether * ONE - 1);
+        assertEq(pool.rad(address(members[1])),950 ether * ONE - 1);
+        assertEq(pool.rad(address(members[2])),900 ether * ONE - 1);
+        assertEq(pool.rad(address(members[3])),850 ether * ONE - 1);
+    }
+
+    function testFailedUntopCushionNotReleased() public {
+        uint cdp = testHappyTopup();
+
+        // do untop
+        members[0].doUntop(pool,cdp);
+    }
+
 
     // tests to do
 
-    // topup
-    // untop
+    // topup - during bite
+    // untop - sad (during bite), untop after partial bite
     // bite
 }
