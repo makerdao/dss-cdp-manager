@@ -23,8 +23,8 @@ contract FakeMember is FakeUser {
         pool.untop(cdp);
     }
 
-    function doBite(Pool pool, uint cdp, uint dart, uint minInk) public {
-        pool.bite(cdp,dart,minInk);
+    function doPoolBite(Pool pool, uint cdp, uint dart, uint minInk) public returns(uint){
+        return pool.bite(cdp,dart,minInk);
     }
 }
 
@@ -613,6 +613,33 @@ contract PoolTest is BCdpManagerTestBase {
 
         // do untop
         members[0].doUntop(pool,cdp);
+    }
+
+    function testSimpleBite() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        members[0].doTopup(pool,cdp);
+
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",130 * 1e18);
+
+        uint ethBefore = vat.gem("ETH",address(members[0]));
+        this.file(address(cat), "ETH", "chop", ONE + ONE/10);
+        pool.setProfitParams(1,100); // 1% goes to jar
+        // for 10 ether we expect 10/130 * 1.1 = 11/130, from which 99% goes to member
+        uint expectedEth = uint(99) * 11 ether / (130 * 100);
+        uint dink = members[0].doPoolBite(pool,cdp,10 ether,expectedEth);
+        assertEq(uint(dink), expectedEth);
+        assertEq(vat.gem("ETH",address(members[0])),expectedEth);
     }
 
 

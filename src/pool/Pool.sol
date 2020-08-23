@@ -256,7 +256,7 @@ contract Pool is Math, DSAuth {
         resetCdp(cdp);
     }
 
-    function bite(uint cdp, uint dart, uint minInk) external onlyMember {
+    function bite(uint cdp, uint dart, uint minInk) external onlyMember returns(uint dMemberInk){
         uint index = getIndex(cdpData[cdp].members, msg.sender);
         require(index < uint(-1), "bite: member-not-elgidabe");
 
@@ -274,12 +274,14 @@ contract Pool is Math, DSAuth {
         // update user rad
         rad[msg.sender] = sub(rad[msg.sender],sub(radBefore,radAfter));
 
-        require(dink >= minInk, "bite: low-dink");
-
         uint userInk = mul(dink,shrn) / shrd;
+        dMemberInk = sub(dink,userInk);
+
+        require(dMemberInk >= minInk, "bite: low-dink");
+
         bytes32 ilk = man.ilks(cdp);
 
         vat.flux(ilk, address(this), jar, userInk);
-        vat.flux(ilk, address(this), msg.sender, sub(dink,userInk));
+        vat.flux(ilk, address(this), msg.sender, dMemberInk);
     }
 }
