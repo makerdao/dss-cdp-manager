@@ -70,6 +70,10 @@ contract PoolTest is BCdpManagerTestBase {
         return memoryMembers;
     }
 
+    function radToWei(uint rad) pure internal returns(uint) {
+        return rad/ONE;
+    }
+
     function openCdp(uint ink,uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
 
@@ -640,8 +644,51 @@ contract PoolTest is BCdpManagerTestBase {
         uint dink = members[0].doPoolBite(pool,cdp,10 ether,expectedEth);
         assertEq(uint(dink), expectedEth);
         assertEq(vat.gem("ETH",address(members[0])),expectedEth);
+        assertEq(vat.gem("ETH",address(jar)),11 ether / uint(130 * 100));
+
+        (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        assertEq(bite[0],10 ether);
+
+        uint userRemainingCushion = 1 + cdpCushion / 4 - 10 * cdpCushion / 110; // 10/110 of the debt is being bitten
+        uint userPoolBalance = radToWei(pool.rad(address(members[0])));
+        uint userExpectedPoolBalance = radToWei(990 ether * ONE - userRemainingCushion) - 1; // TODO - check why -1?
+        assertEq(userPoolBalance,userExpectedPoolBalance); // TODO - remove relative cushion part
     }
 
+    function testFullBite() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        uint cdp = openCdp(1 ether, 104 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        members[0].doTopup(pool,cdp);
+
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",130 * 1e18);
+
+        uint ethBefore = vat.gem("ETH",address(members[0]));
+        this.file(address(cat), "ETH", "chop", ONE + ONE/10);
+        pool.setProfitParams(2,100); // 2% goes to jar
+        // for 26 ether we expect 26/130 * 1.1 = 28.6/130, from which 98% goes to member
+        uint expectedEth = uint(98) * 286 ether / (130 * 100 * 10);
+        for(uint i = 0 ; i < 4 ; i++) {
+            uint dink = members[i].doPoolBite(pool,cdp,26 ether,expectedEth);
+            assertEq(uint(dink), expectedEth);
+            assertEq(vat.gem("ETH",address(members[i])),expectedEth);
+            (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+            assertEq(bite[i],26 ether);
+            assertEq(pool.rad(address(members[i])),(1000 ether - 50 ether * i - 26 ether) * ONE - 1);
+        }
+
+        // jar should get 2% from 104 * 1.1 / 130
+        assertEq(vat.gem("ETH",address(jar)),(104 ether * 11 / 1300)/50);
+    }
 
     // tests to do
 
