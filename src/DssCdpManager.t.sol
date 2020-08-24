@@ -285,11 +285,11 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.frob(cdp, 1 ether, 50 ether);
-        assertEq(vat.dai(manager.urns(cdp)), 50 ether * ONE);
+        assertEq(vat.dai(manager.urns(cdp)), 50 ether * RAY);
         assertEq(vat.dai(address(this)), 0);
-        manager.move(cdp, address(this), 50 ether * ONE);
+        manager.move(cdp, address(this), 50 ether * RAY);
         assertEq(vat.dai(manager.urns(cdp)), 0);
-        assertEq(vat.dai(address(this)), 50 ether * ONE);
+        assertEq(vat.dai(address(this)), 50 ether * RAY);
         assertEq(dai.balanceOf(address(this)), 0);
         vat.hope(address(daiJoin));
         daiJoin.exit(address(this), 50 ether);
@@ -303,7 +303,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.cdpAllow(cdp, address(user), 1);
         user.doFrob(manager, cdp, 1 ether, 50 ether);
-        assertEq(vat.dai(manager.urns(cdp)), 50 ether * ONE);
+        assertEq(vat.dai(manager.urns(cdp)), 50 ether * RAY);
     }
 
     function testFailFrobNotAllowed() public {
