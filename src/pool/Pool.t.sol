@@ -795,9 +795,34 @@ contract PoolTest is BCdpManagerTestBase {
         members[0].doBite(pool,cdp,11 ether + 1, 1);
     }
 
+    function testFailedBiteInvalidMember() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,0 ether * ONE);
+
+        uint cdp = openCdp(1 ether, 104 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        this.file(address(cat), "ETH", "chop", ONE + ONE/10);
+        pool.setProfitParams(65,1000); // 6.5% goes to jar
+
+        members[0].doTopup(pool,cdp);
+
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",130 * 1e18);
+
+        members[3].doBite(pool,cdp,15 ether, 1);
+    }
+
     // tests to do
 
     // topup - during bite
     // untop - sad (during bite), untop after partial bite
-    // bite
+    // bite - test with rate != 1
 }
