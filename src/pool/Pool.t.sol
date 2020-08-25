@@ -782,28 +782,17 @@ contract PoolTest is BCdpManagerTestBase {
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
+        this.file(address(cat), "ETH", "chop", ONE + ONE/10);
+        pool.setProfitParams(65,1000); // 6.5% goes to jar
+
         members[0].doTopup(pool,cdp);
 
         pipETH.poke(bytes32(uint(150 * 1e18)));
         spotter.poke("ETH");
         realPrice.set("ETH",130 * 1e18);
 
-        uint ethBefore = vat.gem("ETH",address(members[0]));
-        this.file(address(cat), "ETH", "chop", ONE + ONE/10);
-        pool.setProfitParams(2,100); // 2% goes to jar
-        // for 26 ether we expect 26/130 * 1.1 = 28.6/130, from which 98% goes to member
-        uint expectedEth = uint(98) * 286 ether / (130 * 100 * 10);
-        for(uint i = 0 ; i < 4 ; i++) {
-            uint dink = members[i].doPoolBite(pool,cdp,26 ether,expectedEth);
-            assertEq(uint(dink), expectedEth);
-            assertEq(vat.gem("ETH",address(members[i])),expectedEth);
-            (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
-            assertEq(bite[i],26 ether);
-            assertEq(pool.rad(address(members[i])),(1000 ether - 50 ether * i - 26 ether) * ONE - 1);
-        }
-
-        // jar should get 2% from 104 * 1.1 / 130
-        assertEq(vat.gem("ETH",address(jar)),(104 ether * 11 / 1300)/50);
+        members[0].doBite(pool,cdp,15 ether, 1);
+        members[0].doBite(pool,cdp,11 ether + 1, 1);
     }
 
     // tests to do
