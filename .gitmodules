@@ -4,3 +4,6 @@
 [submodule "lib/dss-deploy"]
 	path = lib/dss-deploy
 	url = https://github.com/makerdao/dss-deploy
+[submodule "user-rating"]
+	path = user-rating
+	url = https://github.com/backstop-protocol/user-rating.git

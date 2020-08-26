@@ -1,6 +1,6 @@
 pragma solidity ^0.5.12;
 
-import {ScoringMachine} from "./ScoringMachine.sol";
+import {ScoringMachine} from "../user-rating/contracts/ScoringMachine.sol";
 
 contract BCdpScore is ScoringMachine {
     function user(uint cdp) public pure returns(bytes32) {
@@ -24,7 +24,7 @@ contract BCdpScore is ScoringMachine {
         updateScore(user(cdp), artAsset(ilk), dart, time);
     }
 
-    function slashScore(uint cdp, bytes32 ilk, int dart, uint time) external auth {
+    function slashScore(uint cdp, bytes32 ilk, int dart, uint time) external onlyOwner {
         updateScore(user(cdp), slashAsset(ilk), dart, time);
     }
 
