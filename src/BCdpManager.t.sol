@@ -189,11 +189,11 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         weth.deposit.value(1 ether)();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(liquidatorCdp), 1 ether);
-        manager.frob(liquidatorCdp, 1 ether, 50 ether);
-        manager.move(liquidatorCdp, address(this), 50 ether * ONE);
-        vat.move(address(this), address(liquidator), 50 ether * ONE);
+        manager.frob(liquidatorCdp, 1 ether, 51 ether);
+        manager.move(liquidatorCdp, address(this), 51 ether * ONE);
+        vat.move(address(this), address(liquidator), 51 ether * ONE);
 
-        liquidator.doDeposit(pool, 50 ether * ONE);
+        liquidator.doDeposit(pool, 51 ether * ONE);
 
         osm.setPrice(70 * 1e18); // 1 ETH = 50 DAI
         (int dart, int dtab, uint art) = pool.topAmount(cdp);
@@ -281,12 +281,12 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         realPrice.set("ETH",70 * 1e18);
 
         this.file(address(cat), "ETH", "chop", ONE + ONE/10);
-
+        assertEq(art,50 ether);
         // bite
-        liquidator.doBite(pool,cdp,art,0);
+        liquidator.doBite(pool,cdp,art/2,0);
 
-        assertTrue(vat.gem("ETH",address(liquidator)) > 77e16);
-        assertTrue(vat.gem("ETH",address(jar)) > 77e14);
+        assertTrue(vat.gem("ETH",address(liquidator)) > 77e16/2);
+        assertTrue(vat.gem("ETH",address(jar)) > 77e14/2);
     }
 
     function testOpenCDP() public {
