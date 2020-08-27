@@ -690,7 +690,7 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(vat.gem("ETH",address(jar)),(104 ether * 11 / 1300)/50);
     }
 
-    function doBite(FakeMember m, Pool pool, uint cdp, uint dart) internal {
+    function doBite(FakeMember m, Pool pool, uint cdp, uint dart,bool rate) internal {
         (bytes32 price32) = realPrice.read("ETH");
         uint price = uint(price32);
 
@@ -701,6 +701,11 @@ contract PoolTest is BCdpManagerTestBase {
         uint expectedJar = (dart * 1e18 * 110 / (price*100)) * shrn / shrd;
         uint expectedInk = (dart * 1e18 * 110 / (price*100)) - expectedJar;
 
+        if(rate) {
+            expectedJar = expectedJar * 11 / 10;
+            expectedInk = expectedInk * 11 / 10;
+        }
+
         uint mInkBefore = vat.gem("ETH",address(m));
         uint jarInkBefore = vat.gem("ETH",address(jar));
 
@@ -709,8 +714,8 @@ contract PoolTest is BCdpManagerTestBase {
         uint mInkAfter = vat.gem("ETH",address(m));
         uint jarInkAfter = vat.gem("ETH",address(jar));
 
-        assertEq(mInkAfter - mInkBefore,expectedInk);
-        assertEq(jarInkAfter - jarInkBefore,expectedJar);
+        assert(mInkAfter - mInkBefore <= expectedInk + 1 && expectedInk <= 1 + mInkAfter - mInkBefore);
+        assert(jarInkAfter - jarInkBefore <= expectedJar + 1 && expectedJar <= 1 + jarInkAfter - jarInkBefore);
     }
 
     function testBiteInPartsThenUntop() public {
@@ -735,12 +740,12 @@ contract PoolTest is BCdpManagerTestBase {
         this.file(address(cat), "ETH", "chop", ONE + ONE/10);
         pool.setProfitParams(65,1000); // 6.5% goes to jar
 
-        doBite(members[1], pool, cdp, 15 ether);
-        doBite(members[0], pool, cdp, 13 ether);
-        doBite(members[2], pool, cdp, 17 ether);
-        doBite(members[1], pool, cdp, 9 ether);
-        doBite(members[0], pool, cdp, 10 ether);
-        doBite(members[0], pool, cdp, 3 ether);
+        doBite(members[1], pool, cdp, 15 ether, false);
+        doBite(members[0], pool, cdp, 13 ether, false);
+        doBite(members[2], pool, cdp, 17 ether, false);
+        doBite(members[1], pool, cdp, 9 ether, false);
+        doBite(members[0], pool, cdp, 10 ether, false);
+        doBite(members[0], pool, cdp, 3 ether, false);
 
         assert(LiquidationMachine(manager).bitten(cdp));
 
@@ -842,9 +847,116 @@ contract PoolTest is BCdpManagerTestBase {
         members[0].doBite(pool,cdp,15 ether, 1 ether);
     }
 
+    function testBiteInPartsThenUntopNonOneRate() public {
+        timeReset();
+
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        uint cdp = openCdp(1 ether, 104 ether); // 1 eth, 110 dai
+
+        setRateTo1p1(); // debt is 10% up
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        members[3].doTopup(pool,cdp);
+
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",149 * 1e18);
+
+        this.file(address(cat), "ETH", "chop", ONE + ONE/10);
+        pool.setProfitParams(65,1000); // 6.5% goes to jar
+
+        doBite(members[1], pool, cdp, 15 ether, true);
+        doBite(members[0], pool, cdp, 13 ether, true);
+        doBite(members[2], pool, cdp, 17 ether, true);
+        doBite(members[1], pool, cdp, 9 ether, true);
+        doBite(members[0], pool, cdp, 10 ether, true);
+        doBite(members[0], pool, cdp, 3 ether, true);
+
+        assert(LiquidationMachine(manager).bitten(cdp));
+
+        // fast forward until no longer bitten
+        forwardTime(60*60 + 1);
+        assert(! LiquidationMachine(manager).bitten(cdp));
+
+        // do dummy operation to untop
+        manager.frob(cdp, -1, 0);
+
+        members[3].doUntop(pool,cdp);
+
+        // check balances
+        // 0 consumed 26 ether
+        assertEq(radToWei(pool.rad(address(members[0]))),radToWei((1000 ether - 26 ether * 11/10) * ONE - 1)-1);
+        // 1 consumed 24 ether
+        assertEq(radToWei(pool.rad(address(members[1]))),radToWei((950 ether - 24 ether * 11/10) * ONE - 1));
+        // 2 consumed 17 ether
+        assertEq(radToWei(pool.rad(address(members[2]))),radToWei((900 ether - 17 ether * 11/10) * ONE - 1));
+        // 3 consumed 0 ether
+        assertEq(radToWei(pool.rad(address(members[3]))),radToWei((850 ether - 0 ether * 11/10) * ONE - 1));
+
+        // check that cdp was reset
+        (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        assertEq(cdpArt,0);
+        assertEq(cdpCushion,0);
+        assertEq(winners.length,0);
+        assertEq(bite.length,0);
+    }
+
+    function assertAlmostEq(uint a, uint b) internal {
+        if(a > b + 1) {
+            assertEq(a,b);
+            assertEq(uint(1),2);
+        }
+        if(b > a + 1) {
+            assertEq(a,b);
+            assertEq(uint(1),3);
+        }
+    }
+
+    function testFullBiteWithRate() public {
+        members[0].doDeposit(pool,1000 ether * ONE);
+        members[1].doDeposit(pool,950 ether * ONE);
+        members[2].doDeposit(pool,900 ether * ONE);
+        members[3].doDeposit(pool,850 ether * ONE);
+
+        uint cdp = openCdp(1 ether, 104 ether); // 1 eth, 110 dai
+
+        setRateTo1p1(); // debt is 10% up
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        members[0].doTopup(pool,cdp);
+
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",140 * 1e18);
+
+        uint ethBefore = vat.gem("ETH",address(members[0]));
+        this.file(address(cat), "ETH", "chop", ONE + ONE/10);
+        pool.setProfitParams(2,100); // 2% goes to jar
+        // for 26 ether we expect 26/140 * 1.1 * 1.1 = 28.6/140, from which 98% goes to member
+        uint expectedEth = uint(98) * 286 ether * 11/ (140 * 100 * 10 * 10);
+        for(uint i = 0 ; i < 4 ; i++) {
+            uint dink = members[i].doPoolBite(pool,cdp,26 ether,expectedEth);
+            assertEq(uint(dink), expectedEth);
+            assertEq(vat.gem("ETH",address(members[i])),expectedEth);
+            (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+            assertEq(bite[i],26 ether);
+            assertAlmostEq(pool.rad(address(members[i]))/ONE,((1000 ether - 50 ether * i - 26 ether * uint(11)/10) * ONE - 1)/ONE);
+        }
+
+        // jar should get 2% from 104 * 1.1 * 1.1 / 140
+        assertEq(vat.gem("ETH",address(jar)),(104 ether * uint(11) * 11/ 1400)/500 - 1);
+    }
+
     // tests to do
 
     // topup - during bite
     // untop - sad (during bite), untop after partial bite
-    // bite - test with rate != 1
 }
