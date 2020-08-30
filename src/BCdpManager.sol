@@ -1,11 +1,12 @@
 pragma solidity ^0.5.12;
 
 import { LibNote } from "dss/lib.sol";
+import {DSAuth} from "ds-auth/auth.sol";
 import {DssCdpManager} from "./DssCdpManager.sol";
 import "./LiquidationMachine.sol";
 import {BCdpScoreConnector, BCdpScoreLike} from "./BCdpScoreConnector.sol";
 
-contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine {
+contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, DSAuth {
     constructor(address vat_, address end_, address pool_, address real_, address score_) public
         DssCdpManager(vat_)
         LiquidationMachine(this,VatLike(vat_),EndLike(end_),pool_,PriceFeedLike(real_))
@@ -123,8 +124,15 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine {
         super.shift(cdpSrc,cdpDst);
     }
 
+    ///////////////// B specific control functions /////////////////////////////
+
     function quitB(uint cdp) note external cdpAllowed(cdp) {
         quitScore(cdp);
         quitBLiquidation(cdp);
+    }
+
+    function setBParams(address pool, BCdpScoreLike score) external auth {
+        setPool(pool);
+        setScoreContract(score);
     }
 }
