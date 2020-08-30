@@ -2,7 +2,7 @@ pragma solidity ^0.5.12;
 
 import { LibNote } from "dss/lib.sol";
 import {DssCdpManager} from "./DssCdpManager.sol";
-import {BCdpScore} from "./BCdpScore.sol";
+import {BCdpScoreConnector} from "./BCdpScoreConnector.sol";
 import {Math} from "./Math.sol";
 
 contract VatLike {
@@ -24,7 +24,7 @@ contract PriceFeedLike {
     function read(bytes32 ilk) external view returns(bytes32);
 }
 
-contract LiquidationMachine is LibNote, BCdpScore, Math {
+contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
     VatLike                   public vat;
     EndLike                   public end;
     DssCdpManager             public man;
@@ -49,6 +49,10 @@ contract LiquidationMachine is LibNote, BCdpScore, Math {
         end = end_;
         pool = pool_;
         real = real_;
+    }
+
+    function setPool(address newPool) internal {
+        pool = newPool;
     }
 
     function quitBLiquidation(uint cdp) internal {

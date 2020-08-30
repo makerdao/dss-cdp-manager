@@ -3,6 +3,17 @@ pragma solidity ^0.5.12;
 import {ScoringMachine} from "../user-rating/contracts/ScoringMachine.sol";
 
 contract BCdpScore is ScoringMachine {
+    address public manager;
+
+    modifier onlyManager {
+        require(msg.sender == manager, "not-manager");
+        _;
+    }
+
+    function setManager(address newManager) external onlyOwner {
+        manager = newManager;
+    }
+
     function user(uint cdp) public pure returns(bytes32) {
         return keccak256(abi.encodePacked("BCdpScore",cdp));
     }
@@ -19,7 +30,7 @@ contract BCdpScore is ScoringMachine {
         return keccak256(abi.encodePacked("BCdpScore","slash-art",ilk));
     }
 
-    function updateScore(uint cdp, bytes32 ilk, int dink, int dart, uint time) internal {
+    function updateScore(uint cdp, bytes32 ilk, int dink, int dart, uint time) external onlyManager {
         updateScore(user(cdp), inkAsset(ilk), dink, time);
         updateScore(user(cdp), artAsset(ilk), dart, time);
     }

@@ -2,6 +2,7 @@ pragma solidity ^0.5.12;
 
 import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol";
 import {BCdpScore} from "./BCdpScore.sol";
+import {BCdpScoreConnector} from "./BCdpScoreConnector.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
 import { ScoringMachine } from "../user-rating/contracts/ScoringMachine.sol";
 
@@ -24,7 +25,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         currTime = now;
         hevm.warp(currTime);
 
-        score = BCdpScore(manager);
+        score = BCdpScore(address(BCdpScoreConnector(manager).score()));
         sm = new MockScoringMachine();
     }
 
@@ -415,7 +416,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         uint time = now;
 
         resetAndMakeFakeScore(time);
-        
+
         uint score; uint balance;
         (, balance,) = sm._getAssetScore("user", "ETH");
         assert(balance < (uint(-1) - uint(_INT256_MAX)));
@@ -435,7 +436,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
         sm.spin();
         forwardTime(10);
-        sm._updateScore("user", "ETH", 1 ether, now);        
+        sm._updateScore("user", "ETH", 1 ether, now);
         forwardTime(10);
         sm._updateScore("user", "ETH", 1 ether, now);
         score = sm._getScore("user", "ETH", now, time, time);

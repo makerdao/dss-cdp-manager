@@ -3,6 +3,7 @@ pragma solidity ^0.5.12;
 import {Vat, Jug} from "dss-deploy/DssDeploy.t.base.sol";
 import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
+import {BCdpScore} from "./BCdpScore.sol";
 import {BCdpManager} from "./BCdpManager.sol";
 
 contract FakePool {
@@ -36,7 +37,9 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         hevm.warp(currTime);
 
         fPool = new FakePool();
-        manager = new BCdpManager(address(vat), address(end), address(fPool), address(realPrice));
+        BCdpScore score = new BCdpScore();
+        manager = new BCdpManager(address(vat), address(end), address(fPool), address(realPrice),address(score));
+        score.setManager(address(manager));
         fPool.doHope(vat,address(manager));
         lm = LiquidationMachine(manager);
 

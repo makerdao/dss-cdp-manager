@@ -5,6 +5,7 @@ import "./GetCdps.sol";
 import {BCdpManager} from "./BCdpManager.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
 import {Pool} from "./pool/Pool.sol";
+import {BCdpScore} from "./BCdpScore.sol";
 
 
 contract Hevm {
@@ -142,6 +143,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeUser liquidator;
     FakePriceFeed realPrice;
     Pool pool;
+    BCdpScore score;
     FakeUser jar;
     Hevm hevm;
     FakeOSM osm;
@@ -161,7 +163,9 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         osm = new FakeOSM();
 
         pool = new Pool(address(vat),address(jar),address(spotter));
-        manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice));
+        score = new BCdpScore();
+        manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice),address(score));
+        score.setManager(address(manager));        
         pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);

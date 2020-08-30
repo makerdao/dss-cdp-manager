@@ -3,12 +3,13 @@ pragma solidity ^0.5.12;
 import { LibNote } from "dss/lib.sol";
 import {DssCdpManager} from "./DssCdpManager.sol";
 import "./LiquidationMachine.sol";
-import {BCdpScore} from "./BCdpScore.sol";
+import {BCdpScoreConnector, BCdpScoreLike} from "./BCdpScoreConnector.sol";
 
-contract BCdpManager is DssCdpManager, BCdpScore, LiquidationMachine {
-    constructor(address vat_, address end_, address pool_, address real_) public
+contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine {
+    constructor(address vat_, address end_, address pool_, address real_, address score_) public
         DssCdpManager(vat_)
         LiquidationMachine(this,VatLike(vat_),EndLike(end_),pool_,PriceFeedLike(real_))
+        BCdpScoreConnector(BCdpScoreLike(score_))
     {
 
     }
@@ -123,7 +124,7 @@ contract BCdpManager is DssCdpManager, BCdpScore, LiquidationMachine {
     }
 
     function quitB(uint cdp) note external cdpAllowed(cdp) {
-        //quitBScore(cdp);
+        quitScore(cdp);
         quitBLiquidation(cdp);
     }
 }
