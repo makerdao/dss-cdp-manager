@@ -36,7 +36,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         hevm.warp(currTime);
 
         fPool = new FakePool();
-        manager = new BCdpManager(address(vat), address(cat), address(fPool), address(realPrice));
+        manager = new BCdpManager(address(vat), address(end), address(fPool), address(realPrice));
         fPool.doHope(vat,address(manager));
         lm = LiquidationMachine(manager);
 

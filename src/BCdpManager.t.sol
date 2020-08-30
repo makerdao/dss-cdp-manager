@@ -161,7 +161,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         osm = new FakeOSM();
 
         pool = new Pool(address(vat),address(jar),address(spotter));
-        manager = new BCdpManager(address(vat), address(cat), address(pool), address(realPrice));
+        manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice));
         pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
