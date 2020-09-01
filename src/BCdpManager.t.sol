@@ -6,7 +6,7 @@ import {BCdpManager} from "./BCdpManager.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
 import {Pool} from "./pool/Pool.sol";
 import {BCdpScore} from "./BCdpScore.sol";
-
+import {BCdpScoreLike} from "./BCdpScoreConnector.sol";
 
 contract Hevm {
     function warp(uint256) public;
@@ -90,6 +90,14 @@ contract FakeUser {
     ) public {
         pool.deposit(radVal);
     }
+
+    function doSetBParams(
+        BCdpManager manager, 
+        address pool, 
+        BCdpScoreLike score
+    ) public {
+        manager.setBParams(pool, score);
+    }
 }
 
 contract FakePriceFeed {
@@ -147,7 +155,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeUser jar;
     Hevm hevm;
     FakeOSM osm;
-
+    uint currTime;
 
     function setUp() public {
         super.setUp();
@@ -228,6 +236,53 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         liquidator.doBite(pool,cdp,art/2,0);
 
         assert(LiquidationMachine(manager).bitten(cdp));
+    }
+
+    function deployNewPoolContract() internal returns (Pool) {
+        jar = new FakeUser();
+        return deployNewPoolContract(jar);
+    }
+
+    function deployNewPoolContract(FakeUser jar_) internal returns (Pool) {
+        Pool _pool = new Pool(address(vat),address(jar_),address(spotter));
+        _pool.setCdpManager(manager);
+        address[] memory members = new address[](1);
+        members[0] = address(liquidator);
+        _pool.setMembers(members);
+        _pool.setProfitParams(1,100);
+        _pool.setIlk("ETH",true);
+        _pool.setOsm("ETH",address(osm));
+        liquidator.doHope(vat, address(_pool));
+        return _pool;
+    }
+
+    function deployNewScoreContract() internal returns (BCdpScore) {
+        BCdpScore _score = new BCdpScore();
+        _score.spin();
+        _score.setManager(address(manager));
+        return _score;
+    }
+
+    function timeReset() internal {
+        currTime = now;
+        hevm.warp(currTime);
+    }
+
+    function forwardTime(uint deltaInSec) internal {
+        currTime += deltaInSec;
+        hevm.warp(currTime);
+    }
+
+    function expectScore(uint cdp, bytes32 ilk, uint inkScore, uint artScore, uint slashScore) internal {
+        assertEq(score.getInkScore(cdp, ilk, currTime, score.start()), inkScore);
+        assertEq(score.getArtScore(cdp, ilk, currTime, score.start()), artScore);
+        assertEq(score.getSlashScore(cdp, ilk, currTime, score.start()), slashScore);
+    }
+
+    function expectGlobalScore(bytes32 ilk, uint gInkScore, uint gArtScore, uint gSlashScore) internal {
+        assertEq(score.getInkGlobalScore(ilk, currTime, score.start()), gInkScore);
+        assertEq(score.getArtGlobalScore(ilk, currTime, score.start()), gArtScore);
+        assertEq(score.getSlashGlobalScore(ilk, currTime, score.start()), gSlashScore);
     }
 }
 
@@ -1127,4 +1182,81 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
         manager.shift(cdpSrc, cdpDst);
     }
+
+
+    function testChangePoolContract() public {
+        FakeUser newJar = new FakeUser();
+        pool = deployNewPoolContract(newJar);
+
+        // No change in score
+        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
+
+        uint cdp = manager.open("ETH", address(this));
+
+        // expect zero gem before bite
+        assertEq(vat.gem("ETH", address(newJar)), 0);
+        reachBite(cdp);
+        // expect some balance after bite
+        assert(vat.gem("ETH", address(newJar)) > 0);
+
+    }
+
+    function testChangeScoreContract() public {
+        timeReset();
+
+        score = deployNewScoreContract();
+
+        // no change in pool contract
+        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
+
+        uint cdp = manager.open("ETH", address(this));
+
+        reachTopup(cdp);
+
+        uint fwdTimeBy = 10;
+        forwardTime(fwdTimeBy);
+
+        uint expectedInkScore = 1 ether * fwdTimeBy;
+        uint exoectedArtScore = 50 ether * fwdTimeBy;
+        expectScore(cdp, "ETH", expectedInkScore, exoectedArtScore, 0);
+
+        // user ink + liquidator ink
+        uint expectedInkGlobalScore = (1 ether + 1 ether) * fwdTimeBy;
+        // uint art + liquidator art
+        uint expectedArtGlobalScore = (50 ether + 51 ether) * fwdTimeBy;
+        expectGlobalScore("ETH", expectedInkGlobalScore, expectedArtGlobalScore, 0);
+
+    }
+
+    function testChangePoolAndScoreContracts() public {
+        timeReset();
+        pool = deployNewPoolContract();
+        score = deployNewScoreContract();
+
+        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
+
+        uint cdp = manager.open("ETH", address(this));
+        reachTopup(cdp);
+
+        uint fwdTimeBy = 10;
+        forwardTime(fwdTimeBy);
+
+        uint expectedInkScore = 1 ether * fwdTimeBy;
+        uint exoectedArtScore = 50 ether * fwdTimeBy;
+        expectScore(cdp, "ETH", expectedInkScore, exoectedArtScore, 0);
+
+        // user ink + liquidator ink
+        uint expectedInkGlobalScore = (1 ether + 1 ether) * fwdTimeBy;
+        // uint art + liquidator art
+        uint expectedArtGlobalScore = (50 ether + 51 ether) * fwdTimeBy;
+        expectGlobalScore("ETH", expectedInkGlobalScore, expectedArtGlobalScore, 0);
+
+    }
+
+    function testFailNonAuthSetBParams() public {
+        pool = deployNewPoolContract();
+        score = deployNewScoreContract();
+
+        user.doSetBParams(manager, address(pool), BCdpScoreLike(address(score)));
+    }    
 }
