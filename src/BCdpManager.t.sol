@@ -260,6 +260,17 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         hevm.warp(currTime);
     }
 
+    function expectScore(uint cdp, bytes32 ilk, uint inkScore, uint artScore, uint slashScore) internal {
+        assertEq(score.getInkScore(cdp, ilk, currTime, score.start()), inkScore);
+        assertEq(score.getArtScore(cdp, ilk, currTime, score.start()), artScore);
+        assertEq(score.getSlashScore(cdp, ilk, currTime, score.start()), slashScore);
+    }
+
+    function expectGlobalScore(bytes32 ilk, uint gInkScore, uint gArtScore, uint gSlashScore) internal {
+        assertEq(score.getInkGlobalScore(ilk, currTime, score.start()), gInkScore);
+        assertEq(score.getArtGlobalScore(ilk, currTime, score.start()), gArtScore);
+        assertEq(score.getSlashGlobalScore(ilk, currTime, score.start()), gSlashScore);
+    }
 }
 
 contract BCdpManagerTest is BCdpManagerTestBase {
@@ -1195,18 +1206,6 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         uint expectedArtGlobalScore = (50 ether + 51 ether) * fwdTimeBy;
         expectGlobalScore("ETH", expectedInkGlobalScore, expectedArtGlobalScore, 0);
 
-    }
-
-    function expectScore(uint cdp, bytes32 ilk, uint inkScore, uint artScore, uint slashScore) internal {
-        assertEq(score.getInkScore(cdp, ilk, currTime, score.start()), inkScore);
-        assertEq(score.getArtScore(cdp, ilk, currTime, score.start()), artScore);
-        assertEq(score.getSlashScore(cdp, ilk, currTime, score.start()), slashScore);
-    }
-
-    function expectGlobalScore(bytes32 ilk, uint gInkScore, uint gArtScore, uint gSlashScore) internal {
-        assertEq(score.getInkGlobalScore(ilk, currTime, score.start()), gInkScore);
-        assertEq(score.getArtGlobalScore(ilk, currTime, score.start()), gArtScore);
-        assertEq(score.getSlashGlobalScore(ilk, currTime, score.start()), gSlashScore);
     }
 
     function testChangePoolAndScoreContracts() public {
