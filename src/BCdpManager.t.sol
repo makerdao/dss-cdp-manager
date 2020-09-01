@@ -1192,9 +1192,12 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         manager.setBParams(address(pool), BCdpScoreLike(address(score)));
 
         uint cdp = manager.open("ETH", address(this));
+
+        // expect zero gem before bite
+        assertEq(vat.gem("ETH", address(newJar)), 0);
         reachBite(cdp);
-        assertEq(dai.balanceOf(address(newJar)), 0); //TODO should not be zero
-        assertEq(address(newJar).balance, 0); //TODO should not be zero
+        // expect some balance after bite
+        assert(vat.gem("ETH", address(newJar)) > 0);
 
     }
 
