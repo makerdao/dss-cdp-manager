@@ -1232,4 +1232,29 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         expectGlobalScore("ETH", expectedInkGlobalScore, expectedArtGlobalScore, 0);
 
     }
+
+    function testFailNonMemberTopupNewPool() public {
+        pool = deployNewPoolContract();
+
+        // No change in score
+        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
+
+        uint cdp = manager.open("ETH", address(this));
+
+        // must fail, as user not allowed to topup externally
+        pool.topup(cdp);
+    }
+
+    function testFailNonMemberUpdateScoreNewScore() public {
+        score = deployNewScoreContract();
+
+        // no change in pool contract
+        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
+
+        uint cdp = manager.open("ETH", address(this));
+
+        // must fail, as user is not allowed to update score externally
+        score.updateScore(cdp, "ETH", 1 ether, 1 ether, now);
+    }
+    
 }
