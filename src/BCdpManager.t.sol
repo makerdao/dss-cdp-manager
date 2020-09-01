@@ -1172,7 +1172,6 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
     function testChangeScoreContract() public {
         timeReset();
-        uint time = now;
 
         score = deployNewScoreContract();
 
@@ -1180,19 +1179,38 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         manager.setBParams(address(pool), BCdpScoreLike(address(score)));
 
         uint cdp = manager.open("ETH", address(this));
-        forwardTime(10);
 
         reachTopup(cdp);
 
-        bytes32 ilk = manager.ilks(cdp);
-        uint ilkScore = score.getInkScore(cdp, "ETH", currTime, score.start());
-        uint artScore = score.getArtScore(cdp, "ETH", currTime, score.start());
+        uint fwdTimeBy = 10;
+        forwardTime(fwdTimeBy);
 
-        assertEq(ilkScore, 0); // TODO should not be zero
-        assertEq(artScore, 0); // TODO should not be zero
+        uint expectedInkScore = 1 ether * fwdTimeBy;
+        uint exoectedArtScore = 50 ether * fwdTimeBy;
+        expectScore(cdp, "ETH", expectedInkScore, exoectedArtScore, 0);
+
+        // user ink + liquidator ink
+        uint expectedInkGlobalScore = (1 ether + 1 ether) * fwdTimeBy;
+        // uint art + liquidator art
+        uint expectedArtGlobalScore = (50 ether + 51 ether) * fwdTimeBy;
+        expectGlobalScore("ETH", expectedInkGlobalScore, expectedArtGlobalScore, 0);
+
+    }
+
+    function expectScore(uint cdp, bytes32 ilk, uint inkScore, uint artScore, uint slashScore) internal {
+        assertEq(score.getInkScore(cdp, ilk, currTime, score.start()), inkScore);
+        assertEq(score.getArtScore(cdp, ilk, currTime, score.start()), artScore);
+        assertEq(score.getSlashScore(cdp, ilk, currTime, score.start()), slashScore);
+    }
+
+    function expectGlobalScore(bytes32 ilk, uint gInkScore, uint gArtScore, uint gSlashScore) internal {
+        assertEq(score.getInkGlobalScore(ilk, currTime, score.start()), gInkScore);
+        assertEq(score.getArtGlobalScore(ilk, currTime, score.start()), gArtScore);
+        assertEq(score.getSlashGlobalScore(ilk, currTime, score.start()), gSlashScore);
     }
 
     function testChangePoolAndScoreContracts() public {
+        timeReset();
         pool = deployNewPoolContract();
         score = deployNewScoreContract();
 
@@ -1200,5 +1218,19 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
         uint cdp = manager.open("ETH", address(this));
         reachTopup(cdp);
+
+        uint fwdTimeBy = 10;
+        forwardTime(fwdTimeBy);
+
+        uint expectedInkScore = 1 ether * fwdTimeBy;
+        uint exoectedArtScore = 50 ether * fwdTimeBy;
+        expectScore(cdp, "ETH", expectedInkScore, exoectedArtScore, 0);
+
+        // user ink + liquidator ink
+        uint expectedInkGlobalScore = (1 ether + 1 ether) * fwdTimeBy;
+        // uint art + liquidator art
+        uint expectedArtGlobalScore = (50 ether + 51 ether) * fwdTimeBy;
+        expectGlobalScore("ETH", expectedInkGlobalScore, expectedArtGlobalScore, 0);
+
     }
 }
