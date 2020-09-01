@@ -90,6 +90,14 @@ contract FakeUser {
     ) public {
         pool.deposit(radVal);
     }
+
+    function doSetBParams(
+        BCdpManager manager, 
+        address pool, 
+        BCdpScoreLike score
+    ) public {
+        manager.setBParams(pool, score);
+    }
 }
 
 contract FakePriceFeed {
@@ -231,7 +239,12 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     }
 
     function deployNewPoolContract() internal returns (Pool) {
-        Pool _pool = new Pool(address(vat),address(jar),address(spotter));
+        jar = new FakeUser();
+        return deployNewPoolContract(jar);
+    }
+
+    function deployNewPoolContract(FakeUser jar_) internal returns (Pool) {
+        Pool _pool = new Pool(address(vat),address(jar_),address(spotter));
         _pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
@@ -1172,13 +1185,17 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
 
     function testChangePoolContract() public {
-        pool = deployNewPoolContract();
+        FakeUser newJar = new FakeUser();
+        pool = deployNewPoolContract(newJar);
 
         // No change in score
         manager.setBParams(address(pool), BCdpScoreLike(address(score)));
 
         uint cdp = manager.open("ETH", address(this));
-        reachTopup(cdp);
+        reachBite(cdp);
+        assertEq(dai.balanceOf(address(newJar)), 0); //TODO should not be zero
+        assertEq(address(newJar).balance, 0); //TODO should not be zero
+
     }
 
     function testChangeScoreContract() public {
@@ -1233,28 +1250,10 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
     }
 
-    function testFailNonMemberTopupNewPool() public {
+    function testFailNonAuthSetBParams() public {
         pool = deployNewPoolContract();
-
-        // No change in score
-        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
-
-        uint cdp = manager.open("ETH", address(this));
-
-        // must fail, as user not allowed to topup externally
-        pool.topup(cdp);
-    }
-
-    function testFailNonMemberUpdateScoreNewScore() public {
         score = deployNewScoreContract();
 
-        // no change in pool contract
-        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
-
-        uint cdp = manager.open("ETH", address(this));
-
-        // must fail, as user is not allowed to update score externally
-        score.updateScore(cdp, "ETH", 1 ether, 1 ether, now);
-    }
-    
+        user.doSetBParams(manager, address(pool), BCdpScoreLike(address(score)));
+    }    
 }
