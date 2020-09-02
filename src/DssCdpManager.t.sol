@@ -1,4 +1,4 @@
-pragma solidity ^0.5.12;
+pragma solidity >=0.5.12;
 
 import { DssDeployTestBase, Vat } from "dss-deploy/DssDeploy.t.base.sol";
 import "./GetCdps.sol";
