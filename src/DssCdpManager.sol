@@ -15,17 +15,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity ^0.5.12;
+pragma solidity >=0.5.12;
 
 import { LibNote } from "dss/lib.sol";
 
-contract VatLike {
-    function urns(bytes32, address) public view returns (uint, uint);
-    function hope(address) public;
-    function flux(bytes32, address, address, uint) public;
-    function move(address, address, uint) public;
-    function frob(bytes32, address, address, address, int, int) public;
-    function fork(bytes32, address, address, int, int) public;
+interface VatLike {
+    function urns(bytes32, address) external view returns (uint, uint);
+    function hope(address) external;
+    function flux(bytes32, address, address, uint) external;
+    function move(address, address, uint) external;
+    function frob(bytes32, address, address, address, int, int) external;
+    function fork(bytes32, address, address, int, int) external;
 }
 
 contract UrnHandler {
