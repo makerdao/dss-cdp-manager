@@ -28,13 +28,13 @@ contract Math {
         require(y == 0 || (z = x * y) / y == x);
     }
 
-    uint constant ONE = 10 ** 27;
+    uint constant RAY = 10 ** 27;
 
     function rdiv(uint x, uint y) internal pure returns (uint z) {
-        z = mul(x, ONE) / y;
+        z = mul(x, RAY) / y;
     }
     function rmul(uint x, uint y) internal pure returns (uint z) {
-        z = mul(x, y) / ONE;
+        z = mul(x, y) / RAY;
     }
 
     function toInt(uint x) internal pure returns (int y) {

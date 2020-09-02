@@ -35,6 +35,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
     mapping(uint => uint)     public cushion; // how much was topped in art units
 
     uint constant             public GRACE = 1 hours;
+    uint constant             public WAD = 1e18;
 
     mapping (uint => bool)    public out;
 
@@ -114,7 +115,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
 
     function calcDink(uint dart, uint rate, bytes32 ilk) internal returns(uint dink) {
         (,uint chop,) = end.cat().ilks(ilk);
-        uint tab = rmul(mul(dart, rate), chop);
+        uint tab = mul(mul(dart, rate), chop) / WAD;
         bytes32 realtimePrice = real.read(ilk);
 
         dink = rmul(tab, 1e18) / uint(realtimePrice); // TODO probably need to adjust from rad to wad

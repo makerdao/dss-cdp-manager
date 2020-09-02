@@ -32,7 +32,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
     function openCdp(uint ink,uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
 
-        weth.deposit.value(ink)();
+        weth.mint(ink);
         weth.approve(address(ethJoin), ink);
         ethJoin.join(manager.urns(cdp), ink);
 
@@ -120,7 +120,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         uint cdp = openCdp(10 ether,1 ether);
 
         forwardTime(10);
-        manager.move(cdp, address(this), 1 ether * ONE);
+        manager.move(cdp, address(this), 1 ether * WAD);
         forwardTime(10);
 
         assertEq(score.getInkScore(cdp,"ETH",currTime,score.start()), 200 ether);
@@ -152,7 +152,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
     }
 
     function testEnter() public {
-        weth.deposit.value(10 ether)();
+        weth.mint(10 ether);
         weth.approve(address(ethJoin), 10 ether);
         ethJoin.join(address(this), 10 ether);
         vat.frob("ETH", address(this), address(this), address(this), 10 ether, 1 ether);

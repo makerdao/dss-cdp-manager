@@ -15,8 +15,8 @@ contract PriceFeed is DSValue {
 }
 
 contract FakeCat {
-    function ilks(bytes32 ilk) external pure returns(uint,uint,uint) {
-        return (0,1130000000000000000000000000,0);
+    function ilks(bytes32 ilk) external pure returns(uint flip,uint chop,uint dunk) {
+        return (0,1130000000000000000,0);
     }
 }
 
@@ -222,7 +222,7 @@ contract DeploymentTest is BCdpManagerTestBase {
     function openCdp(uint ink,uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
 
-        weth.deposit.value(ink)();
+        weth.mint(ink);
         weth.approve(address(ethJoin), ink);
         ethJoin.join(manager.urns(cdp), ink);
 
@@ -233,7 +233,7 @@ contract DeploymentTest is BCdpManagerTestBase {
 
     function seedMember(FakeMember m) internal {
         uint cdp = openCdp(1e3 ether, 1e3 ether);
-        manager.move(cdp,address(m),1e3 ether * ONE);
+        manager.move(cdp,address(m),1e3 ether * RAY);
     }
 
     function timeReset() internal {
