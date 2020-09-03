@@ -160,22 +160,22 @@ contract Pool is Math, DSAuth {
         winners = candidates;
     }
 
-    function topAmount(uint cdp) public view returns(int dart, int dtab, uint art) {
+    function hypoTopAmount(uint cdp) internal view returns(int dart, int dtab, uint art, bool should) {
         address urn = man.urns(cdp);
         bytes32 ilk = man.ilks(cdp);
 
-        (uint ink, uint curArt) = vat.urns(ilk,urn);
-        art = curArt;
+        uint ink;
+        (ink, art) = vat.urns(ilk,urn);
 
-        if(! ilks[ilk]) return (0,0,art);
+        if(! ilks[ilk]) return (0,0,art,false);
 
         (bytes32 peep, bool valid) = osm[ilk].peep();
 
         // price feed invalid
-        if(! valid) return (0,0,art);
+        if(! valid) return (0,0,art,false);
 
         // too early to topup
-        if(now < add(uint(osm[ilk].zzz()),uint(osm[ilk].hop())/2)) return (0,0,art);
+        should = (now >= add(uint(osm[ilk].zzz()),uint(osm[ilk].hop())/2));
 
         (,uint rate,,,) = vat.ilks(ilk);
 
@@ -190,6 +190,12 @@ contract Pool is Math, DSAuth {
 
         dart = (int(art) - int(maximumArt));
         dtab = mul(rate, dart);
+    }
+
+    function topAmount(uint cdp) public view returns(int dart, int dtab, uint art) {
+        bool should;
+        (dart,dtab,art,should) = hypoTopAmount(cdp);
+        if(! should) return (0,0,art);
     }
 
     function resetCdp(uint cdp) internal {
@@ -225,24 +231,27 @@ contract Pool is Math, DSAuth {
         cdpData[cdp].bite = new uint[](winners.length);
     }
 
+    function topupInfo(uint cdp) public view returns(int dart, int dtab, uint art, bool should, address[] memory winners) {
+        (dart,dtab,art,should) = hypoTopAmount(cdp);
+        if(art < minArt) {
+            winners = chooseMember(cdp, uint(dtab), members);
+        }
+        else winners = chooseMembers(uint(dtab), members);
+    }
+
     function topup(uint cdp) external onlyMember {
         require(man.cushion(cdp) == 0, "topup: already-topped");
         require(! man.bitten(cdp), "topup: already-bitten");
 
-        (int dart, int dtab, uint art) = topAmount(cdp);
+        (int dart, int dtab, uint art,bool should,address[] memory winners) = topupInfo(cdp);
 
-        require(dart > 0 && dtab > 0, "topup: no-need");
+        require(should, "topup: no-need");
 
         resetCdp(cdp);
 
-        address[] memory winners;
-        if(art < minArt) {
-            winners = chooseMember(cdp, uint(dtab), members);
-            // for small amounts, only winner can topup
-            require(winners[0] == msg.sender,"topup: only-winner-can-topup");
-        }
-        else winners = chooseMembers(uint(dtab), members);
         require(winners.length > 0, "topup: members-are-broke");
+        // for small amounts, only winner can topup
+        if(art < minArt) require(winners[0] == msg.sender,"topup: only-winner-can-topup");
 
         setCdp(cdp, winners, uint(art), uint(dtab));
 
