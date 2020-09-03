@@ -267,12 +267,8 @@ contract Pool is Math, DSAuth {
 
     function bite(uint cdp, uint dart, uint minInk) external onlyMember returns(uint dMemberInk){
         uint index = getIndex(cdpData[cdp].members, msg.sender);
-        require(index < uint(-1), "bite: member-not-elgidabe");
-
-        uint numMembers = cdpData[cdp].members.length;
-
-        uint availArt = sub(cdpData[cdp].art / numMembers, cdpData[cdp].bite[index]);
-        require(dart <= availArt, "bite: debt-too-small");
+        uint availBite = availBite(cdp, index);
+        require(dart <= availBite, "bite: debt-too-small");
 
         cdpData[cdp].bite[index] = add(cdpData[cdp].bite[index], dart);
 
@@ -292,5 +288,26 @@ contract Pool is Math, DSAuth {
 
         vat.flux(ilk, address(this), jar, userInk);
         vat.flux(ilk, address(this), msg.sender, dMemberInk);
+    }
+
+    function availBite(uint cdp, address member) public view returns (uint) {
+        uint index = getIndex(cdpData[cdp].members, member);
+        return availBite(cdp, index);
+    }
+
+    function availBite(uint cdp, uint index) internal view returns (uint) {
+        if(index == uint(-1)) return 0;
+
+        uint numMembers = cdpData[cdp].members.length;
+
+        uint maxArt = cdpData[cdp].art / numMembers;
+        // give dust to first member
+        if(index == 0) {
+            uint dust = cdpData[cdp].art % numMembers;
+            maxArt = add(maxArt, dust);
+        }
+        uint availArt = sub(maxArt, cdpData[cdp].bite[index]);
+        
+        return availArt;
     }
 }
