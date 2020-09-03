@@ -300,6 +300,14 @@ contract Pool is Math, DSAuth {
 
         uint numMembers = cdpData[cdp].members.length;
 
-        return sub(cdpData[cdp].art / numMembers, cdpData[cdp].bite[index]);
+        uint maxArt = cdpData[cdp].art / numMembers;
+        // give dust to first member
+        if(index == 0) {
+            uint dust = cdpData[cdp].art % numMembers;
+            maxArt = add(maxArt, dust);
+        }
+        uint availArt = sub(maxArt, cdpData[cdp].bite[index]);
+        
+        return availArt;
     }
 }
