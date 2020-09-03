@@ -130,6 +130,17 @@ contract PoolTest is BCdpManagerTestBase {
         return true;
     }
 
+    function assertAlmostEq(uint a, uint b) internal {
+        if(a > b + 1) {
+            assertEq(a,b);
+            assertEq(uint(1),2);
+        }
+        if(b > a + 1) {
+            assertEq(a,b);
+            assertEq(uint(1),3);
+        }
+    }
+
     function testDeposit() public {
         uint userBalance = vat.dai(address(member));
         assertEq(pool.rad(address(member)), 0);
@@ -907,17 +918,6 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(bite.length,0);
     }
 
-    function assertAlmostEq(uint a, uint b) internal {
-        if(a > b + 1) {
-            assertEq(a,b);
-            assertEq(uint(1),2);
-        }
-        if(b > a + 1) {
-            assertEq(a,b);
-            assertEq(uint(1),3);
-        }
-    }
-
     function testFullBiteWithRate() public {
         members[0].doDeposit(pool,1000 ether * RAY);
         members[1].doDeposit(pool,950 ether * RAY);
@@ -954,6 +954,111 @@ contract PoolTest is BCdpManagerTestBase {
         // jar should get 2% from 104 * 1.1 * 1.1 / 140
         assertEq(vat.gem("ETH",address(jar)),(104 ether * uint(11) * 11/ 1400)/500 - 1);
     }
+
+    function testAvailArtWithDust() public {
+        timeReset();
+
+        members[0].doDeposit(pool,1000 ether * RAY);
+        members[1].doDeposit(pool,950 ether * RAY);
+        members[2].doDeposit(pool,900 ether * RAY);
+        members[3].doDeposit(pool,850 ether * RAY);
+
+        uint daiAmt = 104 ether + 111111111111111111; // 104.11 dai
+        uint cdp = openCdp(1 ether, daiAmt); // 1 eth
+
+        members[3].doTopup(pool,cdp);
+
+        uint expectedAvailArt = daiAmt / members.length;
+        uint expectedDust = daiAmt % members.length;
+        assertEq(pool.availArt(cdp, address(members[0])), expectedAvailArt + expectedDust);
+        assertEq(pool.availArt(cdp, address(members[1])), expectedAvailArt);
+        assertEq(pool.availArt(cdp, address(members[2])), expectedAvailArt);
+        assertEq(pool.availArt(cdp, address(members[3])), expectedAvailArt);
+
+        assertEq(members.length * expectedAvailArt + expectedDust, daiAmt);
+    }
+
+
+    function testAvailArtWithoutDust() public {
+        timeReset();
+
+        members[0].doDeposit(pool,1000 ether * RAY);
+        members[1].doDeposit(pool,950 ether * RAY);
+        members[2].doDeposit(pool,900 ether * RAY);
+        members[3].doDeposit(pool,850 ether * RAY);
+
+        uint daiAmt = 104 ether;
+        uint cdp = openCdp(1 ether, daiAmt); // 1 eth, 104 dai
+
+        members[3].doTopup(pool,cdp);
+
+        uint expectedAvailArt = daiAmt / members.length;
+        uint expectedDust = daiAmt % members.length;
+        assertEq(expectedDust, 0);
+
+        assertEq(pool.availArt(cdp, address(members[0])), expectedAvailArt);
+        assertEq(pool.availArt(cdp, address(members[1])), expectedAvailArt);
+        assertEq(pool.availArt(cdp, address(members[2])), expectedAvailArt);
+        assertEq(pool.availArt(cdp, address(members[3])), expectedAvailArt);
+
+        assertEq(members.length * expectedAvailArt, daiAmt);
+    }
+
+
+    function testFullBiteWithRateAndDust() public {
+        members[0].doDeposit(pool,1000 ether * RAY);
+        members[1].doDeposit(pool,950 ether * RAY);
+        members[2].doDeposit(pool,900 ether * RAY);
+        members[3].doDeposit(pool,850 ether * RAY);
+        
+        uint extraDust = 111111111111111111;
+        uint _1p1 = WAD + WAD/10;
+        uint daiAmt = 104 ether + extraDust; // 104.11 dai
+        uint cdp = openCdp(1 ether, daiAmt); // 1 eth
+
+        setRateTo1p1(); // debt is 10% up
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        members[0].doTopup(pool,cdp);
+
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH",140 * 1e18);
+
+        uint ethBefore = vat.gem("ETH",address(members[0]));
+        this.file(address(cat), "ETH", "chop", WAD + WAD/10);
+        pool.setProfitParams(2,100); // 2% goes to jar
+
+        uint expectedAvailArt = daiAmt / members.length;
+        uint expectedDust = daiAmt % members.length;
+        assertEq(expectedDust, 3);
+
+        assertEq(pool.availArt(cdp, address(members[0])), expectedAvailArt + expectedDust);
+        assertEq(pool.availArt(cdp, address(members[1])), expectedAvailArt);
+        assertEq(pool.availArt(cdp, address(members[2])), expectedAvailArt);
+        assertEq(pool.availArt(cdp, address(members[3])), expectedAvailArt);
+
+        // for 26 ether we expect 26/140 * 1.1 = 28.6/140, from which 98% goes to member
+        uint expectedEth = uint(98) * 286 ether * 11/ (140 * 100 * 10 * 10);
+        uint amt = daiAmt / members.length;
+
+        members[0].doPoolBite(pool,cdp,amt+expectedDust,expectedEth);
+        members[1].doPoolBite(pool,cdp,amt,expectedEth);
+        members[2].doPoolBite(pool,cdp,amt,expectedEth);
+        members[3].doPoolBite(pool,cdp,amt,expectedEth);
+
+        assertEq(pool.availArt(cdp, address(members[0])), 0);
+        assertEq(pool.availArt(cdp, address(members[1])), 0);
+        assertEq(pool.availArt(cdp, address(members[2])), 0);
+        assertEq(pool.availArt(cdp, address(members[3])), 0);
+
+        // jar should get 2% from 104 * 1.1 * 1.1 / 140
+        almostEqual(vat.gem("ETH",address(jar)),(daiAmt * uint(11) * 11/ 1400)/500 - 1);
+    }
+
+
 
     // tests to do
 
