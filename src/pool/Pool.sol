@@ -267,8 +267,8 @@ contract Pool is Math, DSAuth {
 
     function bite(uint cdp, uint dart, uint minInk) external onlyMember returns(uint dMemberInk){
         uint index = getIndex(cdpData[cdp].members, msg.sender);
-        uint availArt = availArt(cdp, index);
-        require(dart <= availArt, "bite: debt-too-small");
+        uint availBite = availBite(cdp, index);
+        require(dart <= availBite, "bite: debt-too-small");
 
         cdpData[cdp].bite[index] = add(cdpData[cdp].bite[index], dart);
 
@@ -290,13 +290,13 @@ contract Pool is Math, DSAuth {
         vat.flux(ilk, address(this), msg.sender, dMemberInk);
     }
 
-    function availArt(uint cdp, address member) public returns (uint) {
+    function availBite(uint cdp, address member) public view returns (uint) {
         uint index = getIndex(cdpData[cdp].members, member);
-        return availArt(cdp, index);
+        return availBite(cdp, index);
     }
 
-    function availArt(uint cdp, uint index) internal returns (uint) {
-        require(index < uint(-1), "bite: member-not-elgidabe");
+    function availBite(uint cdp, uint index) internal view returns (uint) {
+        if(index == uint(-1)) return 0;
 
         uint numMembers = cdpData[cdp].members.length;
 
