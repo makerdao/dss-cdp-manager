@@ -1,8 +1,8 @@
 pragma solidity ^0.5.12;
 
 import { LibNote } from "dss/lib.sol";
-import {BCdpManager} from "./../BCdpManager.sol";
-import {Math} from "./../Math.sol";
+import { BCdpManager } from "./../BCdpManager.sol";
+import { Math } from "./../Math.sol";
 
 import { DSAuth } from "ds-auth/auth.sol";
 
@@ -34,31 +34,25 @@ contract Pool is Math, DSAuth {
     address[] public members;
     mapping(bytes32 => bool) public ilks;
     uint                     public minArt; // min debt to share among members
-    uint                     public shrn; // share profit % numerator
-    uint                     public shrd; // share profit % denumerator
-    mapping(address => uint) public rad; // mapping from member to its dai balance in rad
+    uint                     public shrn;   // share profit % numerator
+    uint                     public shrd;   // share profit % denumerator
+    mapping(address => uint) public rad;    // mapping from member to its dai balance in rad
 
     VatLike                   public vat;
     BCdpManager               public man;
     SpotLike                  public spot;
     address                   public jar;
 
-    mapping(uint => CdpData) cdpData;
+    mapping(uint => CdpData)  internal cdpData;
+
+    mapping(bytes32 => OSMLike) public osm; // mapping from ilk to osm
+
     struct CdpData {
         uint       art;        // topup in art units
         uint       cushion;    // cushion in rad units
         address[]  members;    // liquidators that are in
         uint[]     bite;       // how much was already bitten
     }
-
-    function getCdpData(uint cdp) external view returns(uint art, uint cushion, address[] memory members, uint[] memory bite) {
-        art = cdpData[cdp].art;
-        cushion = cdpData[cdp].cushion;
-        members = cdpData[cdp].members;
-        bite = cdpData[cdp].bite;
-    }
-
-    mapping(bytes32 => OSMLike) public osm; // mapping from ilk to osm
 
     modifier onlyMember {
         bool member = false;
@@ -73,6 +67,13 @@ contract Pool is Math, DSAuth {
         spot = SpotLike(spot_);
         vat = VatLike(vat_);
         jar = jar_;
+    }
+
+    function getCdpData(uint cdp) external view returns(uint art, uint cushion, address[] memory members, uint[] memory bite) {
+        art = cdpData[cdp].art;
+        cushion = cdpData[cdp].cushion;
+        members = cdpData[cdp].members;
+        bite = cdpData[cdp].bite;
     }
 
     function setCdpManager(BCdpManager man_) external auth { // TODO - make it settable only once, or with timelock
@@ -107,7 +108,7 @@ contract Pool is Math, DSAuth {
     }
 
     function withdraw(uint radVal) external onlyMember {
-        require(rad[msg.sender] >= radVal, "withdraw: insufficient balance");
+        require(rad[msg.sender] >= radVal, "withdraw: insufficient-balance");
         rad[msg.sender] = sub(rad[msg.sender],radVal);
         vat.move(address(this),msg.sender,radVal);
     }
