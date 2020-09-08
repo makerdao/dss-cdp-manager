@@ -20,7 +20,7 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
         uint cdp,
         int dink,
         int dart
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         bytes32 ilk = ilks[cdp];
 
         untop(cdp);
@@ -33,7 +33,7 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
     function quit(
         uint cdp,
         address dst
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) urnAllowed(dst) {
         address urn = urns[cdp];
         bytes32 ilk = ilks[cdp];
 
@@ -48,7 +48,7 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
     function enter(
         address src,
         uint cdp
-    ) public note urnAllowed(src) cdpAllowed(cdp) {
+    ) public urnAllowed(src) cdpAllowed(cdp) {
         bytes32 ilk = ilks[cdp];
 
         untop(cdp);
@@ -62,7 +62,7 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
     function shift(
         uint cdpSrc,
         uint cdpDst
-    ) public note cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
+    ) public cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
         bytes32 ilkSrc = ilks[cdpSrc];
 
         untop(cdpSrc);
