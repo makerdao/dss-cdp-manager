@@ -52,7 +52,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         real = real_;
     }
 
-    function _setPoolContract(address newPool) internal {
+    function setPool(address newPool) internal {
         pool = newPool;
     }
 

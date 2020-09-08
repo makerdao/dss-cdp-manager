@@ -85,11 +85,11 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
         quitBLiquidation(cdp);
     }
 
-    function setScoreContract(BCdpScoreLike score) public auth {
-        super._setScoreContract(score);
+    function setScoreContract(BCdpScoreLike score) external auth {
+        super.setScore(score);
     }
 
-    function setPoolContract(address pool) public auth {
-        super._setPoolContract(pool);
+    function setPoolContract(address pool) external auth {
+        super.setPool(pool);
     }
 }
