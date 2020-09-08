@@ -7,12 +7,6 @@ import {LiquidationMachine} from "./LiquidationMachine.sol";
 import { ScoringMachine } from "../user-rating/contracts/ScoringMachine.sol";
 
 
-contract FakeSlasher {
-    function doSlash(BCdpScore score, uint cdp, bytes32 ilk, int dart, uint time) public {
-        score.slashScore(cdp,ilk,dart,time);
-    }
-}
-
 contract ScoringMachineTest is BCdpManagerTestBase {
     uint currTime;
 
@@ -334,7 +328,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         assertEq(score.getInkScore(cdp,"ETH",time + 25 + 19,time+25), 17 * 100 ether + 2 * 99 ether);
     }
 
-    function testSlash() public {
+    function testSlashHappy() public {
         timeReset();
 
         uint time = now;
@@ -342,17 +336,30 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         score.spin();
 
         uint cdp = openCdp(10 ether,1 ether);
-        forwardTime(10);
+        manager.move(cdp,address(this),1 ether * RAY);
 
-        score.slashScore(cdp,"ETH",10 ether,time);
+        forwardTime(10 * 30 days);
 
-        forwardTime(15);
+        uint scoreBeforeCheating = score.getArtScore(cdp,"ETH",currTime,score.start());
+        assertEq(scoreBeforeCheating, 1 ether * 10 * 30 days);
 
-        assertEq(score.getSlashScore(cdp,"ETH",now,time),10 ether * 25);
-        assertEq(score.getSlashGlobalScore("ETH",now,time),10 ether * 25);
+        address urn = manager.urns(cdp);
+        assertEq(vat.dai(address(this)),1 ether * RAY);
+        vat.frob("ETH",urn,urn,address(this),0,-1 ether / 2);
+
+        forwardTime(1 days);
+
+        uint scoreAfterCheating = score.getArtScore(cdp,"ETH",currTime,score.start());
+        assertEq(scoreAfterCheating, 1 ether * 301 days);
+
+        score.slashScore(cdp);
+
+        uint scoreAfterSlashing = score.getArtScore(cdp,"ETH",currTime,score.start());
+
+        assertEq(scoreAfterCheating, scoreAfterSlashing + 30 days * 1 ether / 2);
     }
 
-    function testFailedSlashNotFromAdmin() public {
+    function testSlashBeforeOneMonth() public {
         timeReset();
 
         uint time = now;
@@ -360,9 +367,81 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         score.spin();
 
         uint cdp = openCdp(10 ether,1 ether);
-        forwardTime(10);
-        FakeSlasher fakeSlasher = new FakeSlasher();
-        fakeSlasher.doSlash(score,cdp,"ETH",10 ether,time);
+        manager.move(cdp,address(this),1 ether * RAY);
+
+        forwardTime(25 days);
+
+        uint scoreBeforeCheating = score.getArtScore(cdp,"ETH",currTime,score.start());
+        assertEq(scoreBeforeCheating, 1 ether * 25 days);
+
+        address urn = manager.urns(cdp);
+        assertEq(vat.dai(address(this)),1 ether * RAY);
+        vat.frob("ETH",urn,urn,address(this),0,-1 ether / 2);
+
+        forwardTime(1 days);
+
+        uint scoreAfterCheating = score.getArtScore(cdp,"ETH",currTime,score.start());
+        assertEq(scoreAfterCheating, 1 ether * 26 days);
+
+        score.slashScore(cdp);
+
+        uint scoreAfterSlashing = score.getArtScore(cdp,"ETH",currTime,score.start());
+
+        assertEq(scoreAfterCheating, scoreAfterSlashing + 26 days * 1 ether / 2);
+    }
+
+    function testSlashBelowZero() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        forwardTime(30 days);
+
+        uint cdp = openCdp(10 ether,1 ether);
+        manager.move(cdp,address(this),1 ether * RAY);
+
+        forwardTime(25 days);
+
+        uint scoreBeforeCheating = score.getArtScore(cdp,"ETH",currTime,score.start());
+        assertEq(scoreBeforeCheating, 1 ether * 25 days);
+
+        address urn = manager.urns(cdp);
+        assertEq(vat.dai(address(this)),1 ether * RAY);
+        vat.frob("ETH",urn,urn,address(this),0,-1 ether);
+
+        forwardTime(1 days);
+
+        uint scoreAfterCheating = score.getArtScore(cdp,"ETH",currTime,score.start());
+        assertEq(scoreAfterCheating, 1 ether * 26 days);
+
+        score.slashScore(cdp);
+
+        uint scoreAfterSlashing = score.getArtScore(cdp,"ETH",currTime,score.start());
+
+        assertEq(0, scoreAfterSlashing);
+    }
+
+    function testFailSlash() public {
+        timeReset();
+
+        uint time = now;
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether,1 ether);
+        manager.move(cdp,address(this),1 ether * RAY);
+
+        forwardTime(250 days);
+
+        uint scoreBeforeCheating = score.getArtScore(cdp,"ETH",currTime,score.start());
+        assertEq(scoreBeforeCheating, 1 ether * 250 days);
+
+        forwardTime(2 days);
+
+        // no cheats
+        score.slashScore(cdp);
     }
 
     function testBite() public {

@@ -1,17 +1,18 @@
 pragma solidity ^0.5.12;
 
 import {ScoringMachine} from "../user-rating/contracts/ScoringMachine.sol";
+import {BCdpManager} from "./BCdpManager.sol";
 
 contract BCdpScore is ScoringMachine {
-    address public manager;
+    BCdpManager public manager;
 
     modifier onlyManager {
-        require(msg.sender == manager, "not-manager");
+        require(msg.sender == address(manager), "not-manager");
         _;
     }
 
     function setManager(address newManager) external onlyOwner {
-        manager = newManager;
+        manager = BCdpManager(newManager);
     }
 
     function user(uint cdp) public pure returns(bytes32) {
@@ -35,8 +36,23 @@ contract BCdpScore is ScoringMachine {
         updateScore(user(cdp), artAsset(ilk), dart, time);
     }
 
-    function slashScore(uint cdp, bytes32 ilk, int dart, uint time) external onlyOwner {
-        updateScore(user(cdp), slashAsset(ilk), dart, time);
+    function slashScore(uint maliciousCdp) external {
+        address urn = manager.urns(maliciousCdp);
+        bytes32 ilk = manager.ilks(maliciousCdp);
+
+        (,uint realArt) = manager.vat().urns(ilk, urn);
+
+        bytes32 maliciousUser = user(maliciousCdp);
+        bytes32 asset = artAsset(ilk);
+
+        uint calculatedArt = getCurrentBalance(maliciousUser, asset);
+        require(realArt < calculatedArt, "slashScore-cdp-is-ok");
+        int dart = int(realArt) - int(calculatedArt);
+
+        uint time = sub(now, 30 days);
+        if(time < start) time = start;
+
+        updateScore(maliciousUser, asset, dart, time);
     }
 
     function getInkScore(uint cdp, bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
