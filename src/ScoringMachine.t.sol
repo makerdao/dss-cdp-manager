@@ -4,7 +4,7 @@ import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol";
 import {BCdpScore} from "./BCdpScore.sol";
 import {BCdpScoreConnector} from "./BCdpScoreConnector.sol";
 import {LiquidationMachine} from "./LiquidationMachine.sol";
-import { ScoringMachine } from "../user-rating/contracts/ScoringMachine.sol";
+import { ScoringMachine } from "../user-rating/contracts/score/ScoringMachine.sol";
 
 
 contract ScoringMachineTest is BCdpManagerTestBase {
