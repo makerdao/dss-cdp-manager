@@ -194,7 +194,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
 
     function reachTopup(uint cdp) internal {
         address urn = manager.urns(cdp);
-        (uint ink, uint artPre) = vat.urns("ETH", urn);
+        (, uint artPre) = vat.urns("ETH", urn);
 
         if(artPre == 0) {
             weth.mint(1 ether);
