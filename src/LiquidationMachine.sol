@@ -143,8 +143,8 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
 
         uint usedCushion = mul(cushion[cdp],dart) / art;
         cushion[cdp] = sub(cushion[cdp], usedCushion);
-        dart = sub(dart,usedCushion);
+        uint _dart = sub(dart,usedCushion);
 
-        doBite(cdp, dart, ilk, urn, dink);
+        doBite(cdp, _dart, ilk, urn, dink);
     }
 }
