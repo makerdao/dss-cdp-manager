@@ -15,22 +15,6 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
 
     }
 
-    // Open a new cdp for a given usr address.
-    function open(
-        bytes32 ilk,
-        address usr
-    ) public note returns (uint) {
-        return super.open(ilk,usr);
-    }
-
-    // Give the cdp ownership to a dst address.
-    function give(
-        uint cdp,
-        address dst
-    ) public note cdpAllowed(cdp) {
-        return super.give(cdp,dst);
-    }
-
     // Frob the cdp keeping the generated DAI or collateral freed in the cdp urn address.
     function frob(
         uint cdp,
@@ -44,36 +28,6 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
 
         super.frob(cdp,dink,dart);
     }
-
-    // Transfer wad amount of cdp collateral from the cdp address to a dst address.
-    function flux(
-        uint cdp,
-        address dst,
-        uint wad
-    ) public note cdpAllowed(cdp) {
-        super.flux(cdp,dst,wad);
-    }
-
-    // Transfer wad amount of any type of collateral (ilk) from the cdp address to a dst address.
-    // This function has the purpose to take away collateral from the system that doesn't correspond to the cdp but was sent there wrongly.
-    function flux(
-        bytes32 ilk,
-        uint cdp,
-        address dst,
-        uint wad
-    ) public note cdpAllowed(cdp) {
-        super.flux(ilk,cdp,dst,wad);
-    }
-
-    // Transfer wad amount of DAI from the cdp address to a dst address.
-    function move(
-        uint cdp,
-        address dst,
-        uint rad
-    ) public note cdpAllowed(cdp) {
-        super.move(cdp,dst,rad);
-    }
-
 
     // Quit the system, migrating the cdp (ink, art) to a different dst urn
     function quit(
