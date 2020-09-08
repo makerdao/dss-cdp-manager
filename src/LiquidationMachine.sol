@@ -70,7 +70,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         (,uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, dtopup);
 
-        vat.move(address(pool),address(this),dtab);
+        vat.move(pool,address(this),dtab);
         vat.frob(ilk,urn,urn,address(this),0,-int(dtopup));
 
         cushion[cdp] = add(cushion[cdp], dtopup);
@@ -96,7 +96,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
 
         // move topping to pool
         vat.frob(ilk, urn, urn, urn, 0, toInt(top));
-        vat.move(urn,address(pool),dtab);
+        vat.move(urn,pool,dtab);
     }
 
     function untopByPool(uint cdp) external onlyPool {
@@ -107,7 +107,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         (,uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, dart);
 
-        vat.move(address(pool),address(this),dtab);
+        vat.move(pool,address(this),dtab);
 
         vat.frob(ilk,urn,urn,address(this),0,-int(dart));
         vat.frob(ilk,urn,msg.sender,urn,-int(dink),0);
@@ -118,7 +118,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         uint tab = mul(mul(dart, rate), chop) / WAD;
         bytes32 realtimePrice = real.read(ilk);
 
-        dink = rmul(tab, 1e18) / uint(realtimePrice); // TODO probably need to adjust from rad to wad
+        dink = rmul(tab, WAD) / uint(realtimePrice); // TODO probably need to adjust from rad to wad
     }
 
     function bite(uint cdp, uint dart) external onlyPool returns(uint dink){

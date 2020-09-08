@@ -15,28 +15,12 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
 
     }
 
-    // Open a new cdp for a given usr address.
-    function open(
-        bytes32 ilk,
-        address usr
-    ) public note returns (uint) {
-        return super.open(ilk,usr);
-    }
-
-    // Give the cdp ownership to a dst address.
-    function give(
-        uint cdp,
-        address dst
-    ) public note cdpAllowed(cdp) {
-        return super.give(cdp,dst);
-    }
-
     // Frob the cdp keeping the generated DAI or collateral freed in the cdp urn address.
     function frob(
         uint cdp,
         int dink,
         int dart
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         bytes32 ilk = ilks[cdp];
 
         untop(cdp);
@@ -45,41 +29,11 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
         super.frob(cdp,dink,dart);
     }
 
-    // Transfer wad amount of cdp collateral from the cdp address to a dst address.
-    function flux(
-        uint cdp,
-        address dst,
-        uint wad
-    ) public note cdpAllowed(cdp) {
-        super.flux(cdp,dst,wad);
-    }
-
-    // Transfer wad amount of any type of collateral (ilk) from the cdp address to a dst address.
-    // This function has the purpose to take away collateral from the system that doesn't correspond to the cdp but was sent there wrongly.
-    function flux(
-        bytes32 ilk,
-        uint cdp,
-        address dst,
-        uint wad
-    ) public note cdpAllowed(cdp) {
-        super.flux(ilk,cdp,dst,wad);
-    }
-
-    // Transfer wad amount of DAI from the cdp address to a dst address.
-    function move(
-        uint cdp,
-        address dst,
-        uint rad
-    ) public note cdpAllowed(cdp) {
-        super.move(cdp,dst,rad);
-    }
-
-
     // Quit the system, migrating the cdp (ink, art) to a different dst urn
     function quit(
         uint cdp,
         address dst
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) urnAllowed(dst) {
         address urn = urns[cdp];
         bytes32 ilk = ilks[cdp];
 
@@ -94,7 +48,7 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
     function enter(
         address src,
         uint cdp
-    ) public note urnAllowed(src) cdpAllowed(cdp) {
+    ) public urnAllowed(src) cdpAllowed(cdp) {
         bytes32 ilk = ilks[cdp];
 
         untop(cdp);
@@ -108,7 +62,7 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
     function shift(
         uint cdpSrc,
         uint cdpDst
-    ) public note cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
+    ) public cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
         bytes32 ilkSrc = ilks[cdpSrc];
 
         untop(cdpSrc);
@@ -131,8 +85,11 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
         quitBLiquidation(cdp);
     }
 
-    function setBParams(address pool, BCdpScoreLike score) external auth {
-        setPool(pool);
-        setScoreContract(score);
+    function setScoreContract(BCdpScoreLike score) external auth {
+        super.setScore(score);
+    }
+
+    function setPoolContract(address pool) external auth {
+        super.setPool(pool);
     }
 }
