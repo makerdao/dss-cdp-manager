@@ -69,10 +69,10 @@ contract Pool is Math, DSAuth {
         jar = jar_;
     }
 
-    function getCdpData(uint cdp) external view returns(uint art, uint cushion, address[] memory members, uint[] memory bite) {
+    function getCdpData(uint cdp) external view returns(uint art, uint cushion, address[] memory members_, uint[] memory bite) {
         art = cdpData[cdp].art;
         cushion = cdpData[cdp].cushion;
-        members = cdpData[cdp].members;
+        members_ = cdpData[cdp].members;
         bite = cdpData[cdp].bite;
     }
 
