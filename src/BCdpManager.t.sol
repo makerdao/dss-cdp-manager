@@ -91,12 +91,18 @@ contract FakeUser {
         pool.deposit(radVal);
     }
 
-    function doSetBParams(
+    function doSetPool(
         BCdpManager manager, 
-        address pool, 
+        address pool
+    ) public {
+        manager.setPoolContract(pool);
+    }
+
+    function doSetScore(
+        BCdpManager manager, 
         BCdpScoreLike score
     ) public {
-        manager.setBParams(pool, score);
+        manager.setScoreContract(score);
     }
 }
 
@@ -1187,8 +1193,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         FakeUser newJar = new FakeUser();
         pool = deployNewPoolContract(newJar);
 
-        // No change in score
-        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
+        manager.setPoolContract(address(pool));
 
         uint cdp = manager.open("ETH", address(this));
 
@@ -1205,8 +1210,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
         score = deployNewScoreContract();
 
-        // no change in pool contract
-        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
+        manager.setScoreContract(BCdpScoreLike(address(score)));
 
         uint cdp = manager.open("ETH", address(this));
 
@@ -1232,7 +1236,8 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         pool = deployNewPoolContract();
         score = deployNewScoreContract();
 
-        manager.setBParams(address(pool), BCdpScoreLike(address(score)));
+        manager.setPoolContract(address(pool));
+        manager.setScoreContract(BCdpScoreLike(address(score)));
 
         uint cdp = manager.open("ETH", address(this));
         reachTopup(cdp);
@@ -1252,10 +1257,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
     }
 
-    function testFailNonAuthSetBParams() public {
+    function testFailNonAuthSetPool() public {
         pool = deployNewPoolContract();
+
+        user.doSetPool(manager, address(pool));
+    }    
+
+    function testFailNonAuthSetScoreContract() public {
         score = deployNewScoreContract();
 
-        user.doSetBParams(manager, address(pool), BCdpScoreLike(address(score)));
-    }    
+        user.doSetScore(manager, BCdpScoreLike(address(score)));
+    }
 }

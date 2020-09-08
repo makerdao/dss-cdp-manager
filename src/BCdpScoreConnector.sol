@@ -12,7 +12,7 @@ contract BCdpScoreConnector {
         score = score_;
     }
 
-    function setScoreContract(BCdpScoreLike bcdpScore) internal {
+    function _setScoreContract(BCdpScoreLike bcdpScore) internal {
         score = bcdpScore;
     }
 
