@@ -103,7 +103,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         untop(cdp);
     }
 
-    function doBite(uint cdp, uint dart, bytes32 ilk, address urn, uint dink) internal {
+    function doBite(uint dart, bytes32 ilk, address urn, uint dink) internal {
         (,uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, dart);
 
@@ -143,8 +143,8 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
 
         uint usedCushion = mul(cushion[cdp],dart) / art;
         cushion[cdp] = sub(cushion[cdp], usedCushion);
-        uint _dart = sub(dart,usedCushion);
+        uint bart = sub(dart,usedCushion);
 
-        doBite(cdp, _dart, ilk, urn, dink);
+        doBite(bart, ilk, urn, dink);
     }
 }
