@@ -30,7 +30,7 @@ contract OSMLike {
     function zzz()  external view returns(uint64);
 }
 
-contract Pool is Math, DSAuth {
+contract Pool is Math, DSAuth, LibNote {
     address[] public members;
     mapping(bytes32 => bool) public ilks;
     uint                     public minArt; // min debt to share among members
@@ -79,38 +79,39 @@ contract Pool is Math, DSAuth {
         bite = cdpData[cdp].bite;
     }
 
-    function setCdpManager(BCdpManager man_) external note auth {
+    function setCdpManager(BCdpManager man_) external auth note {
         man = man_;
         vat.hope(address(man));
     }
 
-    function setOsm(bytes32 ilk_, address  osm_) external note auth {
+    function setOsm(bytes32 ilk_, address  osm_) external auth note {
         osm[ilk_] = OSMLike(osm_);
     }
 
-    function setMembers(address[] calldata members_) external auth {
+    function setMembers(address[] calldata members_) external auth note {
         members = members_;
     }
 
-    function setIlk(bytes32 ilk, bool set) external auth {
+    function setIlk(bytes32 ilk, bool set) external auth note {
         ilks[ilk] = set;
     }
 
-    function setMinArt(uint minArt_) external auth {
+    function setMinArt(uint minArt_) external auth note {
         minArt = minArt_;
     }
 
-    function setProfitParams(uint num, uint den) external auth {
+    function setProfitParams(uint num, uint den) external auth note {
+        require(num < den, "invalid-profit-params");
         shrn = num;
         shrd = den;
     }
 
-    function deposit(uint radVal) external onlyMember {
+    function deposit(uint radVal) external onlyMember note {
         vat.move(msg.sender, address(this),radVal);
         rad[msg.sender] = add(rad[msg.sender],radVal);
     }
 
-    function withdraw(uint radVal) external onlyMember {
+    function withdraw(uint radVal) external note {
         require(rad[msg.sender] >= radVal, "withdraw: insufficient-balance");
         rad[msg.sender] = sub(rad[msg.sender],radVal);
         vat.move(address(this),msg.sender,radVal);
@@ -244,7 +245,7 @@ contract Pool is Math, DSAuth {
         else winners = chooseMembers(uint(dtab), members);
     }
 
-    function topup(uint cdp) external onlyMember {
+    function topup(uint cdp) external onlyMember note {
         require(man.cushion(cdp) == 0, "topup: already-topped");
         require(! man.bitten(cdp), "topup: already-bitten");
 
@@ -263,14 +264,14 @@ contract Pool is Math, DSAuth {
         man.topup(cdp, uint(dart));
     }
 
-    function untop(uint cdp) external onlyMember {
+    function untop(uint cdp) external onlyMember note {
         require(man.cushion(cdp) == 0, "untop: should-be-untopped-by-user");
         require(! man.bitten(cdp), "topup: in-bite-process");
 
         resetCdp(cdp);
     }
 
-    function bite(uint cdp, uint dart, uint minInk) external onlyMember returns(uint dMemberInk){
+    function bite(uint cdp, uint dart, uint minInk) external onlyMember note returns(uint dMemberInk){
         uint index = getIndex(cdpData[cdp].members, msg.sender);
         uint availBite = availBite(cdp, index);
         require(dart <= availBite, "bite: debt-too-small");
