@@ -1,11 +1,11 @@
 pragma solidity ^0.5.12;
 
-import {BCdpManagerTestBase, Hevm, FakeUser, FakeOSM, BCdpManager} from "./../BCdpManager.t.sol";
+import { BCdpManagerTestBase, Hevm, FakeUser, FakeOSM, BCdpManager } from "./../BCdpManager.t.sol";
 import { DssDeployTestBase, Vat, Cat, Spotter, DSValue } from "dss-deploy/DssDeploy.t.base.sol";
-import {BCdpScore} from "./../BCdpScore.sol";
-import {Pool} from "./../pool/Pool.sol";
-import {FakeMember} from "./../pool/Pool.t.sol";
-import {LiquidationMachine,PriceFeedLike} from "./../LiquidationMachine.sol";
+import { BCdpScore } from "./../BCdpScore.sol";
+import { Pool } from "./../pool/Pool.sol";
+import { FakeMember } from "./../pool/Pool.t.sol";
+import { LiquidationMachine, PriceFeedLike } from "./../LiquidationMachine.sol";
 
 
 contract PriceFeed is DSValue {
@@ -15,8 +15,8 @@ contract PriceFeed is DSValue {
 }
 
 contract FakeCat {
-    function ilks(bytes32 ilk) external pure returns(uint flip,uint chop,uint dunk) {
-        return (0,1130000000000000000,0);
+    function ilks(bytes32 ilk) external pure returns(uint flip, uint chop, uint dunk) {
+        return (0, 1130000000000000000, 0);
     }
 }
 
@@ -64,69 +64,69 @@ contract VatDeployer {
         osm.setPrice(uint(300 * 10 ** 18));
         //pipETH.setOwner(msg.sender);
         spotter.file("ETH-A", "pip", address(pipETH)); // Set pip
-        spotter.file("par",1000000000000000000000000000);
+        spotter.file("par", 1000000000000000000000000000);
         spotter.file("ETH-A", "mat", 1500000000000000000000000000);
 
         vat.rely(address(spotter));
 
         end = new FakeEnd();
         //cat.rely(msg.sender);
-        //cat.file("ETH-A","chop",1130000000000000000000000000);
+        //cat.file("ETH-A", "chop", 1130000000000000000000000000);
 
         // set VAT cfg
         vat.init("ETH-A");
-        vat.file("Line",568000000000000000000000000000000000000000000000000000);
-        vat.file("ETH-A","spot",260918853648800000000000000000);
-        vat.file("ETH-A","line",340000000000000000000000000000000000000000000000000000);
-        vat.file("ETH-A","dust",20000000000000000000000000000000000000000000000);
-        //vat.fold("ETH-A",address(0),1020041883692153436559184034);
+        vat.file("Line", 568000000000000000000000000000000000000000000000000000);
+        vat.file("ETH-A", "spot", 260918853648800000000000000000);
+        vat.file("ETH-A", "line", 340000000000000000000000000000000000000000000000000000);
+        vat.file("ETH-A", "dust", 20000000000000000000000000000000000000000000000);
+        //vat.fold("ETH-A", address(0), 1020041883692153436559184034);
 
         spotter.poke("ETH-A");
 
-        pool = new Pool(address(vat),address(0x12345678),address(spotter));
+        pool = new Pool(address(vat), address(0x12345678), address(spotter));
         score = BCdpScore(address(new FakeScore())); //new BCdpScore();
-        man = new BCdpManager(address(vat), address(end), address(pool), address(pipETH),address(score));
+        man = new BCdpManager(address(vat), address(end), address(pool), address(pipETH), address(score));
         //score.setManager(address(man));
         pool.setCdpManager(man);
-        pool.setOsm("ETH-A",address(osm));
+        pool.setOsm("ETH-A", address(osm));
         address[] memory members = new address[](2);
         member = new FakeMember();
         members[0] = address(member);
         members[1] = 0xf214dDE57f32F3F34492Ba3148641693058D4A9e;
         pool.setMembers(members);
-        pool.setIlk("ETH-A",true);
+        pool.setIlk("ETH-A", true);
         pool.setProfitParams(6, 100);
         pool.setOwner(msg.sender);
     }
 
     function poke(int ink, int art) public {
-        member.doHope(vat,address(pool));
+        member.doHope(vat, address(pool));
 
         pipETH.poke(bytes32(uint(300 * 10 ** 18))); // Price 300 DAI = 1 ETH (precision 18)
         spotter.poke("ETH-A");
         osm.setPrice(uint(300 * 10 ** 18));
         // send ton of gem to holder
-        vat.slip("ETH-A",msg.sender,1e18 * 1e6);
-        vat.slip("ETH-A",address(this),1e18 * 1e20);
+        vat.slip("ETH-A", msg.sender, 1e18 * 1e6);
+        vat.slip("ETH-A", address(this), 1e18 * 1e20);
 
         // get tons of dai
         uint cdp = man.open("ETH-A", address(this));
-        vat.flux("ETH-A",address(this),man.urns(cdp),1e7 * 1 ether);
-        man.frob(cdp,1e6 * 1 ether,1e7 * 10 ether);
+        vat.flux("ETH-A", address(this), man.urns(cdp), 1e7 * 1 ether);
+        man.frob(cdp, 1e6 * 1 ether, 1e7 * 10 ether);
         man.move(cdp, address(member), 1e6 * 1 ether * 1e27);
         man.move(cdp, address(0xf214dDE57f32F3F34492Ba3148641693058D4A9e), 1e6 * 1 ether * 1e27);
 
         cdpUnsafe = man.open("ETH-A", address(this));
-        vat.flux("ETH-A",address(this),man.urns(cdpUnsafe),1e7 * 1 ether);
-        man.frob(cdpUnsafe,1 ether, 100 ether);
+        vat.flux("ETH-A", address(this), man.urns(cdpUnsafe), 1e7 * 1 ether);
+        man.frob(cdpUnsafe, 1 ether, 100 ether);
 
         cdpUnsafeNext = man.open("ETH-A", address(this));
-        vat.flux("ETH-A",address(this),man.urns(cdpUnsafeNext),1e7 * 1 ether);
-        man.frob(cdpUnsafeNext,1 ether, 98 ether);
+        vat.flux("ETH-A", address(this), man.urns(cdpUnsafeNext), 1e7 * 1 ether);
+        man.frob(cdpUnsafeNext, 1 ether, 98 ether);
 
         cdpCustom = man.open("ETH-A", address(this));
-        vat.flux("ETH-A",address(this),man.urns(cdpCustom),1e7 * 1 ether);
-        man.frob(cdpCustom,ink, art);
+        vat.flux("ETH-A", address(this), man.urns(cdpCustom), 1e7 * 1 ether);
+        man.frob(cdpCustom, ink, art);
 
         pipETH.poke(bytes32(uint(149 ether)));
         osm.setPrice(uint(146 ether));
@@ -154,7 +154,7 @@ contract DeploymentTest is BCdpManagerTestBase {
         for(uint i = 0 ; i < 5 ; i++) {
             FakeMember m = new FakeMember();
             seedMember(m);
-            m.doHope(vat,address(pool));
+            m.doHope(vat, address(pool));
 
             if(i < 4) {
                 members.push(m);
@@ -186,17 +186,17 @@ contract DeploymentTest is BCdpManagerTestBase {
         deployer.poke(1 ether, 20 ether);
         deployer.poke(2 ether, 30 ether);
 
-        assert(deployer.vat().gem("ETH-A",address(this)) >= 1e18 * 1e6);
-        assertEq(deployer.vat().live(),1);
+        assert(deployer.vat().gem("ETH-A", address(this)) >= 1e18 * 1e6);
+        assertEq(deployer.vat().live(), 1);
 
         uint cdp1 = deployer.cdpUnsafe();
         uint cdp2 = deployer.cdpUnsafeNext();
         uint cdp3 = deployer.cdpCustom();
 
         address urn = deployer.man().urns(cdp3);
-        (uint ink, uint art) = deployer.vat().urns("ETH-A",urn);
-        assertEq(ink,2 ether);
-        assertEq(art,30 ether);
+        (uint ink, uint art) = deployer.vat().urns("ETH-A", urn);
+        assertEq(ink, 2 ether);
+        assertEq(art, 30 ether);
 
         int dartX;
         (dartX,,) = deployer.pool().topAmount(cdp1);
@@ -208,18 +208,18 @@ contract DeploymentTest is BCdpManagerTestBase {
         Pool p = deployer.pool();
         Vat v = deployer.vat();
 
-        m.doHope(vat,address(p));
-        m.doDeposit(p,1e22 * 1e27);
+        m.doHope(vat, address(p));
+        m.doDeposit(p, 1e22 * 1e27);
         assertEq(p.rad(address(m)), 1e22 * 1e27);
-        m.doTopup(p,cdp1);
-        m.doBite(p,cdp1,100 ether,0);
+        m.doTopup(p, cdp1);
+        m.doBite(p, cdp1, 100 ether, 0);
 
-        assertEq(v.gem("ETH-A",address(m)),712885906040268456);
+        assertEq(v.gem("ETH-A", address(m)), 712885906040268456);
 
-        m.doTopup(p,cdp2);
+        m.doTopup(p, cdp2);
     }
 
-    function openCdp(uint ink,uint art) internal returns(uint){
+    function openCdp(uint ink, uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
 
         weth.mint(ink);
@@ -233,7 +233,7 @@ contract DeploymentTest is BCdpManagerTestBase {
 
     function seedMember(FakeMember m) internal {
         uint cdp = openCdp(1e3 ether, 1e3 ether);
-        manager.move(cdp,address(m),1e3 ether * RAY);
+        manager.move(cdp, address(m), 1e3 ether * RAY);
     }
 
     function timeReset() internal {
