@@ -1,15 +1,15 @@
 pragma solidity ^0.5.12;
 
 import { LibNote } from "dss/lib.sol";
-import {DSAuth} from "ds-auth/auth.sol";
-import {DssCdpManager} from "./DssCdpManager.sol";
-import "./LiquidationMachine.sol";
-import {BCdpScoreConnector, BCdpScoreLike} from "./BCdpScoreConnector.sol";
+import { DSAuth } from "ds-auth/auth.sol";
+import { DssCdpManager } from "./DssCdpManager.sol";
+import { LiquidationMachine, VatLike, EndLike, PriceFeedLike} from "./LiquidationMachine.sol";
+import { BCdpScoreConnector, BCdpScoreLike } from "./BCdpScoreConnector.sol";
 
 contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, DSAuth {
     constructor(address vat_, address end_, address pool_, address real_, address score_) public
         DssCdpManager(vat_)
-        LiquidationMachine(this,VatLike(vat_),EndLike(end_),pool_,PriceFeedLike(real_))
+        LiquidationMachine(this, VatLike(vat_), EndLike(end_), pool_, PriceFeedLike(real_))
         BCdpScoreConnector(BCdpScoreLike(score_))
     {
 
@@ -24,9 +24,9 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
         bytes32 ilk = ilks[cdp];
 
         untop(cdp);
-        updateScore(cdp,ilk,dink,dart,now);
+        updateScore(cdp, ilk, dink, dart, now);
 
-        super.frob(cdp,dink,dart);
+        super.frob(cdp, dink, dart);
     }
 
     // Quit the system, migrating the cdp (ink, art) to a different dst urn
@@ -39,9 +39,9 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
 
         untop(cdp);
         (uint ink, uint art) = vat.urns(ilk, urn);
-        updateScore(cdp,ilk,-toInt(ink),-toInt(art),now);
+        updateScore(cdp, ilk, -toInt(ink), -toInt(art), now);
 
-        super.quit(cdp,dst);
+        super.quit(cdp, dst);
     }
 
     // Import a position from src urn to the urn owned by cdp
@@ -53,9 +53,9 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
 
         untop(cdp);
         (uint ink, uint art) = vat.urns(ilk, src);
-        updateScore(cdp,ilk,toInt(ink),toInt(art),now);
+        updateScore(cdp, ilk, toInt(ink), toInt(art), now);
 
-        super.enter(src,cdp);
+        super.enter(src, cdp);
     }
 
     // Move a position from cdpSrc urn to the cdpDst urn
@@ -72,10 +72,10 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
 
         (uint inkSrc, uint artSrc) = vat.urns(ilkSrc, src);
 
-        updateScore(cdpSrc,ilkSrc,-toInt(inkSrc),-toInt(artSrc),now);
-        updateScore(cdpDst,ilkSrc,toInt(inkSrc),toInt(artSrc),now);
+        updateScore(cdpSrc, ilkSrc, -toInt(inkSrc), -toInt(artSrc), now);
+        updateScore(cdpDst, ilkSrc, toInt(inkSrc), toInt(artSrc), now);
 
-        super.shift(cdpSrc,cdpDst);
+        super.shift(cdpSrc, cdpDst);
     }
 
     ///////////////// B specific control functions /////////////////////////////

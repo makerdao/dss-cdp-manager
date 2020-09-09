@@ -16,7 +16,7 @@ contract VatLike {
 }
 
 contract PriceFeedLike {
-    function peek(bytes32 ilk) external view returns(bytes32,bool);
+    function peek(bytes32 ilk) external view returns(bytes32, bool);
 }
 
 contract SpotLike {
@@ -25,7 +25,7 @@ contract SpotLike {
 }
 
 contract OSMLike {
-    function peep() external view returns(bytes32,bool);
+    function peep() external view returns(bytes32, bool);
     function hop()  external view returns(uint16);
     function zzz()  external view returns(uint64);
 }
@@ -107,14 +107,14 @@ contract Pool is Math, DSAuth, LibNote {
     }
 
     function deposit(uint radVal) external onlyMember note {
-        vat.move(msg.sender, address(this),radVal);
-        rad[msg.sender] = add(rad[msg.sender],radVal);
+        vat.move(msg.sender, address(this), radVal);
+        rad[msg.sender] = add(rad[msg.sender], radVal);
     }
 
     function withdraw(uint radVal) external note {
         require(rad[msg.sender] >= radVal, "withdraw: insufficient-balance");
-        rad[msg.sender] = sub(rad[msg.sender],radVal);
-        vat.move(address(this),msg.sender,radVal);
+        rad[msg.sender] = sub(rad[msg.sender], radVal);
+        vat.move(address(this), msg.sender, radVal);
     }
 
     function getIndex(address[] storage array, address elm) internal view returns(uint) {
@@ -143,10 +143,10 @@ contract Pool is Math, DSAuth, LibNote {
         if(candidates.length == 0) return candidates;
         // A bit of randomness to choose winners. We don't need pure randomness, its ok even if a 
         // liquidator can predict his winning in the future.
-        uint chosen = uint(keccak256(abi.encodePacked(cdp,now / 1 hours))) % candidates.length;
+        uint chosen = uint(keccak256(abi.encodePacked(cdp, now / 1 hours))) % candidates.length;
         address winner = candidates[chosen];
 
-        if(rad[winner] < radVal) return chooseMember(cdp,radVal, removeElement(candidates, chosen));
+        if(rad[winner] < radVal) return chooseMember(cdp, radVal, removeElement(candidates, chosen));
 
         winners = new address[](1);
         winners[0] = candidates[chosen];
@@ -156,7 +156,7 @@ contract Pool is Math, DSAuth, LibNote {
     function chooseMembers(uint radVal, address[] memory candidates) public view returns(address[] memory winners) {
         if(candidates.length == 0) return candidates;
 
-        uint need = add(1,radVal / candidates.length);
+        uint need = add(1, radVal / candidates.length);
         for(uint i = 0 ; i < candidates.length ; i++) {
             if(rad[candidates[i]] < need) {
                 return chooseMembers(radVal, removeElement(candidates, i));
@@ -171,19 +171,19 @@ contract Pool is Math, DSAuth, LibNote {
         bytes32 ilk = man.ilks(cdp);
 
         uint ink;
-        (ink, art) = vat.urns(ilk,urn);
+        (ink, art) = vat.urns(ilk, urn);
 
-        if(! ilks[ilk]) return (0,0,art,false);
+        if(! ilks[ilk]) return (0, 0, art, false);
 
         (bytes32 peep, bool valid) = osm[ilk].peep();
 
         // price feed invalid
-        if(! valid) return (0,0,art,false);
+        if(! valid) return (0, 0, art, false);
 
         // too early to topup
-        should = (now >= add(uint(osm[ilk].zzz()),uint(osm[ilk].hop())/2));
+        should = (now >= add(uint(osm[ilk].zzz()), uint(osm[ilk].hop())/2));
 
-        (,uint rate,,,) = vat.ilks(ilk);
+        (, uint rate,,,) = vat.ilks(ilk);
 
         (, uint mat) = spot.ilks(ilk);
         uint par = spot.par();
@@ -192,7 +192,7 @@ contract Pool is Math, DSAuth, LibNote {
 
         // rate * art <= spot * ink
         // art <= spot * ink / rate
-        uint maximumArt = mul(nextVatSpot,ink) / rate;
+        uint maximumArt = mul(nextVatSpot, ink) / rate;
 
         dart = (int(art) - int(maximumArt));
         dtab = mul(rate, dart);
@@ -200,8 +200,8 @@ contract Pool is Math, DSAuth, LibNote {
 
     function topAmount(uint cdp) public view returns(int dart, int dtab, uint art) {
         bool should;
-        (dart,dtab,art,should) = hypoTopAmount(cdp);
-        if(! should) return (0,0,art);
+        (dart, dtab, art, should) = hypoTopAmount(cdp);
+        if(! should) return (0, 0, art);
     }
 
     function resetCdp(uint cdp) internal {
@@ -215,8 +215,8 @@ contract Pool is Math, DSAuth, LibNote {
         uint perUserArt = cdpData[cdp].art / winners.length;
         for(uint i = 0 ; i < winners.length ; i++) {
             if(perUserArt <= cdpData[cdp].bite[i]) continue; // nothing to refund
-            uint refundArt = sub(perUserArt,cdpData[cdp].bite[i]);
-            rad[winners[i]] = add(rad[winners[i]],mul(refundArt,cushion)/art);
+            uint refundArt = sub(perUserArt, cdpData[cdp].bite[i]);
+            rad[winners[i]] = add(rad[winners[i]], mul(refundArt, cushion)/art);
         }
 
         cdpData[cdp].art = 0;
@@ -226,7 +226,7 @@ contract Pool is Math, DSAuth, LibNote {
     }
 
     function setCdp(uint cdp, address[] memory winners, uint art, uint dradVal) internal {
-        uint drad = add(1,dradVal / winners.length); // round up
+        uint drad = add(1, dradVal / winners.length); // round up
         for(uint i = 0 ; i < winners.length ; i++) {
             rad[winners[i]] = sub(rad[winners[i]], drad);
         }
@@ -238,7 +238,7 @@ contract Pool is Math, DSAuth, LibNote {
     }
 
     function topupInfo(uint cdp) public view returns(int dart, int dtab, uint art, bool should, address[] memory winners) {
-        (dart,dtab,art,should) = hypoTopAmount(cdp);
+        (dart, dtab, art, should) = hypoTopAmount(cdp);
         if(art < minArt) {
             winners = chooseMember(cdp, uint(dtab), members);
         }
@@ -249,7 +249,7 @@ contract Pool is Math, DSAuth, LibNote {
         require(man.cushion(cdp) == 0, "topup: already-topped");
         require(! man.bitten(cdp), "topup: already-bitten");
 
-        (int dart, int dtab, uint art,bool should,address[] memory winners) = topupInfo(cdp);
+        (int dart, int dtab, uint art, bool should, address[] memory winners) = topupInfo(cdp);
 
         require(should, "topup: no-need");
 
@@ -257,7 +257,7 @@ contract Pool is Math, DSAuth, LibNote {
 
         require(winners.length > 0, "topup: members-are-broke");
         // for small amounts, only winner can topup
-        if(art < minArt) require(winners[0] == msg.sender,"topup: only-winner-can-topup");
+        if(art < minArt) require(winners[0] == msg.sender, "topup: only-winner-can-topup");
 
         setCdp(cdp, winners, uint(art), uint(dtab));
 
@@ -283,10 +283,10 @@ contract Pool is Math, DSAuth, LibNote {
         uint radAfter = vat.dai(address(this));
 
         // update user rad
-        rad[msg.sender] = sub(rad[msg.sender],sub(radBefore,radAfter));
+        rad[msg.sender] = sub(rad[msg.sender], sub(radBefore, radAfter));
 
-        uint userInk = mul(dink,shrn) / shrd;
-        dMemberInk = sub(dink,userInk);
+        uint userInk = mul(dink, shrn) / shrd;
+        dMemberInk = sub(dink, userInk);
 
         require(dMemberInk >= minInk, "bite: low-dink");
 
