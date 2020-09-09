@@ -76,12 +76,12 @@ contract Pool is Math, DSAuth {
         bite = cdpData[cdp].bite;
     }
 
-    function setCdpManager(BCdpManager man_) external auth { // TODO - make it settable only once, or with timelock
+    function setCdpManager(BCdpManager man_) external note auth {
         man = man_;
         vat.hope(address(man));
     }
 
-    function setOsm(bytes32 ilk_, address  osm_) external auth { // TODO - make it settable only once, or with timelock
+    function setOsm(bytes32 ilk_, address  osm_) external note auth {
         osm[ilk_] = OSMLike(osm_);
     }
 

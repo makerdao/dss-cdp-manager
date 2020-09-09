@@ -90,7 +90,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         address urn = man.urns(cdp);
 
         (,uint rate,,,) = vat.ilks(ilk);
-        uint dtab = mul(rate, top); // TODO - check resolution
+        uint dtab = mul(rate, top);
 
         cushion[cdp] = 0;
 
@@ -118,7 +118,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         uint tab = mul(mul(dart, rate), chop) / WAD;
         bytes32 realtimePrice = real.read(ilk);
 
-        dink = rmul(tab, WAD) / uint(realtimePrice); // TODO probably need to adjust from rad to wad
+        dink = rmul(tab, WAD) / uint(realtimePrice);
     }
 
     function bite(uint cdp, uint dart) external onlyPool returns(uint dink){
