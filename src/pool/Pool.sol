@@ -57,7 +57,10 @@ contract Pool is Math, DSAuth {
     modifier onlyMember {
         bool member = false;
         for(uint i = 0 ; i < members.length ; i++) {
-            if(members[i] == msg.sender) member = true;
+            if(members[i] == msg.sender) {
+                member = true;
+                break;
+            }
         }
         require(member, "not-member");
         _;
