@@ -80,7 +80,7 @@ contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, D
 
     ///////////////// B specific control functions /////////////////////////////
 
-    function quitB(uint cdp) note external cdpAllowed(cdp) {
+    function quitB(uint cdp) external cdpAllowed(cdp) note {
         quitScore(cdp);
         quitBLiquidation(cdp);
     }

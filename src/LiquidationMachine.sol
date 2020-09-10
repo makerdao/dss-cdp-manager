@@ -90,7 +90,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         address urn = man.urns(cdp);
 
         (,uint rate,,,) = vat.ilks(ilk);
-        uint dtab = mul(rate, top); // TODO - check resolution
+        uint dtab = mul(rate, top);
 
         cushion[cdp] = 0;
 
@@ -103,7 +103,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         untop(cdp);
     }
 
-    function doBite(uint cdp, uint dart, bytes32 ilk, address urn, uint dink) internal {
+    function doBite(uint dart, bytes32 ilk, address urn, uint dink) internal {
         (,uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, dart);
 
@@ -118,7 +118,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         uint tab = mul(mul(dart, rate), chop) / WAD;
         bytes32 realtimePrice = real.read(ilk);
 
-        dink = rmul(tab, WAD) / uint(realtimePrice); // TODO probably need to adjust from rad to wad
+        dink = rmul(tab, WAD) / uint(realtimePrice);
     }
 
     function bite(uint cdp, uint dart) external onlyPool returns(uint dink){
@@ -143,8 +143,8 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
 
         uint usedCushion = mul(cushion[cdp],dart) / art;
         cushion[cdp] = sub(cushion[cdp], usedCushion);
-        dart = sub(dart,usedCushion);
+        uint bart = sub(dart,usedCushion);
 
-        doBite(cdp, dart, ilk, urn, dink);
+        doBite(bart, ilk, urn, dink);
     }
 }

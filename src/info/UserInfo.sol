@@ -187,7 +187,14 @@ contract UserInfo is Math, UserInfoStorage {
         info.userProxy = registry.proxies(user);
     }
 
-    function getCdpInfo(address guy, address manager, bytes32 ilk, VatLike vat, GetCdps getCdp, bool b) public view returns(CdpInfo memory info) {
+    function getCdpInfo(
+        address guy,
+        address manager,
+        bytes32 ilk,
+        VatLike vat,
+        GetCdps getCdp,
+        bool b
+    ) public view returns(CdpInfo memory info) {
         info.cdp = getFirstCdp(getCdp,manager,guy,ilk);
         info.hasCdp = info.cdp > 0;
         if(info.hasCdp) {
@@ -199,9 +206,10 @@ contract UserInfo is Math, UserInfoStorage {
         }
     }
 
-    function getUserRatingInfo(address guy, address jar) public view returns(UserRatingInfo memory info) {
+    function getUserRatingInfo(address guy, address jar) public pure returns(UserRatingInfo memory info) {
         // TODO - set real sizes
-        jar; // shhhh compiler warning
+        guy; // shh compiler warning
+        jar; // shh compiler warning
         info.userRating = 70000e18;
         info.userRatingProgressPerSec = 1e18;
         info.totalRating = info.userRating * 11;
@@ -209,9 +217,18 @@ contract UserInfo is Math, UserInfoStorage {
         info.jarSize = 1e4 * 1e18;
     }
 
-    function setInfo(address user, bytes32 ilk, BCdpManager manager, DssCdpManager makerDAOManager, GetCdps getCdp, VatLike vat,
-                     SpotLike spot, ProxyRegistryLike registry, address jar, address dai)
-                     public {
+    function setInfo(
+        address user,
+        bytes32 ilk,
+        BCdpManager manager,
+        DssCdpManager makerDAOManager,
+        GetCdps getCdp,
+        VatLike vat,
+        SpotLike spot,
+        ProxyRegistryLike registry,
+        address jar,
+        address dai
+    ) public {
         UserState memory state;
 
         // fill proxy info
@@ -239,9 +256,18 @@ contract UserInfo is Math, UserInfoStorage {
         set(state);
     }
 
-    function getInfo(address user, bytes32 ilk, BCdpManager manager, DssCdpManager makerDAOManager, GetCdps getCdp, VatLike vat,
-                     SpotLike spot, ProxyRegistryLike registry, address jar, address dai)
-                     public returns(UserState memory state) {
+    function getInfo(
+        address user,
+        bytes32 ilk,
+        BCdpManager manager,
+        DssCdpManager makerDAOManager,
+        GetCdps getCdp,
+        VatLike vat,
+        SpotLike spot,
+        ProxyRegistryLike registry,
+        address jar,
+        address dai
+    ) public returns(UserState memory state) {
         setInfo(user,ilk,manager,makerDAOManager,getCdp,vat,spot,registry,jar,dai);
         return userState;
     }

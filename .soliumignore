@@ -1,0 +1,9 @@
+node_modules
+src/deployment/deployment.t.sol
+src/info/UserInfo.t.sol
+src/pool/Pool.t.sol
+src/BCdpManager.t.sol
+src/DssCdpManager.t.sol
+src/Gem2Weth.t.sol
+src/LiquidationMachine.t.sol
+src/ScoringMachine.t.sol

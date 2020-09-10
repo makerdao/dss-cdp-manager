@@ -1,8 +1,8 @@
 pragma solidity ^0.5.12;
 
 import { LibNote } from "dss/lib.sol";
-import {BCdpManager} from "./../BCdpManager.sol";
-import {Math} from "./../Math.sol";
+import { BCdpManager } from "./../BCdpManager.sol";
+import { Math } from "./../Math.sol";
 
 import { DSAuth } from "ds-auth/auth.sol";
 
@@ -30,20 +30,23 @@ contract OSMLike {
     function zzz()  external view returns(uint64);
 }
 
-contract Pool is Math, DSAuth {
+contract Pool is Math, DSAuth, LibNote {
     address[] public members;
     mapping(bytes32 => bool) public ilks;
     uint                     public minArt; // min debt to share among members
-    uint                     public shrn; // share profit % numerator
-    uint                     public shrd; // share profit % denumerator
-    mapping(address => uint) public rad; // mapping from member to its dai balance in rad
+    uint                     public shrn;   // share profit % numerator
+    uint                     public shrd;   // share profit % denumerator
+    mapping(address => uint) public rad;    // mapping from member to its dai balance in rad
 
     VatLike                   public vat;
     BCdpManager               public man;
     SpotLike                  public spot;
     address                   public jar;
 
-    mapping(uint => CdpData) cdpData;
+    mapping(uint => CdpData)  internal cdpData;
+
+    mapping(bytes32 => OSMLike) public osm; // mapping from ilk to osm
+
     struct CdpData {
         uint       art;        // topup in art units
         uint       cushion;    // cushion in rad units
@@ -51,19 +54,13 @@ contract Pool is Math, DSAuth {
         uint[]     bite;       // how much was already bitten
     }
 
-    function getCdpData(uint cdp) external view returns(uint art, uint cushion, address[] memory members, uint[] memory bite) {
-        art = cdpData[cdp].art;
-        cushion = cdpData[cdp].cushion;
-        members = cdpData[cdp].members;
-        bite = cdpData[cdp].bite;
-    }
-
-    mapping(bytes32 => OSMLike) public osm; // mapping from ilk to osm
-
     modifier onlyMember {
         bool member = false;
         for(uint i = 0 ; i < members.length ; i++) {
-            if(members[i] == msg.sender) member = true;
+            if(members[i] == msg.sender) {
+                member = true;
+                break;
+            }
         }
         require(member, "not-member");
         _;
@@ -75,39 +72,47 @@ contract Pool is Math, DSAuth {
         jar = jar_;
     }
 
-    function setCdpManager(BCdpManager man_) external auth { // TODO - make it settable only once, or with timelock
+    function getCdpData(uint cdp) external view returns(uint art, uint cushion, address[] memory members_, uint[] memory bite) {
+        art = cdpData[cdp].art;
+        cushion = cdpData[cdp].cushion;
+        members_ = cdpData[cdp].members;
+        bite = cdpData[cdp].bite;
+    }
+
+    function setCdpManager(BCdpManager man_) external auth note {
         man = man_;
         vat.hope(address(man));
     }
 
-    function setOsm(bytes32 ilk_, address  osm_) external auth { // TODO - make it settable only once, or with timelock
+    function setOsm(bytes32 ilk_, address  osm_) external auth note {
         osm[ilk_] = OSMLike(osm_);
     }
 
-    function setMembers(address[] calldata members_) external auth {
+    function setMembers(address[] calldata members_) external auth note {
         members = members_;
     }
 
-    function setIlk(bytes32 ilk, bool set) external auth {
+    function setIlk(bytes32 ilk, bool set) external auth note {
         ilks[ilk] = set;
     }
 
-    function setMinArt(uint minArt_) external auth {
+    function setMinArt(uint minArt_) external auth note {
         minArt = minArt_;
     }
 
-    function setProfitParams(uint num, uint den) external auth {
+    function setProfitParams(uint num, uint den) external auth note {
+        require(num < den, "invalid-profit-params");
         shrn = num;
         shrd = den;
     }
 
-    function deposit(uint radVal) external onlyMember {
+    function deposit(uint radVal) external onlyMember note {
         vat.move(msg.sender, address(this),radVal);
         rad[msg.sender] = add(rad[msg.sender],radVal);
     }
 
-    function withdraw(uint radVal) external onlyMember {
-        require(rad[msg.sender] >= radVal, "withdraw: insufficient balance");
+    function withdraw(uint radVal) external note {
+        require(rad[msg.sender] >= radVal, "withdraw: insufficient-balance");
         rad[msg.sender] = sub(rad[msg.sender],radVal);
         vat.move(address(this),msg.sender,radVal);
     }
@@ -136,7 +141,7 @@ contract Pool is Math, DSAuth {
 
     function chooseMember(uint cdp, uint radVal, address[] memory candidates) public view returns(address[] memory winners) {
         if(candidates.length == 0) return candidates;
-        // A bit of randomness to choose winners. We don't need pure randomness, its ok even if a 
+        // A bit of randomness to choose winners. We don't need pure randomness, its ok even if a
         // liquidator can predict his winning in the future.
         uint chosen = uint(keccak256(abi.encodePacked(cdp,now / 1 hours))) % candidates.length;
         address winner = candidates[chosen];
@@ -240,7 +245,7 @@ contract Pool is Math, DSAuth {
         else winners = chooseMembers(uint(dtab), members);
     }
 
-    function topup(uint cdp) external onlyMember {
+    function topup(uint cdp) external onlyMember note {
         require(man.cushion(cdp) == 0, "topup: already-topped");
         require(! man.bitten(cdp), "topup: already-bitten");
 
@@ -259,14 +264,14 @@ contract Pool is Math, DSAuth {
         man.topup(cdp, uint(dart));
     }
 
-    function untop(uint cdp) external onlyMember {
+    function untop(uint cdp) external onlyMember note {
         require(man.cushion(cdp) == 0, "untop: should-be-untopped-by-user");
         require(! man.bitten(cdp), "topup: in-bite-process");
 
         resetCdp(cdp);
     }
 
-    function bite(uint cdp, uint dart, uint minInk) external onlyMember returns(uint dMemberInk){
+    function bite(uint cdp, uint dart, uint minInk) external onlyMember note returns(uint dMemberInk){
         uint index = getIndex(cdpData[cdp].members, msg.sender);
         uint availBite = availBite(cdp, index);
         require(dart <= availBite, "bite: debt-too-small");
@@ -308,7 +313,7 @@ contract Pool is Math, DSAuth {
             maxArt = add(maxArt, dust);
         }
         uint availArt = sub(maxArt, cdpData[cdp].bite[index]);
-        
+
         return availArt;
     }
 }
