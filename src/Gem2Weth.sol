@@ -21,6 +21,7 @@ contract Gem2Weth {
 
     // callable by anyone
     function ethExit(uint wad, bytes32 ilk_) public {
+        ilk_; // shh compiler wanring
         ethJoin.exit(address(this),wad);
     }
 

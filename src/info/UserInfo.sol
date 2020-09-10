@@ -199,9 +199,10 @@ contract UserInfo is Math, UserInfoStorage {
         }
     }
 
-    function getUserRatingInfo(address guy, address jar) public view returns(UserRatingInfo memory info) {
+    function getUserRatingInfo(address guy, address jar) public pure returns(UserRatingInfo memory info) {
         // TODO - set real sizes
-        jar; // shhhh compiler warning
+        guy; // shh compiler warning
+        jar; // shh compiler warning
         info.userRating = 70000e18;
         info.userRatingProgressPerSec = 1e18;
         info.totalRating = info.userRating * 11;
