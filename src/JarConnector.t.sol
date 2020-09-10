@@ -10,7 +10,12 @@ contract JarConnectorTest is BCdpManagerTestBase {
     function setUp() public {
         super.setUp();
 
-        jarConnector = new JarConnector(address(manager), address(ethJoin), "ETH");
+        uint[2] memory durations;
+        durations[0] = 30 days;
+        durations[1] = 5 * 30 days;
+
+        jarConnector = new JarConnector(address(manager), address(ethJoin), "ETH", durations);
+        score.transferOwnership(address(jarConnector));
     }
 
     function timeReset() internal {
@@ -80,15 +85,110 @@ contract JarConnectorTest is BCdpManagerTestBase {
         uint cdp1 = openCdp(10 ether, 100 ether);
         uint cdp2 = openCdp(10 ether, 101 ether);
 
+        forwardTime(101);
+
+        assertEq(0, jarConnector.getUserScore(bytes32(cdp1)));
+        assertEq(0, jarConnector.getUserScore(bytes32(cdp2)));
+        assertEq(0, jarConnector.getUserScore(bytes32(cdp2+1)));
+
+        jarConnector.spin();
+
         forwardTime(100);
 
-        uint expectedScore1 = 100 * 100 ether;
-        uint expectedScore2 = 101 * 100 ether;
+        uint expectedScore1 = 2 * 100 * 100 ether;
+        uint expectedScore2 = 2 * 101 * 100 ether;
 
         assertEq(expectedScore1, jarConnector.getUserScore(bytes32(cdp1)));
         assertEq(expectedScore2, jarConnector.getUserScore(bytes32(cdp2)));
         assertEq(0, jarConnector.getUserScore(bytes32(cdp2+1)));
 
         assertEq(expectedScore1 + expectedScore2, jarConnector.getGlobalScore());
+
+        forwardTime(30 days);
+
+        expectedScore1 = 2 * (30 days + 100) * 100 ether;
+        expectedScore2 = 2 * (30 days + 100) * 101 ether;
+
+        assertEq(expectedScore1, jarConnector.getUserScore(bytes32(cdp1)));
+        assertEq(expectedScore2, jarConnector.getUserScore(bytes32(cdp2)));
+        assertEq(0, jarConnector.getUserScore(bytes32(cdp2+1)));
+
+        assertEq(expectedScore1 + expectedScore2, jarConnector.getGlobalScore());
+
+        jarConnector.spin();
+
+        assertEq(expectedScore1, jarConnector.getUserScore(bytes32(cdp1)));
+        assertEq(expectedScore2, jarConnector.getUserScore(bytes32(cdp2)));
+        assertEq(0, jarConnector.getUserScore(bytes32(cdp2+1)));
+
+        assertEq(expectedScore1 + expectedScore2, jarConnector.getGlobalScore());
+
+        forwardTime(5 days);
+
+        uint cdp3 = openCdp(10 ether, 102 ether);
+
+        forwardTime(100 days);
+
+        uint expectedScoreAddition1 = 105 days * 100 ether;
+        uint expectedScoreAddition2 = 105 days * 101 ether;
+
+        expectedScore1 += expectedScoreAddition1;
+        expectedScore2 += expectedScoreAddition2;
+        uint expectedScore3 = 100 days * 102 ether;
+
+        assertEq(expectedScore1, jarConnector.getUserScore(bytes32(cdp1)));
+        assertEq(expectedScore2, jarConnector.getUserScore(bytes32(cdp2)));
+        assertEq(expectedScore3, jarConnector.getUserScore(bytes32(cdp3)));
+        assertEq(0, jarConnector.getUserScore(bytes32(cdp3 + 1)));
+
+        assertEq(expectedScore1 + expectedScore2 + expectedScore3, jarConnector.getGlobalScore());
+
+        // so far 135 days and 100 seconds elapsed, out of total of 180 days
+        forwardTime(180 days - 135 days);
+
+        expectedScore1 += (180 days - 135 days) * 100 ether;
+        expectedScore2 += (180 days - 135 days) * 101 ether;
+        expectedScore3 += (180 days - 135 days) * 102 ether;
+
+        assertEq(expectedScore1, jarConnector.getUserScore(bytes32(cdp1)));
+        assertEq(expectedScore2, jarConnector.getUserScore(bytes32(cdp2)));
+        assertEq(expectedScore3, jarConnector.getUserScore(bytes32(cdp3)));
+        assertEq(0, jarConnector.getUserScore(bytes32(cdp3 + 1)));
+
+        assertEq(expectedScore1 + expectedScore2 + expectedScore3, jarConnector.getGlobalScore());
+
+        jarConnector.spin();
+
+        // should remove first 101 seconds because first round didn't start,
+        // and last 100 seconds because spin was called with delay
+        expectedScore1 -= 201 * 100 ether;
+        expectedScore2 -= 201 * 101 ether;
+        expectedScore3 -= 201 * 102 ether;
+
+        assertEq(expectedScore1, jarConnector.getUserScore(bytes32(cdp1)));
+        assertEq(expectedScore2, jarConnector.getUserScore(bytes32(cdp2)));
+        assertEq(expectedScore3, jarConnector.getUserScore(bytes32(cdp3)));
+        assertEq(0, jarConnector.getUserScore(bytes32(cdp3 + 1)));
+
+        assertEq(expectedScore1 + expectedScore2 + expectedScore3, jarConnector.getGlobalScore());
+    }
+
+    function testSpinTooEarly() public {
+        timeReset();
+        assertEq(jarConnector.round(), 0);
+        forwardTime(101);
+        jarConnector.spin();
+        forwardTime(29 days);
+        jarConnector.spin();
+        assertEq(jarConnector.round(), 1);
+        forwardTime(1 days);
+        jarConnector.spin();
+        assertEq(jarConnector.round(), 2);
+        forwardTime(100 days);
+        jarConnector.spin();
+        assertEq(jarConnector.round(), 2);
+        forwardTime(50 days);
+        jarConnector.spin();
+        assertEq(jarConnector.round(), 3);
     }
 }
