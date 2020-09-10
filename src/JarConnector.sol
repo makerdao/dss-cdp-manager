@@ -18,8 +18,8 @@ contract JarConnector {
     VatLike     vat;
     bytes32     ilk;
 
-    constructor(address manager, address _ethJoin, bytes32 _ilk) public {
-        man = BCdpManager(manager);
+    constructor(address _manager, address _ethJoin, bytes32 _ilk) public {
+        man = BCdpManager(_manager);
         vat = VatLike(address(man.vat()));
         score = BCdpScore(address(man.score()));
         ethJoin = GemJoinLike(_ethJoin);
