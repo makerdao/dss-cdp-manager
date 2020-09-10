@@ -1,14 +1,14 @@
 pragma solidity ^0.5.12;
 
-import {Vat, Jug} from "dss-deploy/DssDeploy.t.base.sol";
-import {BCdpManagerTestBase, Hevm, FakeUser} from "./BCdpManager.t.sol";
-import {LiquidationMachine} from "./LiquidationMachine.sol";
-import {BCdpScore} from "./BCdpScore.sol";
-import {BCdpManager} from "./BCdpManager.sol";
+import { Vat, Jug } from "dss-deploy/DssDeploy.t.base.sol";
+import { BCdpManagerTestBase, Hevm, FakeUser } from "./BCdpManager.t.sol";
+import { LiquidationMachine } from "./LiquidationMachine.sol";
+import { BCdpScore } from "./BCdpScore.sol";
+import { BCdpManager } from "./BCdpManager.sol";
 
 contract FakePool {
     function doTopup(LiquidationMachine lm, uint cdp, uint dtopup) public {
-        lm.topup(cdp,dtopup);
+        lm.topup(cdp, dtopup);
     }
 
     function doUntopByPool(LiquidationMachine lm, uint cdp) public {
@@ -16,10 +16,10 @@ contract FakePool {
     }
 
     function doBite(LiquidationMachine lm, uint cdp, uint dart) public returns(uint){
-        return lm.bite(cdp,dart);
+        return lm.bite(cdp, dart);
     }
 
-    function doHope(Vat vat,address dst) public {
+    function doHope(Vat vat, address dst) public {
         vat.hope(dst);
     }
 }
@@ -38,14 +38,14 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
 
         fPool = new FakePool();
         BCdpScore score = new BCdpScore();
-        manager = new BCdpManager(address(vat), address(end), address(fPool), address(realPrice),address(score));
+        manager = new BCdpManager(address(vat), address(end), address(fPool), address(realPrice), address(score));
         score.setManager(address(manager));
-        fPool.doHope(vat,address(manager));
+        fPool.doHope(vat, address(manager));
         lm = LiquidationMachine(manager);
 
         // put funds in pool
         uint cdp = openCdp(100 ether, 100 ether);
-        manager.move(cdp,address(fPool),100 ether * RAY);
+        manager.move(cdp, address(fPool), 100 ether * RAY);
 
         this.file(address(cat), "ETH", "chop", 1130000000000000000); // 1.13
     }
@@ -64,24 +64,24 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         uint duty;
         uint rho;
         (duty,) = jug.ilks("ETH");
-        assertEq(RAY,duty);
-        assertEq(uint(address(vat)),uint(address(jug.vat())));
+        assertEq(RAY, duty);
+        assertEq(uint(address(vat)), uint(address(jug.vat())));
         jug.drip("ETH");
         forwardTime(1);
         jug.drip("ETH");
-        this.file(address(jug),"ETH","duty",RAY + RAY/10);
+        this.file(address(jug), "ETH", "duty", RAY + RAY/10);
         (duty,) = jug.ilks("ETH");
-        assertEq(RAY + RAY / 10,duty);
+        assertEq(RAY + RAY / 10, duty);
         forwardTime(1);
         jug.drip("ETH");
-        (,rho) = jug.ilks("ETH");
-        assertEq(rho,now);
-        (,uint rate,,,) = vat.ilks("ETH");
-        assertEq(RAY + RAY/10,rate);
+        (, rho) = jug.ilks("ETH");
+        assertEq(rho, now);
+        (, uint rate,,,) = vat.ilks("ETH");
+        assertEq(RAY + RAY/10, rate);
     }
 
 
-    function openCdp(uint ink,uint art) internal returns(uint){
+    function openCdp(uint ink, uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
 
         weth.mint(ink);
@@ -97,24 +97,24 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
     function testTopup() public {
         uint cdp = openCdp(50 ether, 50 ether);
 
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         address urn = manager.urns(cdp);
-        (,uint art) = vat.urns("ETH", urn);
+        (, uint art) = vat.urns("ETH", urn);
 
-        assertEq(art,40 ether);
-        assertEq(lm.cushion(cdp),10 ether);
-        assertEq(vat.dai(address(fPool)),90 ether * RAY);
+        assertEq(art, 40 ether);
+        assertEq(lm.cushion(cdp), 10 ether);
+        assertEq(vat.dai(address(fPool)), 90 ether * RAY);
     }
 
     // topup not from pool
     function testFailedTopupFromNonPool() public {
         FakePool fPool2 = new FakePool();
-        fPool2.doHope(vat,address(manager));
+        fPool2.doHope(vat, address(manager));
         uint cdp = openCdp(100 ether, 100 ether);
-        manager.move(cdp,address(fPool),100 ether * RAY);
+        manager.move(cdp, address(fPool), 100 ether * RAY);
 
-        fPool2.doTopup(lm,cdp,10 ether);
+        fPool2.doTopup(lm, cdp, 10 ether);
     }
 
     // happy path
@@ -122,20 +122,20 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         // first topup
         uint cdp = openCdp(50 ether, 50 ether);
 
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
         address urn = manager.urns(cdp);
-        (,uint art) = vat.urns("ETH", urn);
+        (, uint art) = vat.urns("ETH", urn);
 
-        assertEq(art,40 ether);
-        assertEq(lm.cushion(cdp),10 ether);
-        assertEq(vat.dai(address(fPool)),90 ether * RAY);
+        assertEq(art, 40 ether);
+        assertEq(lm.cushion(cdp), 10 ether);
+        assertEq(vat.dai(address(fPool)), 90 ether * RAY);
 
         // now untop
-        fPool.doUntopByPool(lm,cdp);
-        (,art) = vat.urns("ETH", urn);
-        assertEq(art,50 ether);
-        assertEq(lm.cushion(cdp),0 ether);
-        assertEq(vat.dai(address(fPool)),100 ether * RAY);
+        fPool.doUntopByPool(lm, cdp);
+        (, art) = vat.urns("ETH", urn);
+        assertEq(art, 50 ether);
+        assertEq(lm.cushion(cdp), 0 ether);
+        assertEq(vat.dai(address(fPool)), 100 ether * RAY);
     }
 
     // untop not from pool
@@ -143,13 +143,13 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         // first topup
         uint cdp = openCdp(50 ether, 50 ether);
 
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
         address urn = manager.urns(cdp);
-        (,uint art) = vat.urns("ETH", urn);
+        (, uint art) = vat.urns("ETH", urn);
 
-        assertEq(art,40 ether);
-        assertEq(lm.cushion(cdp),10 ether);
-        assertEq(vat.dai(address(fPool)),90 ether * RAY);
+        assertEq(art, 40 ether);
+        assertEq(lm.cushion(cdp), 10 ether);
+        assertEq(vat.dai(address(fPool)), 90 ether * RAY);
 
         // now untop not from pool
         lm.untopByPool(cdp);
@@ -158,205 +158,205 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
     // untop failed in bite
     function testFailedUntopWhenBite() public {
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(70 * 1e18); // 1 ETH = 50 DAI
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
-        fPool.doBite(lm,cdp,15 ether);
+        fPool.doBite(lm, cdp, 15 ether);
         assert(lm.bitten(cdp));
 
-        fPool.doUntopByPool(lm,cdp);
+        fPool.doUntopByPool(lm, cdp);
     }
 
     // untop when cushion is 0
     function testUntopCushionZero() public {
         uint cdp = openCdp(50 ether, 50 ether);
-        fPool.doUntopByPool(lm,cdp);
+        fPool.doUntopByPool(lm, cdp);
 
         address urn = manager.urns(cdp);
-        (,uint art) = vat.urns("ETH", urn);
+        (, uint art) = vat.urns("ETH", urn);
 
-        assertEq(art,50 ether);
-        assertEq(lm.cushion(cdp),0 ether);
-        assertEq(vat.dai(address(fPool)),100 ether * RAY);
+        assertEq(art, 50 ether);
+        assertEq(lm.cushion(cdp), 0 ether);
+        assertEq(vat.dai(address(fPool)), 100 ether * RAY);
     }
 
     // top when rate is non one
     function testTopupAndUntopWithRate() public {
         setRateTo1p1();
         uint cdp = openCdp(50 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         address urn = manager.urns(cdp);
-        (,uint art) = vat.urns("ETH", urn);
-        assertEq(art,40 ether);
-        assertEq(vat.dai(address(fPool)),(100 - 11) * 1 ether * RAY);
+        (, uint art) = vat.urns("ETH", urn);
+        assertEq(art, 40 ether);
+        assertEq(vat.dai(address(fPool)), (100 - 11) * 1 ether * RAY);
 
-        fPool.doUntopByPool(lm,cdp);
-        (,art) = vat.urns("ETH", urn);
-        assertEq(art,50 ether);
-        assertEq(vat.dai(address(fPool)),100 ether * RAY);
+        fPool.doUntopByPool(lm, cdp);
+        (, art) = vat.urns("ETH", urn);
+        assertEq(art, 50 ether);
+        assertEq(vat.dai(address(fPool)), 100 ether * RAY);
     }
 
     // top when rate is non one
     function testTopupAndUntopWithAccumulatedInterest() public {
         setRateTo1p1();
         uint cdp = openCdp(50 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         address urn = manager.urns(cdp);
-        (,uint art) = vat.urns("ETH", urn);
-        assertEq(art,40 ether);
-        assertEq(vat.dai(address(fPool)),(100 - 11) * 1 ether * RAY);
+        (, uint art) = vat.urns("ETH", urn);
+        assertEq(art, 40 ether);
+        assertEq(vat.dai(address(fPool)), (100 - 11) * 1 ether * RAY);
 
         forwardTime(1);
         jug.drip("ETH");
 
-        fPool.doUntopByPool(lm,cdp);
-        (,art) = vat.urns("ETH", urn);
-        assertEq(art,50 ether);
+        fPool.doUntopByPool(lm, cdp);
+        (, art) = vat.urns("ETH", urn);
+        assertEq(art, 50 ether);
         // 10% interest per second
-        assertEq(vat.dai(address(fPool)),100 ether * RAY + 11 ether * RAY / 10);
+        assertEq(vat.dai(address(fPool)), 100 ether * RAY + 11 ether * RAY / 10);
     }
 
     // test bite, happy path
     function testBite() public {
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
         uint daiBefore = vat.dai(address(fPool));
-        uint dink = fPool.doBite(lm,cdp,10 ether);
+        uint dink = fPool.doBite(lm, cdp, 10 ether);
         assert(lm.bitten(cdp));
         uint daiAfter = vat.dai(address(fPool));
 
-        assertEq(dink,(10 ether * 113 / 100)/uint(70));
+        assertEq(dink, (10 ether * 113 / 100)/uint(70));
         // consumes 1/5 of the cushion
         assertEq(daiBefore - daiAfter, (10 ether - 2 ether)* RAY);
-        assertEq(vat.gem("ETH",address(fPool)), dink);
+        assertEq(vat.gem("ETH", address(fPool)), dink);
     }
 
     // test bite, liquidate in one shot
     function testBiteAll() public {
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
         uint daiBefore = vat.dai(address(fPool));
-        uint dink = fPool.doBite(lm,cdp,50 ether);
+        uint dink = fPool.doBite(lm, cdp, 50 ether);
         assert(lm.bitten(cdp));
         uint daiAfter = vat.dai(address(fPool));
 
-        assertEq(dink,(50 ether * 113 / 100)/uint(70));
+        assertEq(dink, (50 ether * 113 / 100)/uint(70));
         // 10 ETH were reused from the cushion
         assertEq(daiBefore - daiAfter, (50 ether - 10 ether) * RAY);
-        assertEq(vat.gem("ETH",address(fPool)), dink);
+        assertEq(vat.gem("ETH", address(fPool)), dink);
     }
 
     // test bite, liquidate in three steps
     function testBiteIn3Steps() public {
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
-        // bite 10,15,25
+        // bite 10, 15, 25
         uint daiBefore; uint dink; uint daiAfter;
         uint expectedBalance = 0;
 
         // bite 10
         daiBefore = vat.dai(address(fPool));
-        dink = fPool.doBite(lm,cdp,10 ether);
+        dink = fPool.doBite(lm, cdp, 10 ether);
         expectedBalance += dink;
         assert(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
-        assertEq(dink,(10 ether * 113 / 100)/uint(70));
+        assertEq(dink, (10 ether * 113 / 100)/uint(70));
         // 10/5 ETH were reused from the cushion
         assertEq(daiBefore - daiAfter, (10 ether - 2 ether) * RAY);
-        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+        assertEq(vat.gem("ETH", address(fPool)), expectedBalance);
 
         // bite 15
         daiBefore = vat.dai(address(fPool));
-        dink = fPool.doBite(lm,cdp,15 ether);
+        dink = fPool.doBite(lm, cdp, 15 ether);
         expectedBalance += dink;
         assert(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
-        assertEq(dink,(15 ether * 113 / 100)/uint(70));
+        assertEq(dink, (15 ether * 113 / 100)/uint(70));
         // 10 * 15/50 ETH were reused from the cushion
         assertEq(daiBefore - daiAfter, (15 ether - 10 ether * 15 / 50) * RAY);
-        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+        assertEq(vat.gem("ETH", address(fPool)), expectedBalance);
 
         // bite 25
         daiBefore = vat.dai(address(fPool));
-        dink = fPool.doBite(lm,cdp,25 ether);
+        dink = fPool.doBite(lm, cdp, 25 ether);
         expectedBalance += dink;
         assert(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
-        assertEq(dink,(25 ether * 113 / 100)/uint(70));
+        assertEq(dink, (25 ether * 113 / 100)/uint(70));
         // 10 * 25/50 ETH were reused from the cushion
         assertEq(daiBefore - daiAfter, (25 ether - 10 ether * 25 / 50) * RAY);
-        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+        assertEq(vat.gem("ETH", address(fPool)), expectedBalance);
     }
 
     function testBiteAfterPriceBounces() public {
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
-        // bite 10,15
+        // bite 10, 15
         uint daiBefore; uint dink; uint daiAfter;
         uint expectedBalance = 0;
 
         // bite 10
         daiBefore = vat.dai(address(fPool));
-        dink = fPool.doBite(lm,cdp,10 ether);
+        dink = fPool.doBite(lm, cdp, 10 ether);
         expectedBalance += dink;
         assert(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
-        assertEq(dink,(10 ether * 113 / 100)/uint(70));
+        assertEq(dink, (10 ether * 113 / 100)/uint(70));
         // 10/5 ETH were reused from the cushion
         assertEq(daiBefore - daiAfter, (10 ether - 2 ether) * RAY);
-        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+        assertEq(vat.gem("ETH", address(fPool)), expectedBalance);
 
         // reach bite state
         osm.setPrice(700 * 1e18); // 1 ETH = 700 DAI
         pipETH.poke(bytes32(uint(700 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",700 * 1e18);
+        realPrice.set("ETH", 700 * 1e18);
 
         // bite 15
         daiBefore = vat.dai(address(fPool));
-        dink = fPool.doBite(lm,cdp,15 ether);
+        dink = fPool.doBite(lm, cdp, 15 ether);
         expectedBalance += dink;
         assert(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
-        assertEq(dink,(15 ether * 113 / 100)/uint(700));
+        assertEq(dink, (15 ether * 113 / 100)/uint(700));
         // 10 * 15/50 ETH were reused from the cushion
         assertEq(daiBefore - daiAfter, (15 ether - 10 ether * 15 / 50) * RAY);
-        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+        assertEq(vat.gem("ETH", address(fPool)), expectedBalance);
     }
 
     // test when rate is not 0
@@ -364,21 +364,21 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         setRateTo1p1();
 
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
-        // bite 10,15
+        // bite 10, 15
         uint daiBefore; uint dink; uint daiAfter;
         uint expectedBalance = 0;
 
         // bite 10
         daiBefore = vat.dai(address(fPool));
-        dink = fPool.doBite(lm,cdp,10 ether);
+        dink = fPool.doBite(lm, cdp, 10 ether);
         expectedBalance += dink;
         assert(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
@@ -387,35 +387,35 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         assert(dink <= estimatedInk + 1);
         // 10/5 ETH were reused from the cushion
         assertEq(daiBefore - daiAfter, (10 ether - 2 ether) * 110 * RAY/100);
-        assertEq(vat.gem("ETH",address(fPool)), expectedBalance);
+        assertEq(vat.gem("ETH", address(fPool)), expectedBalance);
     }
 
     // test bite sad paths
     function testFailedBiteWhenSafe() public {
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
-        fPool.doBite(lm,cdp,10 ether);
+        fPool.doBite(lm, cdp, 10 ether);
     }
 
     function testFailedHighDart() public {
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
-        fPool.doBite(lm,cdp,50 ether + 1);
+        fPool.doBite(lm, cdp, 50 ether + 1);
     }
 
     function testFailedBiteAfterGrace() public {
         timeReset();
 
         uint cdp = openCdp(1 ether, 50 ether + 1);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(75 * 1e18); // 1 ETH = 75 DAI
@@ -423,17 +423,17 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
 
 
         spotter.poke("ETH");
-        realPrice.set("ETH",75 * 1e18);
+        realPrice.set("ETH", 75 * 1e18);
 
         address urn = manager.urns(cdp);
         bytes32 ilk = manager.ilks(cdp);
 
-        (uint ink, uint art) = vat.urns(ilk,urn);
-        (,uint rate,uint spotValue,,) = vat.ilks(ilk);
+        (uint ink, uint art) = vat.urns(ilk, urn);
+        (, uint rate, uint spotValue,,) = vat.ilks(ilk);
         if(ink*spotValue > rate*(art+lm.cushion(cdp))) return; // prevent test from failing
-        fPool.doBite(lm,cdp,10 ether);
-        (ink, art) = vat.urns(ilk,urn);
-        (,rate,spotValue,,) = vat.ilks(ilk);
+        fPool.doBite(lm, cdp, 10 ether);
+        (ink, art) = vat.urns(ilk, urn);
+        (, rate, spotValue,,) = vat.ilks(ilk);
         if(ink*spotValue < rate*(art+lm.cushion(cdp))) return; // prevent test from failing
 
         forwardTime(lm.GRACE()+1);
@@ -442,7 +442,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         if(lm.bitten(cdp)) return;
 
         // this should fail
-        fPool.doBite(lm,cdp,10 ether);
+        fPool.doBite(lm, cdp, 10 ether);
 
     }
 
@@ -451,17 +451,17 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         timeReset();
 
         uint cdp = openCdp(1 ether, 50 ether);
-        fPool.doTopup(lm,cdp,10 ether);
+        fPool.doTopup(lm, cdp, 10 ether);
 
         // reach bite state
         osm.setPrice(70 * 1e18); // 1 ETH = 70 DAI
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
         assert(! lm.bitten(cdp));
 
-        fPool.doBite(lm,cdp,10 ether);
+        fPool.doBite(lm, cdp, 10 ether);
 
         assert(lm.bitten(cdp));
         forwardTime(lm.GRACE() / 2);

@@ -1,9 +1,9 @@
 pragma solidity ^0.5.12;
 
 import { LibNote } from "dss/lib.sol";
-import {DssCdpManager} from "./DssCdpManager.sol";
-import {BCdpScoreConnector} from "./BCdpScoreConnector.sol";
-import {Math} from "./Math.sol";
+import { DssCdpManager } from "./DssCdpManager.sol";
+import { BCdpScoreConnector } from "./BCdpScoreConnector.sol";
+import { Math } from "./Math.sol";
 
 contract VatLike {
     function urns(bytes32 ilk, address u) public view returns (uint ink, uint art);

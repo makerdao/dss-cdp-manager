@@ -3,7 +3,6 @@ pragma solidity ^0.5.12;
 import { LibNote } from "dss/lib.sol";
 import { BCdpManager } from "./../BCdpManager.sol";
 import { Math } from "./../Math.sol";
-
 import { DSAuth } from "ds-auth/auth.sol";
 
 contract VatLike {

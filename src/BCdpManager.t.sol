@@ -1,7 +1,7 @@
 pragma solidity ^0.5.12;
 
 import { DssDeployTestBase, Vat } from "dss-deploy/DssDeploy.t.base.sol";
-import "./GetCdps.sol";
+import { GetCdps } from "./GetCdps.sol";
 import { BCdpManager } from "./BCdpManager.sol";
 import { LiquidationMachine } from "./LiquidationMachine.sol";
 import { Pool } from "./pool/Pool.sol";
