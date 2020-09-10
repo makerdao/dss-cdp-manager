@@ -32,7 +32,7 @@ contract GetCdps {
             ids[i] = id;
             urns[i] = DssCdpManager(manager).urns(id);
             ilks[i] = DssCdpManager(manager).ilks(id);
-            (,id) = DssCdpManager(manager).list(id);
+            (, id) = DssCdpManager(manager).list(id);
             i++;
         }
     }

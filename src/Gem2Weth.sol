@@ -26,6 +26,6 @@ contract Gem2Weth {
     }
 
     function ethExit() public {
-        ethExit(vat.gem(ilk,address(this)),ilk);
+        ethExit(vat.gem(ilk, address(this)), ilk);
     }
 }

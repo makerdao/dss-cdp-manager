@@ -1,11 +1,11 @@
 pragma solidity ^0.5.12;
 pragma experimental ABIEncoderV2;
 
-import {BCdpManager} from "./../BCdpManager.sol";
-import {LiquidationMachine} from "./../LiquidationMachine.sol";
-import {DssCdpManager} from "./../DssCdpManager.sol";
-import {GetCdps} from "./../GetCdps.sol";
-import {Math} from "./../Math.sol";
+import { BCdpManager } from "./../BCdpManager.sol";
+import { LiquidationMachine } from "./../LiquidationMachine.sol";
+import { DssCdpManager } from "./../DssCdpManager.sol";
+import { GetCdps } from "./../GetCdps.sol";
+import { Math } from "./../Math.sol";
 
 
 contract VatLike {
@@ -157,30 +157,30 @@ contract UserInfo is Math, UserInfoStorage {
     }
 
     function artToDaiDebt(VatLike vat, bytes32 ilk, uint art) internal view returns(uint) {
-        (,uint rate,,,) = vat.ilks(ilk);
-        return mul(rate,art) / ONE;
+        (, uint rate,,,) = vat.ilks(ilk);
+        return mul(rate, art) / ONE;
     }
 
     function calcMaxDebt(VatLike vat, bytes32 ilk, uint ink) internal view returns(uint) {
-        (,uint rate,uint spot,,) = vat.ilks(ilk);
-        // mul(art,rate) = mul(ink,spot)
+        (, uint rate, uint spot,,) = vat.ilks(ilk);
+        // mul(art, rate) = mul(ink, spot)
 
-        uint maxArt = mul(ink,spot)/rate;
-        return artToDaiDebt(vat,ilk,maxArt);
+        uint maxArt = mul(ink, spot)/rate;
+        return artToDaiDebt(vat, ilk, maxArt);
     }
 
     function calcSpotPrice(VatLike vat, SpotLike spot, bytes32 ilk) internal view returns(uint) {
-        (,,uint spotVal,,) = vat.ilks(ilk);
+        (,, uint spotVal,,) = vat.ilks(ilk);
         (, uint mat) = spot.ilks(ilk);
         uint par = spot.par();
 
         // spotVal = rdiv(rdiv(mul(uint(peep), uint(10 ** 9)), par), mat);
-        uint peep = rmul(rmul(spotVal,mat),par) / uint(1e9);
+        uint peep = rmul(rmul(spotVal, mat), par) / uint(1e9);
 
         return peep;
     }
 
-    function getProxyInfo(ProxyRegistryLike registry,address user) public view returns(ProxyInfo memory info) {
+    function getProxyInfo(ProxyRegistryLike registry, address user) public view returns(ProxyInfo memory info) {
         if(registry.proxies(user) == DSProxyLike(0x0) || registry.proxies(user).owner() != user) return info;
 
         info.hasProxy = true;
@@ -195,14 +195,14 @@ contract UserInfo is Math, UserInfoStorage {
         GetCdps getCdp,
         bool b
     ) public view returns(CdpInfo memory info) {
-        info.cdp = getFirstCdp(getCdp,manager,guy,ilk);
+        info.cdp = getFirstCdp(getCdp, manager, guy, ilk);
         info.hasCdp = info.cdp > 0;
         if(info.hasCdp) {
-            (uint ink, uint art) = vat.urns(ilk,DssCdpManager(manager).urns(info.cdp));
-            if(b) art = add(art,LiquidationMachine(manager).cushion(info.cdp));
+            (uint ink, uint art) = vat.urns(ilk, DssCdpManager(manager).urns(info.cdp));
+            if(b) art = add(art, LiquidationMachine(manager).cushion(info.cdp));
             info.ethDeposit = ink;
-            info.daiDebt = artToDaiDebt(vat,ilk,art);
-            info.maxDaiDebt = calcMaxDebt(vat,ilk,ink);
+            info.daiDebt = artToDaiDebt(vat, ilk, art);
+            info.maxDaiDebt = calcMaxDebt(vat, ilk, ink);
         }
     }
 
@@ -232,26 +232,26 @@ contract UserInfo is Math, UserInfoStorage {
         UserState memory state;
 
         // fill proxy info
-        state.proxyInfo = getProxyInfo(registry,user);
+        state.proxyInfo = getProxyInfo(registry, user);
 
         address guy = address(state.proxyInfo.userProxy);
 
         // fill bprotocol info
-        state.bCdpInfo = getCdpInfo(guy,address(manager),ilk,vat,getCdp, true);
+        state.bCdpInfo = getCdpInfo(guy, address(manager), ilk, vat, getCdp, true);
 
         // fill makerdao info
-        state.makerdaoCdpInfo = getCdpInfo(guy,address(makerDAOManager),ilk,vat,getCdp, false);
+        state.makerdaoCdpInfo = getCdpInfo(guy, address(makerDAOManager), ilk, vat, getCdp, false);
 
-        state.miscInfo.spotPrice = calcSpotPrice(vat,spot,ilk);
-        (,,,,uint dust) = vat.ilks(ilk);
+        state.miscInfo.spotPrice = calcSpotPrice(vat, spot, ilk);
+        (,,,, uint dust) = vat.ilks(ilk);
         state.miscInfo.dustInWei = dust / ONE;
         state.miscInfo.blockNumber = block.number;
 
         state.userWalletInfo.ethBalance = user.balance;
         state.userWalletInfo.daiBalance = ERC20Like(dai).balanceOf(user);
-        state.userWalletInfo.daiAllowance = ERC20Like(dai).allowance(user,guy);
+        state.userWalletInfo.daiAllowance = ERC20Like(dai).allowance(user, guy);
 
-        state.userRatingInfo = getUserRatingInfo(guy,jar);
+        state.userRatingInfo = getUserRatingInfo(guy, jar);
 
         set(state);
     }
@@ -268,7 +268,7 @@ contract UserInfo is Math, UserInfoStorage {
         address jar,
         address dai
     ) public returns(UserState memory state) {
-        setInfo(user,ilk,manager,makerDAOManager,getCdp,vat,spot,registry,jar,dai);
+        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jar, dai);
         return userState;
     }
 }

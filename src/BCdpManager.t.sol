@@ -1,12 +1,12 @@
 pragma solidity ^0.5.12;
 
 import { DssDeployTestBase, Vat } from "dss-deploy/DssDeploy.t.base.sol";
-import "./GetCdps.sol";
-import {BCdpManager} from "./BCdpManager.sol";
-import {LiquidationMachine} from "./LiquidationMachine.sol";
-import {Pool} from "./pool/Pool.sol";
-import {BCdpScore} from "./BCdpScore.sol";
-import {BCdpScoreLike} from "./BCdpScoreConnector.sol";
+import { GetCdps } from "./GetCdps.sol";
+import { BCdpManager } from "./BCdpManager.sol";
+import { LiquidationMachine } from "./LiquidationMachine.sol";
+import { Pool } from "./pool/Pool.sol";
+import { BCdpScore } from "./BCdpScore.sol";
+import { BCdpScoreLike } from "./BCdpScoreConnector.sol";
 
 contract Hevm {
     function warp(uint256) public;
@@ -81,7 +81,7 @@ contract FakeUser {
         uint tab,
         uint minInk
     ) public {
-        pool.bite(cdp,tab,minInk);
+        pool.bite(cdp, tab, minInk);
     }
 
     function doDeposit(
@@ -124,7 +124,7 @@ contract FakeOSM {
         price = bytes32(price_);
     }
 
-    function peep() external view returns(bytes32,bool) {
+    function peep() external view returns(bytes32, bool) {
         return (price, valid);
     }
 
@@ -176,17 +176,17 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         liquidator = new FakeUser();
         osm = new FakeOSM();
 
-        pool = new Pool(address(vat),address(jar),address(spotter));
+        pool = new Pool(address(vat), address(jar), address(spotter));
         score = new BCdpScore();
-        manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice),address(score));
+        manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice), address(score));
         score.setManager(address(manager));        
         pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
         pool.setMembers(members);
-        pool.setProfitParams(1,100);
-        pool.setIlk("ETH",true);
-        pool.setOsm("ETH",address(osm));
+        pool.setProfitParams(1, 100);
+        pool.setIlk("ETH", true);
+        pool.setOsm("ETH", address(osm));
         getCdps = new GetCdps();
 
         liquidator.doHope(vat, address(pool));
@@ -219,9 +219,9 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         assertEq(uint(dtab) / RAY, 3333333333333333334 /* 3.333 DAI */);
         assertEq(uint(dart), 3333333333333333334 /* 3.333 DAI */);
 
-        liquidator.doTopup(pool,cdp);
+        liquidator.doTopup(pool, cdp);
 
-        assertEq(manager.cushion(cdp),uint(dart));
+        assertEq(manager.cushion(cdp), uint(dart));
     }
 
     function reachBitePrice(uint cdp) internal {
@@ -230,7 +230,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         // change actual price to enable liquidation
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
     }
 
@@ -240,7 +240,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         // bite
         address urn = manager.urns(cdp);
         (, uint art) = vat.urns("ETH", urn);
-        liquidator.doBite(pool,cdp,art/2,0);
+        liquidator.doBite(pool, cdp, art/2, 0);
 
         assert(LiquidationMachine(manager).bitten(cdp));
     }
@@ -251,14 +251,14 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     }
 
     function deployNewPoolContract(FakeUser jar_) internal returns (Pool) {
-        Pool _pool = new Pool(address(vat),address(jar_),address(spotter));
+        Pool _pool = new Pool(address(vat), address(jar_), address(spotter));
         _pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
         _pool.setMembers(members);
-        _pool.setProfitParams(1,100);
-        _pool.setIlk("ETH",true);
-        _pool.setOsm("ETH",address(osm));
+        _pool.setProfitParams(1, 100);
+        _pool.setIlk("ETH", true);
+        _pool.setOsm("ETH", address(osm));
         liquidator.doHope(vat, address(_pool));
         return _pool;
     }
@@ -320,39 +320,39 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         assertEq(uint(dtab) / RAY, 3333333333333333334 /* 3.333 DAI */);
         assertEq(uint(dart), 3333333333333333334 /* 3.333 DAI */);
 
-        liquidator.doTopup(pool,cdp);
+        liquidator.doTopup(pool, cdp);
 
-        assertEq(manager.cushion(cdp),uint(dart));
+        assertEq(manager.cushion(cdp), uint(dart));
 
         manager.frob(cdp, 0, 1 ether);
 
-        assertEq(manager.cushion(cdp),0);
+        assertEq(manager.cushion(cdp), 0);
 
         manager.frob(cdp, 0, -1 ether);
 
-        liquidator.doTopup(pool,cdp);
+        liquidator.doTopup(pool, cdp);
 
-        assertEq(manager.cushion(cdp),uint(dart));
+        assertEq(manager.cushion(cdp), uint(dart));
 
 
         // change actual price to enable liquidation
-        //(,,uint rate1,,) = vat.ilks("ETH");
+        //(,, uint rate1,,) = vat.ilks("ETH");
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        //(,,uint rate2,,) = vat.ilks("ETH");
-        //assertEq(rate1,rate2);
+        //(,, uint rate2,,) = vat.ilks("ETH");
+        //assertEq(rate1, rate2);
 
         //(, uint artPost) = vat.urns("ETH", urn);
 
-        realPrice.set("ETH",70 * 1e18);
+        realPrice.set("ETH", 70 * 1e18);
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        assertEq(art,50 ether);
+        assertEq(art, 50 ether);
         // bite
-        liquidator.doBite(pool,cdp,art/2,0);
+        liquidator.doBite(pool, cdp, art/2, 0);
 
-        assertTrue(vat.gem("ETH",address(liquidator)) > 77e16/2);
-        assertTrue(vat.gem("ETH",address(jar)) > 77e14/2);
+        assertTrue(vat.gem("ETH", address(liquidator)) > 77e16/2);
+        assertTrue(vat.gem("ETH", address(jar)) > 77e14/2);
     }
 
     function testOpenCDP() public {
@@ -372,15 +372,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testGiveCDP() public {
-        testGiveCDP(false,false);
+        testGiveCDP(false, false);
     }
 
     function testGiveCDPWithTopup() public {
-        testGiveCDP(true,false);
+        testGiveCDP(true, false);
     }
 
     function testGiveCDPWithBite() public {
-        testGiveCDP(false,true);
+        testGiveCDP(false, true);
     }
 
     function testGiveCDP(bool withTopup, bool withBite) internal {
@@ -579,15 +579,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testFrob() public {
-        testFrob(false,false);
+        testFrob(false, false);
     }
 
     function testFrobWithTopup() public {
-        testFrob(true,false);
+        testFrob(true, false);
     }
 
     function testFailedFrobWithBite() public {
-        testFrob(false,true);
+        testFrob(false, true);
     }
 
     function testFrob(bool withTopup, bool withBite) internal {
@@ -602,7 +602,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         (, uint artPre) = vat.urns("ETH", manager.urns(cdp));
         artPre += LiquidationMachine(manager).cushion(cdp);
 
-        if(! withTopup && ! withBite) assertEq(artPre,0);
+        if(! withTopup && ! withBite) assertEq(artPre, 0);
 
         manager.frob(cdp, 1 ether, 50 ether);
 
@@ -632,7 +632,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         manager.frob(cdp, 0 ether, -50 ether);
         (, uint art) = vat.urns("ETH", manager.urns(cdp));
 
-        assertEq(art,0);
+        assertEq(art, 0);
     }
 
     function testFrobAllowed() public {
@@ -654,15 +654,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testFrobGetCollateralBack() public {
-        testFrobGetCollateralBack(false,false);
+        testFrobGetCollateralBack(false, false);
     }
 
     function testFrobGetCollateralBackWithTopup() public {
-        testFrobGetCollateralBack(true,false);
+        testFrobGetCollateralBack(true, false);
     }
 
     function testFrobGetCollateralBackWithBite() public {
-        testFrobGetCollateralBack(false,true);
+        testFrobGetCollateralBack(false, true);
     }
 
     function testFrobGetCollateralBack(bool withTopup, bool withBite) internal {
@@ -679,7 +679,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         if(withBite) reachBite(cdp);
         uint cushion = LiquidationMachine(manager).cushion(cdp);
         manager.flux(cdp, address(this), 1 ether);
-        assertEq(cushion,LiquidationMachine(manager).cushion(cdp));
+        assertEq(cushion, LiquidationMachine(manager).cushion(cdp));
         assertEq(vat.gem("ETH", manager.urns(cdp)), 0);
         assertEq(vat.gem("ETH", address(this)), 1 ether);
         uint prevBalance = weth.balanceOf(address(this));
@@ -688,15 +688,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testGetWrongCollateralBack() public {
-        testGetWrongCollateralBack(false,false);
+        testGetWrongCollateralBack(false, false);
     }
 
     function testGetWrongCollateralBackWithTopup() public {
-        testGetWrongCollateralBack(true,false);
+        testGetWrongCollateralBack(true, false);
     }
 
     function testGetWrongCollateralBackWithBite() public {
-        testGetWrongCollateralBack(false,true);
+        testGetWrongCollateralBack(false, true);
     }
 
     function testGetWrongCollateralBack(bool withTopup, bool withBite) internal {
@@ -710,21 +710,21 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         if(withBite) reachBite(cdp);
         uint cushion = LiquidationMachine(manager).cushion(cdp);
         manager.flux("COL", cdp, address(this), 1 ether);
-        assertEq(cushion,LiquidationMachine(manager).cushion(cdp));
+        assertEq(cushion, LiquidationMachine(manager).cushion(cdp));
         assertEq(vat.gem("COL", manager.urns(cdp)), 0);
         assertEq(vat.gem("COL", address(this)), 1 ether);
     }
 
     function testMove() public {
-        testMove(false,false);
+        testMove(false, false);
     }
 
     function testMoveWithTopup() public {
-        testMove(true,false);
+        testMove(true, false);
     }
 
     function testMoveWithBite() public {
-        testMove(false,true);
+        testMove(false, true);
     }
 
     function testMove(bool withTopup, bool withBite) internal {
@@ -746,19 +746,19 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testQuit() public {
-        testQuit(false,false,false);
+        testQuit(false, false, false);
     }
 
     function testQuitWithTopup() public {
-        testQuit(true,false,false);
+        testQuit(true, false, false);
     }
 
     function testFailQuitWithBite() public {
-        testQuit(false,true,false);
+        testQuit(false, true, false);
     }
 
     function testFailQuitWithBitePrice() public {
-        testQuit(false,false,true);
+        testQuit(false, false, true);
     }
 
     function testQuit(bool withTopup, bool withBite, bool withBitePrice) internal {
@@ -790,15 +790,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testQuitOtherDst() public {
-        testQuitOtherDst(false,false);
+        testQuitOtherDst(false, false);
     }
 
     function testQuitOtherDstWithTopup() public {
-        testQuitOtherDst(true,false);
+        testQuitOtherDst(true, false);
     }
 
     function testFailQuitOtherDstWithBite() public {
-        testQuitOtherDst(false,true);
+        testQuitOtherDst(false, true);
     }
 
     function testQuitOtherDst(bool withTopup, bool withBite) internal {
@@ -848,15 +848,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testEnter() public {
-        testEnter(false,false);
+        testEnter(false, false);
     }
 
     function testEnterWithtopup() public {
-        testEnter(true,false);
+        testEnter(true, false);
     }
 
     function testFailedEnterWithBite() public {
-        testEnter(false,true);
+        testEnter(false, true);
     }
 
     function testEnter(bool withTopup, bool withBite) internal {
@@ -895,15 +895,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testEnterOtherSrc() public {
-        testEnter(false,false);
+        testEnter(false, false);
     }
 
     function testEnterOtherSrcWithtopup() public {
-        testEnter(true,false);
+        testEnter(true, false);
     }
 
     function testFailedEnterOtherSrcWithBite() public {
-        testEnter(false,true);
+        testEnter(false, true);
     }
 
     function testEnterOtherSrc(bool withTopup, bool withBite) internal {
@@ -969,15 +969,15 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testEnterOtherCdp() public {
-        testEnterOtherCdp(false,false);
+        testEnterOtherCdp(false, false);
     }
 
     function testEnterOtherCdpWithTopup() public {
-        testEnterOtherCdp(true,false);
+        testEnterOtherCdp(true, false);
     }
 
     function testFailedEnterOtherCdpWithBite() public {
-        testEnterOtherCdp(false,true);
+        testEnterOtherCdp(false, true);
     }
 
     function testEnterOtherCdp(bool withTopup, bool withBite) internal {
@@ -1042,31 +1042,31 @@ contract BCdpManagerTest is BCdpManagerTestBase {
     }
 
     function testShift() public {
-        testShift(false,false,false,false);
+        testShift(false, false, false, false);
     }
 
     function testShiftSrcTopup() public {
-        testShift(true,false,false,false);
+        testShift(true, false, false, false);
     }
 
     function testShiftDstTopup() public {
-        testShift(false,true,false,false);
+        testShift(false, true, false, false);
     }
 
     function testShiftSrcDstTopup() public {
-        testShift(true,true,false,false);
+        testShift(true, true, false, false);
     }
 
     function testFailedShiftSrcBite() public {
-        testShift(false,false,true,false);
+        testShift(false, false, true, false);
     }
 
     function testFailedShiftDstBite() public {
-        testShift(false,false,false,true);
+        testShift(false, false, false, true);
     }
 
     function testFailedShiftSrcDstBite() public {
-        testShift(false,false,true,true);
+        testShift(false, false, true, true);
     }
 
     function testShift(bool srcTopup, bool dstTopup, bool srcBite, bool dstBite) internal {

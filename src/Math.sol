@@ -1,7 +1,6 @@
 /* solium-disable error-reason */
 pragma solidity ^0.5.12;
 
-
 contract Math {
     // --- Math ---
     function add(uint x, int y) internal pure returns (uint z) {

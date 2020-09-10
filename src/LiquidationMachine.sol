@@ -1,9 +1,9 @@
 pragma solidity ^0.5.12;
 
 import { LibNote } from "dss/lib.sol";
-import {DssCdpManager} from "./DssCdpManager.sol";
-import {BCdpScoreConnector} from "./BCdpScoreConnector.sol";
-import {Math} from "./Math.sol";
+import { DssCdpManager } from "./DssCdpManager.sol";
+import { BCdpScoreConnector } from "./BCdpScoreConnector.sol";
+import { Math } from "./Math.sol";
 
 contract VatLike {
     function urns(bytes32 ilk, address u) public view returns (uint ink, uint art);
@@ -44,7 +44,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         _;
     }
 
-    constructor(DssCdpManager man_,VatLike vat_, EndLike end_, address pool_, PriceFeedLike real_) public {
+    constructor(DssCdpManager man_, VatLike vat_, EndLike end_, address pool_, PriceFeedLike real_) public {
         man = man_;
         vat = vat_;
         end = end_;
@@ -67,11 +67,11 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         address urn = man.urns(cdp);
         bytes32 ilk = man.ilks(cdp);
 
-        (,uint rate,,,) = vat.ilks(ilk);
+        (, uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, dtopup);
 
-        vat.move(pool,address(this),dtab);
-        vat.frob(ilk,urn,urn,address(this),0,-int(dtopup));
+        vat.move(pool, address(this), dtab);
+        vat.frob(ilk, urn, urn, address(this), 0, -int(dtopup));
 
         cushion[cdp] = add(cushion[cdp], dtopup);
     }
@@ -89,14 +89,14 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         bytes32 ilk = man.ilks(cdp);
         address urn = man.urns(cdp);
 
-        (,uint rate,,,) = vat.ilks(ilk);
+        (, uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, top);
 
         cushion[cdp] = 0;
 
         // move topping to pool
         vat.frob(ilk, urn, urn, urn, 0, toInt(top));
-        vat.move(urn,pool,dtab);
+        vat.move(urn, pool, dtab);
     }
 
     function untopByPool(uint cdp) external onlyPool {
@@ -104,17 +104,17 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
     }
 
     function doBite(uint dart, bytes32 ilk, address urn, uint dink) internal {
-        (,uint rate,,,) = vat.ilks(ilk);
+        (, uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, dart);
 
-        vat.move(pool,address(this),dtab);
+        vat.move(pool, address(this), dtab);
 
-        vat.frob(ilk,urn,urn,address(this),0,-int(dart));
-        vat.frob(ilk,urn,msg.sender,urn,-int(dink),0);
+        vat.frob(ilk, urn, urn, address(this), 0, -int(dart));
+        vat.frob(ilk, urn, msg.sender, urn, -int(dink), 0);
     }
 
     function calcDink(uint dart, uint rate, bytes32 ilk) internal returns(uint dink) {
-        (,uint chop,) = end.cat().ilks(ilk);
+        (, uint chop,) = end.cat().ilks(ilk);
         uint tab = mul(mul(dart, rate), chop) / WAD;
         bytes32 realtimePrice = real.read(ilk);
 
@@ -125,25 +125,25 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         address urn = man.urns(cdp);
         bytes32 ilk = man.ilks(cdp);
 
-        (uint ink, uint art) = vat.urns(ilk,urn);
+        (uint ink, uint art) = vat.urns(ilk, urn);
         art = add(art, cushion[cdp]);
-        (,uint rate,uint spotValue,,) = vat.ilks(ilk);
+        (, uint rate, uint spotValue,,) = vat.ilks(ilk);
 
         require(dart <= art, "debt is too low");
 
         // verify cdp is unsafe now
         if(! bitten(cdp)) {
-            require(mul(art,rate) > mul(ink,spotValue), "bite: cdp is safe");
+            require(mul(art, rate) > mul(ink, spotValue), "bite: cdp is safe");
             require(cushion[cdp] > 0, "bite: not-topped");
             tic[cdp] = now;
         }
 
-        dink = calcDink(dart,rate,ilk);
-        updateScore(cdp,ilk,-toInt(dink),-toInt(dart),now);
+        dink = calcDink(dart, rate, ilk);
+        updateScore(cdp, ilk, -toInt(dink), -toInt(dart), now);
 
-        uint usedCushion = mul(cushion[cdp],dart) / art;
+        uint usedCushion = mul(cushion[cdp], dart) / art;
         cushion[cdp] = sub(cushion[cdp], usedCushion);
-        uint bart = sub(dart,usedCushion);
+        uint bart = sub(dart, usedCushion);
 
         doBite(bart, ilk, urn, dink);
     }

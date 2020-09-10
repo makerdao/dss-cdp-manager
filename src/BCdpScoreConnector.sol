@@ -17,7 +17,7 @@ contract BCdpScoreConnector {
     }
 
     function updateScore(uint cdp, bytes32 ilk, int dink, int dart, uint time) internal {
-        if(out[cdp] == 0) score.updateScore(cdp,ilk,dink,dart,time);
+        if(out[cdp] == 0) score.updateScore(cdp, ilk, dink, dart, time);
     }
 
     function quitScore(uint cdp) internal {
