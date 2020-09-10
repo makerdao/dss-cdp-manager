@@ -141,7 +141,7 @@ contract Pool is Math, DSAuth, LibNote {
 
     function chooseMember(uint cdp, uint radVal, address[] memory candidates) public view returns(address[] memory winners) {
         if(candidates.length == 0) return candidates;
-        // A bit of randomness to choose winners. We don't need pure randomness, its ok even if a 
+        // A bit of randomness to choose winners. We don't need pure randomness, its ok even if a
         // liquidator can predict his winning in the future.
         uint chosen = uint(keccak256(abi.encodePacked(cdp,now / 1 hours))) % candidates.length;
         address winner = candidates[chosen];
@@ -313,7 +313,7 @@ contract Pool is Math, DSAuth, LibNote {
             maxArt = add(maxArt, dust);
         }
         uint availArt = sub(maxArt, cdpData[cdp].bite[index]);
-        
+
         return availArt;
     }
 }
