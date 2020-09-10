@@ -215,6 +215,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
 
         osm.setPrice(70 * 1e18); // 1 ETH = 50 DAI
         (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        art; //shh
         assertEq(uint(dtab) / RAY, 3333333333333333334 /* 3.333 DAI */);
         assertEq(uint(dart), 3333333333333333334 /* 3.333 DAI */);
 
@@ -311,8 +312,8 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
         assertEq(vat.dai(address(pool)), 50 ether * RAY);
 
-        address urn = manager.urns(cdp);
-        (, uint artPre) = vat.urns("ETH", urn);
+        //address urn = manager.urns(cdp);
+        //(, uint artPre) = vat.urns("ETH", urn);
 
         osm.setPrice(70 * 1e18); // 1 ETH = 50 DAI
         (int dart, int dtab, uint art) = pool.topAmount(cdp);
@@ -335,13 +336,13 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
 
         // change actual price to enable liquidation
-        (,,uint rate1,,) = vat.ilks("ETH");
+        //(,,uint rate1,,) = vat.ilks("ETH");
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        (,,uint rate2,,) = vat.ilks("ETH");
+        //(,,uint rate2,,) = vat.ilks("ETH");
         //assertEq(rate1,rate2);
 
-        (, uint artPost) = vat.urns("ETH", urn);
+        //(, uint artPost) = vat.urns("ETH", urn);
 
         realPrice.set("ETH",70 * 1e18);
 
@@ -598,7 +599,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         if(withTopup) reachTopup(cdp);
         if(withBite) reachBite(cdp);
 
-        (uint inkPre, uint artPre) = vat.urns("ETH", manager.urns(cdp));
+        (, uint artPre) = vat.urns("ETH", manager.urns(cdp));
         artPre += LiquidationMachine(manager).cushion(cdp);
 
         if(! withTopup && ! withBite) assertEq(artPre,0);

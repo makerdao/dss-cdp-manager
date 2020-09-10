@@ -444,6 +444,7 @@ contract PoolTest is BCdpManagerTestBase {
         members[0].doTopup(pool,cdp);
 
         (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        bite; //shh
         assertEq(art,cdpArt);
         assertEq(cdpCushion,uint(dtab));
         assertEq(winners.length,4);
@@ -484,6 +485,7 @@ contract PoolTest is BCdpManagerTestBase {
         FakeMember(singleMember[0]).doTopup(pool,cdp);
 
         (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        bite; //shh
         assertEq(art,cdpArt);
         assertEq(cdpCushion,uint(dtab));
         assertEq(winners.length,1);
@@ -582,6 +584,7 @@ contract PoolTest is BCdpManagerTestBase {
         members[0].doTopup(pool,cdp);
 
         (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        bite; //shh
         assertEq(art,cdpArt);
         assertEq(cdpCushion,uint(dtab));
         assertEq(winners.length,1);
@@ -596,6 +599,7 @@ contract PoolTest is BCdpManagerTestBase {
         members[0].doUntop(pool,cdp);
 
         (uint cdpArt2, uint cdpCushion2, address[] memory winners2, uint[] memory bite2) = pool.getCdpData(cdp);
+        bite2; //shh
         assertEq(0,cdpArt2);
         assertEq(cdpCushion2,0);
         assertEq(winners2.length,0);
@@ -613,6 +617,7 @@ contract PoolTest is BCdpManagerTestBase {
         members[0].doUntop(pool,cdp);
 
         (uint cdpArt2, uint cdpCushion2, address[] memory winners2, uint[] memory bite2) = pool.getCdpData(cdp);
+        bite2; //shh
         assertEq(cdpArt2,0);
         assertEq(cdpCushion2,0);
         assertEq(winners2.length,0);
@@ -647,7 +652,7 @@ contract PoolTest is BCdpManagerTestBase {
         spotter.poke("ETH");
         realPrice.set("ETH",130 * 1e18);
 
-        uint ethBefore = vat.gem("ETH",address(members[0]));
+        //uint ethBefore = vat.gem("ETH",address(members[0]));
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
         pool.setProfitParams(1,100); // 1% goes to jar
         // for 10 ether we expect 10/130 * 1.1 = 11/130, from which 99% goes to member
@@ -658,6 +663,8 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(vat.gem("ETH",address(jar)),11 ether / uint(130 * 100));
 
         (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+        cdpArt; //shh
+        winners; //shh
         assertEq(bite[0],10 ether);
 
         uint userRemainingCushion = 1 + cdpCushion / 4 - 10 * cdpCushion / 110; // 10/110 of the debt is being bitten
@@ -683,7 +690,7 @@ contract PoolTest is BCdpManagerTestBase {
         spotter.poke("ETH");
         realPrice.set("ETH",130 * 1e18);
 
-        uint ethBefore = vat.gem("ETH",address(members[0]));
+        //uint ethBefore = vat.gem("ETH",address(members[0]));
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
         pool.setProfitParams(2,100); // 2% goes to jar
         // for 26 ether we expect 26/130 * 1.1 = 28.6/130, from which 98% goes to member
@@ -693,6 +700,9 @@ contract PoolTest is BCdpManagerTestBase {
             assertEq(uint(dink), expectedEth);
             assertEq(vat.gem("ETH",address(members[i])),expectedEth);
             (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+            cdpArt; //shh
+            cdpCushion; //shh
+            winners; //shh
             assertEq(bite[i],26 ether);
             assertEq(pool.rad(address(members[i])),(1000 ether - 50 ether * i - 26 ether) * RAY - 1);
         }
@@ -937,7 +947,7 @@ contract PoolTest is BCdpManagerTestBase {
         spotter.poke("ETH");
         realPrice.set("ETH",140 * 1e18);
 
-        uint ethBefore = vat.gem("ETH",address(members[0]));
+        // uint ethBefore = vat.gem("ETH",address(members[0]));
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
         pool.setProfitParams(2,100); // 2% goes to jar
         // for 26 ether we expect 26/140 * 1.1 * 1.1 = 28.6/140, from which 98% goes to member
@@ -947,6 +957,9 @@ contract PoolTest is BCdpManagerTestBase {
             assertEq(uint(dink), expectedEth);
             assertEq(vat.gem("ETH",address(members[i])),expectedEth);
             (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+            cdpArt;//shh
+            cdpCushion;//shh
+            winners;//shh
             assertEq(bite[i],26 ether);
             assertAlmostEq(pool.rad(address(members[i]))/RAY,((1000 ether - 50 ether * i - 26 ether * uint(11)/10) * RAY - 1)/RAY);
         }
@@ -1027,8 +1040,8 @@ contract PoolTest is BCdpManagerTestBase {
         spotter.poke("ETH");
         realPrice.set("ETH",140 * 1e18);
 
-        uint ethBefore = vat.gem("ETH",address(members[0]));
-        this.file(address(cat), "ETH", "chop", WAD + WAD/10);
+        // uint ethBefore = vat.gem("ETH",address(members[0]));
+        this.file(address(cat), "ETH", "chop", _1p1);
         pool.setProfitParams(2,100); // 2% goes to jar
 
         uint expectedAvailBite = daiAmt / members.length;

@@ -48,8 +48,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
     function testOpenCdp() public {
         timeReset();
 
-        uint time = now;
-
         score.spin();
 
         uint cdp = openCdp(0 ether,0 ether);
@@ -64,8 +62,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
     function testShiftCdp() public {
         timeReset();
-
-        uint time = now;
 
         score.spin();
 
@@ -84,8 +80,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
     function testFluxCdp() public {
         timeReset();
-
-        uint time = now;
 
         score.spin();
 
@@ -107,8 +101,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
     function testMove() public {
         timeReset();
 
-        uint time = now;
-
         score.spin();
 
         uint cdp = openCdp(10 ether,1 ether);
@@ -126,8 +118,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
     function testQuit() public {
         timeReset();
-
-        uint time = now;
 
         score.spin();
 
@@ -154,8 +144,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
         timeReset();
 
-        uint time = now;
-
         score.spin();
 
         uint cdp = openCdp(0 ether,0 ether);
@@ -173,8 +161,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
     function testShift() public {
         timeReset();
-
-        uint time = now;
 
         score.spin();
 
@@ -250,8 +236,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
     function testFrob() public {
         timeReset();
-
-        uint time = now;
 
         score.spin();
 
@@ -331,8 +315,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
     function testSlashHappy() public {
         timeReset();
 
-        uint time = now;
-
         score.spin();
 
         uint cdp = openCdp(10 ether,1 ether);
@@ -362,8 +344,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
     function testSlashBeforeOneMonth() public {
         timeReset();
 
-        uint time = now;
-
         score.spin();
 
         uint cdp = openCdp(10 ether,1 ether);
@@ -392,8 +372,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
     function testSlashBelowZero() public {
         timeReset();
-
-        uint time = now;
 
         score.spin();
 
@@ -426,8 +404,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
     function testFailSlash() public {
         timeReset();
 
-        uint time = now;
-
         score.spin();
 
         uint cdp = openCdp(10 ether,1 ether);
@@ -446,8 +422,6 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
     function testBite() public {
         timeReset();
-
-        uint time = now;
 
         score.spin();
 
@@ -538,7 +512,7 @@ contract MockScoringMachine is ScoringMachine {
         super.updateScore(user, asset, dbalance, time);
     }
 
-    function _getAssetScore(bytes32 user, bytes32 asset) public returns (uint, uint, uint) {
+    function _getAssetScore(bytes32 user, bytes32 asset) public view returns (uint, uint, uint) {
         AssetScore memory s = userScore[user][asset];
         return (s.score, s.balance, s.last);
     }

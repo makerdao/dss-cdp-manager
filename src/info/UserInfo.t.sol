@@ -105,7 +105,7 @@ contract UserInfoTest is BCdpManagerTestBase {
     }
 
     function testDaiBalanceAndDustInfo() public {
-        FakeProxy proxy = registry.build();
+        //FakeProxy proxy = registry.build();
 
         uint cdp = openCdp(address(manager),1 ether, 100 ether);
         manager.move(cdp,address(this),50 ether * RAY);
@@ -282,6 +282,7 @@ contract UserInfoTest is BCdpManagerTestBase {
 
         address urn = manager.urns(bCdp);
         (uint ink, uint art) = vat.urns("ETH",urn);
+        ink; //shh
         assert(art < 50 ether); // make sure there is a cushion
 
         userInfo.setInfo(address(this), "ETH", manager, dsManager,getCdps,vatLike,
