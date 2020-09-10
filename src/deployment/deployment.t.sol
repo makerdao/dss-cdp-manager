@@ -10,12 +10,14 @@ import { LiquidationMachine, PriceFeedLike } from "./../LiquidationMachine.sol";
 
 contract PriceFeed is DSValue {
     function read(bytes32 ilk) external view returns(bytes32) {
+        ilk; //shh
         return read();
     }
 }
 
 contract FakeCat {
     function ilks(bytes32 ilk) external pure returns(uint flip, uint chop, uint dunk) {
+        ilk; //shh
         return (0, 1130000000000000000, 0);
     }
 }
