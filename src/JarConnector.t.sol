@@ -96,7 +96,7 @@ contract JarConnectorTest is BCdpManagerTestBase {
         forwardTime(100);
 
         uint expectedScore1 = 2 * 100 * 100 ether;
-        uint expectedScore2 = 2 * 101 * 100 ether;
+        uint expectedScore2 = 2 * 100 * 101 ether;
 
         assertEq(expectedScore1, jarConnector.getUserScore(bytes32(cdp1)));
         assertEq(expectedScore2, jarConnector.getUserScore(bytes32(cdp2)));
