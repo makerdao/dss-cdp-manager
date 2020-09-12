@@ -112,6 +112,11 @@ contract Pool is Math, DSAuth, LibNote {
         shrd = den;
     }
 
+    function emergencyExecute(address target, bytes calldata data) external auth note {
+        (bool succ,) = target.call(data);
+        require(succ, "emergencyExecute: failed");
+    }
+
     function deposit(uint radVal) external onlyMember note {
         vat.move(msg.sender, address(this), radVal);
         rad[msg.sender] = add(rad[msg.sender], radVal);

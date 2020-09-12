@@ -1198,8 +1198,39 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(radToWei(dtab), dart * 10000264755 / 10000000000);
     }
 
+    function setX(uint val) external pure returns(bytes memory) {
+        val; // shhhh
+        return msg.data;
+    }
+
+    function testEmergencyExecute() public {
+        bytes memory data = this.setX(123);
+        Dummy d = new Dummy();
+
+        pool.emergencyExecute(address(d), data);
+
+        assertEq(d.x(), 123);
+    }
+
+    function testFailedEmergencyExecuteNonAdmin() public {
+        bytes memory data = this.setX(123);
+        Dummy d = new Dummy();
+
+        pool.setOwner(address(0x123));
+
+        pool.emergencyExecute(address(d), data);
+    }
+
     // tests to do
 
     // topup - during bite
     // untop - sad (during bite), untop after partial bite
+}
+
+contract Dummy {
+    uint public x;
+
+    function setX(uint val) public {
+        x = val;
+    }
 }
