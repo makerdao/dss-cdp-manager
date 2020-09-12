@@ -553,13 +553,17 @@ contract PoolTest is BCdpManagerTestBase {
         members[2].doDeposit(pool, 900 ether * RAY);
         members[3].doDeposit(pool, 850 ether * RAY);
 
-        // open cdp with rate  = 1, that hit liquidation state
-        uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
+        // open cdp with rate  = 1, that will not hit liquidation state
+        uint cdp = openCdp(1 ether, 90 ether); // 1 eth, 900 dai
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
         (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
+        (,,, bool should,) = pool.topupInfo(cdp);
+        assertEq(uint(should ? 1 : 0), 1);
+
         assertEq(uint(dtab), 0);
-        assertEq(art, 110 ether);
+        assertEq(art, 90 ether);
         assertEq(uint(dart) * RAY, uint(dtab));
 
         members[0].doTopup(pool, cdp);
@@ -1199,6 +1203,3 @@ contract PoolTest is BCdpManagerTestBase {
     // topup - during bite
     // untop - sad (during bite), untop after partial bite
 }
-
-
-// test topup with 0 dart
