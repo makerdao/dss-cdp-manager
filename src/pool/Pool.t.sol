@@ -674,7 +674,9 @@ contract PoolTest is BCdpManagerTestBase {
         pool.setProfitParams(1, 100); // 1% goes to jar
         // for 10 ether we expect 10/130 * 1.1 = 11/130, from which 99% goes to member
         uint expectedEth = uint(99) * 11 ether / (130 * 100);
+        assert(! canKeepersBite(cdp));
         uint dink = members[0].doPoolBite(pool, cdp, 10 ether, expectedEth);
+        assert(! canKeepersBite(cdp));
         assertEq(uint(dink), expectedEth);
         assertEq(vat.gem("ETH", address(members[0])), expectedEth);
         assertEq(vat.gem("ETH", address(jar)), 11 ether / uint(130 * 100));
@@ -713,7 +715,9 @@ contract PoolTest is BCdpManagerTestBase {
         // for 26 ether we expect 26/130 * 1.1 = 28.6/130, from which 98% goes to member
         uint expectedEth = uint(98) * 286 ether / (130 * 100 * 10);
         for(uint i = 0 ; i < 4 ; i++) {
+            assert(! canKeepersBite(cdp));
             uint dink = members[i].doPoolBite(pool, cdp, 26 ether, expectedEth);
+            assert(! canKeepersBite(cdp));
             assertEq(uint(dink), expectedEth);
             assertEq(vat.gem("ETH", address(members[i])), expectedEth);
             (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
@@ -748,7 +752,9 @@ contract PoolTest is BCdpManagerTestBase {
         uint mInkBefore = vat.gem("ETH", address(m));
         uint jarInkBefore = vat.gem("ETH", address(jar));
 
+        assert(! canKeepersBite(cdp));
         m.doBite(pool, cdp, dart, expectedInk);
+        assert(! canKeepersBite(cdp));
 
         uint mInkAfter = vat.gem("ETH", address(m));
         uint jarInkAfter = vat.gem("ETH", address(jar));
@@ -997,7 +1003,9 @@ contract PoolTest is BCdpManagerTestBase {
         uint expectedEth = uint(98) * 286 ether * currRate / (100 * 1400 * RAY);
 
         for(uint i = 0 ; i < 4 ; i++) {
+            assert(! canKeepersBite(cdp));
             uint dink = members[i].doPoolBite(pool, cdp, 26 ether, expectedEth);
+            assert(! canKeepersBite(cdp));
             assertEq(uint(dink), expectedEth);
             assertEq(vat.gem("ETH", address(members[i])), expectedEth);
             (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
@@ -1114,10 +1122,15 @@ contract PoolTest is BCdpManagerTestBase {
         (, uint currRate,,,) = vat.ilks("ETH");
         uint expectedEth = uint(98) * amt * 11 * currRate / (100 * 1400 * RAY);
 
+        assert(! canKeepersBite(cdp));
         members[0].doPoolBite(pool, cdp, amt + expectedDust, expectedEth);
+        assert(! canKeepersBite(cdp));
         members[1].doPoolBite(pool, cdp, amt, expectedEth);
+        assert(! canKeepersBite(cdp));
         members[2].doPoolBite(pool, cdp, amt, expectedEth);
+        assert(! canKeepersBite(cdp));
         members[3].doPoolBite(pool, cdp, amt, expectedEth);
+        assert(! canKeepersBite(cdp));
 
         assertEq(pool.availBite(cdp, address(members[0])), 0);
         assertEq(pool.availBite(cdp, address(members[1])), 0);
@@ -1189,4 +1202,3 @@ contract PoolTest is BCdpManagerTestBase {
 
 
 // test topup with 0 dart
-// test that keeper cannot bite

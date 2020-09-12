@@ -242,9 +242,20 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         // bite
         address urn = manager.urns(cdp);
         (, uint art) = vat.urns("ETH", urn);
+        assert(! canKeepersBite(cdp));
         liquidator.doBite(pool, cdp, art/2, 0);
+        assert(! canKeepersBite(cdp));
 
         assert(LiquidationMachine(manager).bitten(cdp));
+    }
+
+    function canKeepersBite(uint cdp) internal view returns (bool) {
+        address urn = manager.urns(cdp);
+        bytes32 ilk = manager.ilks(cdp);
+        (uint ink, uint art) = vat.urns("ETH", urn);
+        (,uint currRate,uint currSpot,,) = vat.ilks(ilk);
+
+        return art * currRate > ink * currSpot;
     }
 
     function deployNewPoolContract() internal returns (Pool) {
