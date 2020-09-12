@@ -1128,7 +1128,58 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(vat.gem("ETH", address(jar)), expectedEth * 4 * 2 / 98 - 1);
     }
 
+    function testCalcCushionHigherSpot() public {
+        (uint dart, uint dtab) = pool.calcCushion("ETH", 1 ether, 10000000 ether, 1000 ether);
+        assertEq(dart, 0);
+        assertEq(dtab, 0);
+    }
 
+    function testCalcCushionLAttack() public {
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        (,, uint currSpot,,) = vat.ilks("ETH");
+        (uint dart, uint dtab) = pool.calcCushion("ETH", 1 ether, 10000000 ether, currSpot / 2);
+        assertEq(dart, 0);
+        assertEq(dtab, 0);
+    }
+
+    function testCalcNoCushion() public {
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        (,, uint currSpot,,) = vat.ilks("ETH");
+        (uint dart, uint dtab) = pool.calcCushion("ETH", 1 ether, 10 ether, currSpot / 2);
+        assertEq(dart, 0);
+        assertEq(dtab, 0);
+    }
+
+    function testCalcCushion() public {
+        pipETH.poke(bytes32(uint(300 * 1e18)));
+        spotter.poke("ETH");
+        (,, uint currSpot,,) = vat.ilks("ETH");
+
+        jug.drip("ETH");
+        this.file(address(jug), "ETH", "duty", RAY * 10000264755 / 10000000000);
+
+        forwardTime(1);
+        jug.drip("ETH");
+
+        osm.setH(30 * 60); // half an hour
+        osm.setZ(currTime - 1);
+        (uint dart, uint dtab) = pool.calcCushion("ETH", 1 ether, 100 ether, currSpot / 2); // spot is 150
+
+        forwardTime(60 * 60 - 1);
+        jug.drip("ETH");
+
+        (,uint currRate,,,) = vat.ilks("ETH");
+
+        // make sure cushion is enough
+        assert((100 ether - dart) * currRate * 15 / 10 < 1 ether * 150 ether * 1e9);
+
+        // make sure cushion is precise
+        assertEq(1 + radToWei((100 ether - dart + 1 ether) * currRate * 15 / 10), radToWei(1 ether * 150 ether * 1e9));
+
+        assertEq(radToWei(dtab), dart * 10000264755 / 10000000000);
+    }
 
     // tests to do
 
@@ -1136,7 +1187,6 @@ contract PoolTest is BCdpManagerTestBase {
     // untop - sad (during bite), untop after partial bite
 }
 
-// push to repo
-// test calc cushion when already in liquidation
+
 // test topup with 0 dart
 // test that keeper cannot bite

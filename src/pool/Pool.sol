@@ -172,7 +172,7 @@ contract Pool is Math, DSAuth, LibNote {
         winners = candidates;
     }
 
-      function calcCushion(bytes32 ilk, uint ink, uint art, uint nextSpot) public view returns(uint dart, uint dtab) {
+    function calcCushion(bytes32 ilk, uint ink, uint art, uint nextSpot) public view returns(uint dart, uint dtab) {
         (, uint prev, uint currSpot,,) = vat.ilks(ilk);
         if(currSpot <= nextSpot) return (0, 0);
 
@@ -192,16 +192,6 @@ contract Pool is Math, DSAuth, LibNote {
         dart = sub(art, maxArt);
         dart = add(1 ether, dart); // compensate for rounding errors
         dtab = mul(dart, prev); // provide a cushion according to current rate
-    }
-
-    function nextRate(bytes32 ilk) public view returns(uint rate) {
-        (, uint prev,,,) = vat.ilks(ilk);
-        uint next = add(uint(osm[ilk].zzz()), uint(osm[ilk].hop()));
-        (uint duty, uint rho) = jug.ilks(ilk);
-
-        require(next >= rho, "nextRate: next-in-the-past");
-
-        rate = rmul(rpow(add(jug.base(), duty), next - rho, RAY), prev);
     }
 
     function hypoTopAmount(uint cdp) internal view returns(uint dart, uint dtab, uint art, bool should) {
