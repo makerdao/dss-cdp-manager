@@ -101,6 +101,7 @@ contract PoolTest is BCdpManagerTestBase {
         hevm.warp(currTime);
     }
 
+    // 10% per hour = 1.00002648 = 100002648 / 100000000
     function setRateTo1p1() internal {
         uint duty;
         uint rho;
@@ -110,15 +111,15 @@ contract PoolTest is BCdpManagerTestBase {
         jug.drip("ETH");
         forwardTime(1);
         jug.drip("ETH");
-        this.file(address(jug), "ETH", "duty", RAY + RAY/10);
+        this.file(address(jug), "ETH", "duty", RAY * 100002648 / 100000000);
         (duty,) = jug.ilks("ETH");
-        assertEq(RAY + RAY / 10, duty);
+        assertEq(RAY * 100002648 / 100000000, duty);
         forwardTime(1);
         jug.drip("ETH");
         (, rho) = jug.ilks("ETH");
         assertEq(rho, now);
         (, uint rate,,,) = vat.ilks("ETH");
-        assertEq(RAY + RAY/10, rate);
+        assertEq(RAY * 100002648 / 100000000, rate);
     }
 
     function almostEqual(uint a, uint b) internal returns(bool) {
@@ -139,6 +140,10 @@ contract PoolTest is BCdpManagerTestBase {
             assertEq(a, b);
             assertEq(uint(1), 3);
         }
+    }
+
+    function withExtra(uint num) internal pure returns(uint) {
+        return num + 1 ether;
     }
 
     function testDeposit() public {
@@ -330,9 +335,9 @@ contract PoolTest is BCdpManagerTestBase {
         osm.setH(60 * 60);
         osm.setZ(currTime - 40*60);
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
-        assertEq(uint(dtab), 10 ether * RAY);
+        assertEq(uint(dtab), withExtra(10 ether) * RAY);
         assertEq(art, 110 ether);
         assertEq(uint(dart) * RAY, uint(dtab));
     }
@@ -346,15 +351,27 @@ contract PoolTest is BCdpManagerTestBase {
 
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
-        timeReset();
+        //timeReset();
         osm.setH(60 * 60);
-        osm.setZ(currTime - 40*60);
+        osm.setZ(currTime - 31 * 60);
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        assertEq(osm.zzz() + osm.hop(), now + 29 minutes);
 
-        assert(almostEqual(uint(dtab), 10 ether * RAY));
+        (, uint currentRate,,,) = vat.ilks("ETH");
+
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
+        // in 1:29 hours the debt will be 1.15194784 = 115194784 / 100000000
+        forwardTime((60 + 29) * 60);
+        jug.drip("ETH");
+        (, uint futureRate,,,) = vat.ilks("ETH");
+
+        uint maxArtBeforeLiquidation = uint(100 ether * RAY) / futureRate;
+
+        uint expectedDart = withExtra(100 ether - maxArtBeforeLiquidation);
+
+        assertEq(uint(dtab), expectedDart * currentRate);
+        assertEq(uint(dart), expectedDart);
         assertEq(art, 100 ether);
-        assert(almostEqual(uint(dart), 10 ether * uint(100) / 110));
     }
 
     function testTopAmountNoCushion() public {
@@ -367,11 +384,11 @@ contract PoolTest is BCdpManagerTestBase {
         osm.setH(60 * 60);
         osm.setZ(currTime - 40*60);
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
-        assertEq(dtab, -10 ether * int(RAY));
+        assertEq(dtab, 0);
         assertEq(art, 90 ether);
-        assertEq(dart * int(RAY), dtab);
+        assertEq(dart, 0);
     }
 
     function testTopAmountTooEarly() public {
@@ -383,7 +400,7 @@ contract PoolTest is BCdpManagerTestBase {
         osm.setH(60 * 60);
         osm.setZ(currTime - 10*60);
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
         assertEq(dtab, 0);
         assertEq(art, 90 ether);
@@ -399,7 +416,7 @@ contract PoolTest is BCdpManagerTestBase {
 
         pool.setIlk("ETH", false);
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
         assertEq(dtab, 0);
         assertEq(art, 90 ether);
@@ -414,7 +431,7 @@ contract PoolTest is BCdpManagerTestBase {
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
         osm.setValid(false);
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
         assertEq(dtab, 0);
         assertEq(art, 90 ether);
@@ -435,9 +452,9 @@ contract PoolTest is BCdpManagerTestBase {
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
-        assertEq(uint(dtab), 10 ether * RAY);
+        assertEq(uint(dtab), withExtra(10 ether) * RAY);
         assertEq(art, 110 ether);
         assertEq(uint(dart) * RAY, uint(dtab));
 
@@ -474,9 +491,9 @@ contract PoolTest is BCdpManagerTestBase {
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
-        assertEq(uint(dtab), 10 ether * RAY);
+        assertEq(uint(dtab), withExtra(10 ether) * RAY);
         assertEq(art, 110 ether);
         assertEq(uint(dart) * RAY, uint(dtab));
 
@@ -513,7 +530,7 @@ contract PoolTest is BCdpManagerTestBase {
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
         assertEq(uint(dtab), 10 ether * RAY);
         assertEq(art, 110 ether);
@@ -539,7 +556,7 @@ contract PoolTest is BCdpManagerTestBase {
         // open cdp with rate  = 1, that hit liquidation state
         uint cdp = openCdp(1 ether, 110 ether); // 1 eth, 110 dai
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
         assertEq(uint(dtab), 0);
         assertEq(art, 110 ether);
@@ -555,7 +572,7 @@ contract PoolTest is BCdpManagerTestBase {
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
         assertEq(uint(dtab), 10 ether * RAY);
         assertEq(art, 110 ether);
@@ -575,9 +592,9 @@ contract PoolTest is BCdpManagerTestBase {
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
 
-        assertEq(uint(dtab), 10 ether * RAY);
+        assertEq(uint(dtab), withExtra(10 ether) * RAY);
         assertEq(art, 110 ether);
         assertEq(uint(dart) * RAY, uint(dtab));
 
@@ -669,7 +686,7 @@ contract PoolTest is BCdpManagerTestBase {
 
         uint userRemainingCushion = 1 + cdpCushion / 4 - 10 * cdpCushion / 110; // 10/110 of the debt is being bitten
         uint userPoolBalance = radToWei(pool.rad(address(members[0])));
-        uint userExpectedPoolBalance = radToWei(990 ether * RAY - userRemainingCushion) - 1; // TODO - check why -1?
+        uint userExpectedPoolBalance = radToWei(990 ether * RAY - userRemainingCushion); // TODO - check why -1?
         assertEq(userPoolBalance, userExpectedPoolBalance);
     }
 
@@ -723,8 +740,9 @@ contract PoolTest is BCdpManagerTestBase {
         uint expectedInk = (dart * 1e18 * 110 / (price*100)) - expectedJar;
 
         if(rate) {
-            expectedJar = expectedJar * 11 / 10;
-            expectedInk = expectedInk * 11 / 10;
+            (, uint currentRate,,,) = vat.ilks("ETH");
+            expectedJar = expectedJar * currentRate / RAY;
+            expectedInk = expectedInk * currentRate / RAY;
         }
 
         uint mInkBefore = vat.gem("ETH", address(m));
@@ -735,8 +753,11 @@ contract PoolTest is BCdpManagerTestBase {
         uint mInkAfter = vat.gem("ETH", address(m));
         uint jarInkAfter = vat.gem("ETH", address(jar));
 
-        assert(mInkAfter - mInkBefore <= expectedInk + 1 && expectedInk <= 1 + mInkAfter - mInkBefore);
-        assert(jarInkAfter - jarInkBefore <= expectedJar + 1 && expectedJar <= 1 + jarInkAfter - jarInkBefore);
+        //assertEq(mInkAfter - mInkBefore,expectedInk);
+        //assertEq(jarInkAfter - jarInkBefore,expectedJar);
+
+        assert(mInkAfter - mInkBefore <= expectedInk + 2 && expectedInk <= 2 + mInkAfter - mInkBefore);
+        assert(jarInkAfter - jarInkBefore <= expectedJar + 2 && expectedJar <= 2 + jarInkAfter - jarInkBefore);
     }
 
     function testBiteInPartsThenUntop() public {
@@ -783,7 +804,7 @@ contract PoolTest is BCdpManagerTestBase {
         // 0 consumed 26 ether
         assertEq(radToWei(pool.rad(address(members[0]))), radToWei((1000 ether - 26 ether) * RAY - 1)-1);
         // 1 consumed 24 ether
-        assertEq(radToWei(pool.rad(address(members[1]))), radToWei((950 ether - 24 ether) * RAY - 1));
+        assertEq(radToWei(pool.rad(address(members[1]))), radToWei((950 ether - 24 ether) * RAY - 1)-1);
         // 2 consumed 17 ether
         assertEq(radToWei(pool.rad(address(members[2]))), radToWei((900 ether - 17 ether) * RAY - 1));
         // 3 consumed 0 ether
@@ -882,8 +903,14 @@ contract PoolTest is BCdpManagerTestBase {
 
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+        osm.setH(60 * 60);
+        osm.setZ(currTime - 31 minutes);
+
+        (, uint prevRate,,,) = vat.ilks("ETH");
 
         members[3].doTopup(pool, cdp);
+
+        forwardTime(30 minutes);
 
         pipETH.poke(bytes32(uint(150 * 1e18)));
         spotter.poke("ETH");
@@ -891,6 +918,12 @@ contract PoolTest is BCdpManagerTestBase {
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
         pool.setProfitParams(65, 1000); // 6.5% goes to jar
+
+        jug.drip("ETH");
+        (, uint currentRate,,,) = vat.ilks("ETH");
+
+        uint perMemberCushion = LiquidationMachine(manager).cushion(cdp) / 4;
+        uint perMemberCushionGain = (perMemberCushion * currentRate - perMemberCushion * prevRate) / RAY;
 
         doBite(members[1], pool, cdp, 15 ether, true);
         doBite(members[0], pool, cdp, 13 ether, true);
@@ -912,13 +945,13 @@ contract PoolTest is BCdpManagerTestBase {
 
         // check balances
         // 0 consumed 26 ether
-        assertEq(radToWei(pool.rad(address(members[0]))), radToWei((1000 ether - 26 ether * 11/10) * RAY - 1)-1);
+        assertEq(radToWei(pool.rad(address(members[0]))), 1000 ether + perMemberCushionGain - 26 ether * currentRate / RAY - 2); //radToWei((1000 ether - 26 ether * 11/10) * RAY - 1)-1);
         // 1 consumed 24 ether
-        assertEq(radToWei(pool.rad(address(members[1]))), radToWei((950 ether - 24 ether * 11/10) * RAY - 1));
+        assertEq(radToWei(pool.rad(address(members[1]))), 950 ether + perMemberCushionGain * 24 / 26 - 24 ether * currentRate / RAY - 1);
         // 2 consumed 17 ether
-        assertEq(radToWei(pool.rad(address(members[2]))), radToWei((900 ether - 17 ether * 11/10) * RAY - 1));
+        assertEq(radToWei(pool.rad(address(members[2]))), 900 ether + perMemberCushionGain * 17 / 26 - 17 ether * currentRate / RAY);
         // 3 consumed 0 ether
-        assertEq(radToWei(pool.rad(address(members[3]))), radToWei((850 ether - 0 ether * 11/10) * RAY - 1));
+        assertEq(radToWei(pool.rad(address(members[3]))), 850 ether - 1);
 
         // check that cdp was reset
         (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
@@ -936,22 +969,33 @@ contract PoolTest is BCdpManagerTestBase {
 
         uint cdp = openCdp(1 ether, 104 ether); // 1 eth, 110 dai
 
-        setRateTo1p1(); // debt is 10% up
+        setRateTo1p1(); // debt is 10% up per hour
 
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
-
+        osm.setH(60 * 60);
+        osm.setZ(currTime - 31 minutes);
+        (, uint prevRate,,,) = vat.ilks("ETH");
         members[0].doTopup(pool, cdp);
+
+        forwardTime(31 minutes);
 
         pipETH.poke(bytes32(uint(150 * 1e18)));
         spotter.poke("ETH");
         realPrice.set("ETH", 140 * 1e18);
+        jug.drip("ETH");
+        (, uint currRate,,,) = vat.ilks("ETH");
+
+        uint perMemberCushion = LiquidationMachine(manager).cushion(cdp) / 4;
+        uint perMemberCushionGain = (perMemberCushion * currRate - perMemberCushion * prevRate) / RAY;
 
         // uint ethBefore = vat.gem("ETH", address(members[0]));
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
         pool.setProfitParams(2, 100); // 2% goes to jar
-        // for 26 ether we expect 26/140 * 1.1 * 1.1 = 28.6/140, from which 98% goes to member
-        uint expectedEth = uint(98) * 286 ether * 11/ (140 * 100 * 10 * 10);
+
+        // for 26 ether we expect 26/140 * rate * 1.1 = 28.6/140 * rate, from which 98% goes to member
+        uint expectedEth = uint(98) * 286 ether * currRate / (100 * 1400 * RAY);
+
         for(uint i = 0 ; i < 4 ; i++) {
             uint dink = members[i].doPoolBite(pool, cdp, 26 ether, expectedEth);
             assertEq(uint(dink), expectedEth);
@@ -961,11 +1005,11 @@ contract PoolTest is BCdpManagerTestBase {
             cdpCushion;//shh
             winners;//shh
             assertEq(bite[i], 26 ether);
-            assertAlmostEq(pool.rad(address(members[i]))/RAY, ((1000 ether - 50 ether * i - 26 ether * uint(11)/10) * RAY - 1)/RAY);
+            assertAlmostEq(pool.rad(address(members[i]))/RAY, 1000 ether - 50 ether * i + perMemberCushionGain - (26 ether * currRate)/RAY);
         }
 
-        // jar should get 2% from 104 * 1.1 * 1.1 / 140
-        assertEq(vat.gem("ETH", address(jar)), (104 ether * uint(11) * 11/ 1400)/500 - 1);
+        // jar should get 2%
+        assertEq(vat.gem("ETH", address(jar)), expectedEth * 4 * 2 / 98 - 1);
     }
 
     function testAvailBiteWithDust() public {
@@ -979,6 +1023,7 @@ contract PoolTest is BCdpManagerTestBase {
         uint daiAmt = 104 ether + 111111111111111111; // 104.11 dai
         uint cdp = openCdp(1 ether, daiAmt); // 1 eth
 
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
         members[3].doTopup(pool, cdp);
 
         uint expectedAvailBite = daiAmt / members.length;
@@ -1003,6 +1048,9 @@ contract PoolTest is BCdpManagerTestBase {
         uint daiAmt = 104 ether;
         uint cdp = openCdp(1 ether, daiAmt); // 1 eth, 104 dai
 
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
         members[3].doTopup(pool, cdp);
 
         uint expectedAvailBite = daiAmt / members.length;
@@ -1023,22 +1071,25 @@ contract PoolTest is BCdpManagerTestBase {
         members[1].doDeposit(pool, 950 ether * RAY);
         members[2].doDeposit(pool, 900 ether * RAY);
         members[3].doDeposit(pool, 850 ether * RAY);
-        
+
         uint extraDust = 111111111111111111;
         uint _1p1 = WAD + WAD/10;
         uint daiAmt = 104 ether + extraDust; // 104.11 dai
         uint cdp = openCdp(1 ether, daiAmt); // 1 eth
 
-        setRateTo1p1(); // debt is 10% up
+        setRateTo1p1(); // debt is 10% up per hour
 
         // set next price to 150, which means a cushion of 10 dai is expected
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+        osm.setH(60 * 60);
+        osm.setZ(currTime - 31 minutes);
 
         members[0].doTopup(pool, cdp);
 
         pipETH.poke(bytes32(uint(150 * 1e18)));
         spotter.poke("ETH");
         realPrice.set("ETH", 140 * 1e18);
+        jug.drip("ETH");
 
         // uint ethBefore = vat.gem("ETH", address(members[0]));
         this.file(address(cat), "ETH", "chop", _1p1);
@@ -1053,9 +1104,15 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(pool.availBite(cdp, address(members[2])), expectedAvailBite);
         assertEq(pool.availBite(cdp, address(members[3])), expectedAvailBite);
 
-        // for 26 ether we expect 26/140 * 1.1 = 28.6/140, from which 98% goes to member
-        uint expectedEth = uint(98) * 286 ether * 11/ (140 * 100 * 10 * 10);
         uint amt = daiAmt / members.length;
+
+        this.file(address(cat), "ETH", "chop", WAD + WAD/10);
+        pool.setProfitParams(2, 100); // 2% goes to jar
+
+        // for 26 ether we expect 26/140 * rate * 1.1 = 28.6/140 * rate, from which 98% goes to member
+        jug.drip("ETH");
+        (, uint currRate,,,) = vat.ilks("ETH");
+        uint expectedEth = uint(98) * amt * 11 * currRate / (100 * 1400 * RAY);
 
         members[0].doPoolBite(pool, cdp, amt + expectedDust, expectedEth);
         members[1].doPoolBite(pool, cdp, amt, expectedEth);
@@ -1068,7 +1125,7 @@ contract PoolTest is BCdpManagerTestBase {
         assertEq(pool.availBite(cdp, address(members[3])), 0);
 
         // jar should get 2% from 104 * 1.1 * 1.1 / 140
-        almostEqual(vat.gem("ETH", address(jar)), (daiAmt * uint(11) * 11/ 1400)/500 - 1);
+        assertEq(vat.gem("ETH", address(jar)), expectedEth * 4 * 2 / 98 - 1);
     }
 
 
@@ -1078,3 +1135,8 @@ contract PoolTest is BCdpManagerTestBase {
     // topup - during bite
     // untop - sad (during bite), untop after partial bite
 }
+
+// push to repo
+// test calc cushion when already in liquidation
+// test topup with 0 dart
+// test that keeper cannot bite
