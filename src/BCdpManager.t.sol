@@ -133,6 +133,8 @@ contract FakeOSM {
     }
 
     function zzz() external view returns(uint64) {
+        if(z == 0) return uint64((now / 1 hours) * 1 hours);
+
         return uint64(z);
     }
 
@@ -176,7 +178,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         liquidator = new FakeUser();
         osm = new FakeOSM();
 
-        pool = new Pool(address(vat), address(jar), address(spotter));
+        pool = new Pool(address(vat), address(jar), address(spotter), address(jug));
         score = new BCdpScore();
         manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice), address(score));
         score.setManager(address(manager));        
@@ -214,10 +216,10 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         liquidator.doDeposit(pool, 51 ether * RAY);
 
         osm.setPrice(70 * 1e18); // 1 ETH = 50 DAI
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
         art; //shh
-        assertEq(uint(dtab) / RAY, 3333333333333333334 /* 3.333 DAI */);
-        assertEq(uint(dart), 3333333333333333334 /* 3.333 DAI */);
+        assertEq(uint(dtab) / RAY, 1 ether + 3333333333333333334 /* 3.333 DAI */);
+        assertEq(uint(dart), 1 ether + 3333333333333333334 /* 3.333 DAI */);
 
         liquidator.doTopup(pool, cdp);
 
@@ -240,9 +242,20 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         // bite
         address urn = manager.urns(cdp);
         (, uint art) = vat.urns("ETH", urn);
+        assert(! canKeepersBite(cdp));
         liquidator.doBite(pool, cdp, art/2, 0);
+        assert(! canKeepersBite(cdp));
 
         assert(LiquidationMachine(manager).bitten(cdp));
+    }
+
+    function canKeepersBite(uint cdp) internal view returns (bool) {
+        address urn = manager.urns(cdp);
+        bytes32 ilk = manager.ilks(cdp);
+        (uint ink, uint art) = vat.urns("ETH", urn);
+        (,uint currRate,uint currSpot,,) = vat.ilks(ilk);
+
+        return art * currRate > ink * currSpot;
     }
 
     function deployNewPoolContract() internal returns (Pool) {
@@ -251,7 +264,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     }
 
     function deployNewPoolContract(FakeUser jar_) internal returns (Pool) {
-        Pool _pool = new Pool(address(vat), address(jar_), address(spotter));
+        Pool _pool = new Pool(address(vat), address(jar_), address(spotter), address(jug));
         _pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
@@ -316,9 +329,9 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         //(, uint artPre) = vat.urns("ETH", urn);
 
         osm.setPrice(70 * 1e18); // 1 ETH = 50 DAI
-        (int dart, int dtab, uint art) = pool.topAmount(cdp);
-        assertEq(uint(dtab) / RAY, 3333333333333333334 /* 3.333 DAI */);
-        assertEq(uint(dart), 3333333333333333334 /* 3.333 DAI */);
+        (uint dart, uint dtab, uint art) = pool.topAmount(cdp);
+        assertEq(uint(dtab) / RAY, 1 ether + 3333333333333333334 /* 3.333 DAI */);
+        assertEq(uint(dart), 1 ether + 3333333333333333334 /* 3.333 DAI */);
 
         liquidator.doTopup(pool, cdp);
 

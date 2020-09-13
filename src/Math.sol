@@ -36,6 +36,29 @@ contract Math {
     function rmul(uint x, uint y) internal pure returns (uint z) {
         z = mul(x, y) / RAY;
     }
+    function rpow(uint x, uint n, uint b) internal pure returns (uint z) {
+      assembly {
+        switch x case 0 {switch n case 0 {z := b} default {z := 0}}
+        default {
+          switch mod(n, 2) case 0 { z := b } default { z := x }
+          let half := div(b, 2)  // for rounding.
+          for { n := div(n, 2) } n { n := div(n,2) } {
+            let xx := mul(x, x)
+            if iszero(eq(div(xx, x), x)) { revert(0,0) }
+            let xxRound := add(xx, half)
+            if lt(xxRound, xx) { revert(0,0) }
+            x := div(xxRound, b)
+            if mod(n,2) {
+              let zx := mul(z, x)
+              if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
+              let zxRound := add(zx, half)
+              if lt(zxRound, zx) { revert(0,0) }
+              z := div(zxRound, b)
+            }
+          }
+        }
+      }
+    }
 
     function toInt(uint x) internal pure returns (int y) {
         y = int(x);

@@ -22,6 +22,17 @@ contract FakeCat {
     }
 }
 
+contract FakeJug {
+    function ilks(bytes32 ilk) public view returns(uint duty, uint rho) {
+        duty = 1e27;
+        rho = now;
+        ilk; // shhhh
+    }
+    function base() public pure returns(uint) {
+        return 0;
+    }
+}
+
 contract FakeEnd {
     FakeCat public cat;
     constructor() public {
@@ -85,7 +96,7 @@ contract VatDeployer {
 
         spotter.poke("ETH-A");
 
-        pool = new Pool(address(vat), address(0x12345678), address(spotter));
+        pool = new Pool(address(vat), address(0x12345678), address(spotter), address(new FakeJug()));
         score = BCdpScore(address(new FakeScore())); //new BCdpScore();
         man = new BCdpManager(address(vat), address(end), address(pool), address(pipETH), address(score));
         //score.setManager(address(man));
@@ -200,7 +211,7 @@ contract DeploymentTest is BCdpManagerTestBase {
         assertEq(ink, 2 ether);
         assertEq(art, 30 ether);
 
-        int dartX;
+        uint dartX;
         (dartX,,) = deployer.pool().topAmount(cdp1);
         assert(dartX > 0);
         (dartX,,) = deployer.pool().topAmount(cdp2);

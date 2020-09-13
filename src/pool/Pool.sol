@@ -14,6 +14,11 @@ contract VatLike {
     function dai(address usr) external view returns(uint);
 }
 
+contract JugLike {
+    function ilks(bytes32 ilk) public view returns(uint duty, uint rho);
+    function base() public view returns(uint);
+}
+
 contract PriceFeedLike {
     function peek(bytes32 ilk) external view returns(bytes32, bool);
 }
@@ -40,6 +45,7 @@ contract Pool is Math, DSAuth, LibNote {
     VatLike                   public vat;
     BCdpManager               public man;
     SpotLike                  public spot;
+    JugLike                   public jug;
     address                   public jar;
 
     mapping(uint => CdpData)  internal cdpData;
@@ -65,8 +71,9 @@ contract Pool is Math, DSAuth, LibNote {
         _;
     }
 
-    constructor(address vat_, address jar_, address spot_) public {
+    constructor(address vat_, address jar_, address spot_, address jug_) public {
         spot = SpotLike(spot_);
+        jug = JugLike(jug_);
         vat = VatLike(vat_);
         jar = jar_;
     }
@@ -103,6 +110,11 @@ contract Pool is Math, DSAuth, LibNote {
         require(num < den, "invalid-profit-params");
         shrn = num;
         shrd = den;
+    }
+
+    function emergencyExecute(address target, bytes calldata data) external auth note {
+        (bool succ,) = target.call(data);
+        require(succ, "emergencyExecute: failed");
     }
 
     function deposit(uint radVal) external onlyMember note {
@@ -165,7 +177,33 @@ contract Pool is Math, DSAuth, LibNote {
         winners = candidates;
     }
 
-    function hypoTopAmount(uint cdp) internal view returns(int dart, int dtab, uint art, bool should) {
+    function calcCushion(bytes32 ilk, uint ink, uint art, uint nextSpot) public view returns(uint dart, uint dtab) {
+        (, uint prev, uint currSpot,,) = vat.ilks(ilk);
+        if(currSpot <= nextSpot) return (0, 0);
+
+        uint hop = uint(osm[ilk].hop());
+        uint next = add(uint(osm[ilk].zzz()), hop);
+        (uint duty, uint rho) = jug.ilks(ilk);
+
+        require(next >= rho, "calcCushion: next-in-the-past");
+
+        // note that makerdao governance could change jug.base() before the actual
+        // liquidation happens. but there is 48 hours time lock on makerdao votes
+        // so liquidators should withdraw their funds if they think such event will
+        // happen
+        uint nextRate = rmul(rpow(add(jug.base(), duty), next - rho, RAY), prev);
+        uint nextnextRate = rmul(rpow(add(jug.base(), duty), hop, RAY), nextRate);
+
+        if(mul(nextRate, art) > mul(ink, currSpot)) return (0, 0); // prevent L attack
+        if(mul(nextRate, art) <= mul(ink, nextSpot)) return (0, 0);
+
+        uint maxArt = mul(ink, nextSpot) / nextnextRate;
+        dart = sub(art, maxArt);
+        dart = add(1 ether, dart); // compensate for rounding errors
+        dtab = mul(dart, prev); // provide a cushion according to current rate
+    }
+
+    function hypoTopAmount(uint cdp) internal view returns(uint dart, uint dtab, uint art, bool should) {
         address urn = man.urns(cdp);
         bytes32 ilk = man.ilks(cdp);
 
@@ -182,22 +220,15 @@ contract Pool is Math, DSAuth, LibNote {
         // too early to topup
         should = (now >= add(uint(osm[ilk].zzz()), uint(osm[ilk].hop())/2));
 
-        (, uint rate,,,) = vat.ilks(ilk);
-
         (, uint mat) = spot.ilks(ilk);
         uint par = spot.par();
 
         uint nextVatSpot = rdiv(rdiv(mul(uint(peep), uint(10 ** 9)), par), mat);
 
-        // rate * art <= spot * ink
-        // art <= spot * ink / rate
-        uint maximumArt = mul(nextVatSpot, ink) / rate;
-
-        dart = (int(art) - int(maximumArt));
-        dtab = mul(rate, dart);
+        (dart, dtab) = calcCushion(ilk, ink, art, nextVatSpot);
     }
 
-    function topAmount(uint cdp) public view returns(int dart, int dtab, uint art) {
+    function topAmount(uint cdp) public view returns(uint dart, uint dtab, uint art) {
         bool should;
         (dart, dtab, art, should) = hypoTopAmount(cdp);
         if(! should) return (0, 0, art);
@@ -236,7 +267,7 @@ contract Pool is Math, DSAuth, LibNote {
         cdpData[cdp].bite = new uint[](winners.length);
     }
 
-    function topupInfo(uint cdp) public view returns(int dart, int dtab, uint art, bool should, address[] memory winners) {
+    function topupInfo(uint cdp) public view returns(uint dart, uint dtab, uint art, bool should, address[] memory winners) {
         (dart, dtab, art, should) = hypoTopAmount(cdp);
         if(art < minArt) {
             winners = chooseMember(cdp, uint(dtab), members);
@@ -248,9 +279,10 @@ contract Pool is Math, DSAuth, LibNote {
         require(man.cushion(cdp) == 0, "topup: already-topped");
         require(! man.bitten(cdp), "topup: already-bitten");
 
-        (int dart, int dtab, uint art, bool should, address[] memory winners) = topupInfo(cdp);
+        (uint dart, uint dtab, uint art, bool should, address[] memory winners) = topupInfo(cdp);
 
         require(should, "topup: no-need");
+        require(dart > 0, "topup: 0-dart");
 
         resetCdp(cdp);
 
