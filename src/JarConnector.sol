@@ -41,19 +41,19 @@ contract JarConnector {
     // callable by anyone
     function spin() public {
         if(round == 0) {
+            round++;
             score.spin();
             start[0] = score.start();
-            round++;
         }
         if(round == 1 && now > end[0]) {
+            round++;
             score.spin();
             start[1] = score.start();
-            round++;
         }
         if(round == 2 && now > end[1]) {
+            round++;        
             // score is not counted anymore, and this must be followed by contract upgrade
             score.spin();
-            round++;
         }
     }
 

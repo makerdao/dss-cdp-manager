@@ -6,7 +6,7 @@ contract BCdpScoreLike {
 
 contract BCdpScoreConnector {
     BCdpScoreLike public score;
-    mapping(uint => uint) public out;
+    mapping(uint => uint) public left;
 
     constructor(BCdpScoreLike score_) public {
         score = score_;
@@ -17,10 +17,10 @@ contract BCdpScoreConnector {
     }
 
     function updateScore(uint cdp, bytes32 ilk, int dink, int dart, uint time) internal {
-        if(out[cdp] == 0) score.updateScore(cdp, ilk, dink, dart, time);
+        if(left[cdp] == 0) score.updateScore(cdp, ilk, dink, dart, time);
     }
 
     function quitScore(uint cdp) internal {
-        if(out[cdp] == 0) out[cdp] = now;
+        if(left[cdp] == 0) left[cdp] = now;
     }
 }
