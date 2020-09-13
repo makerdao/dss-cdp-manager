@@ -71,9 +71,9 @@ contract Pool is Math, DSAuth, LibNote {
         _;
     }
 
-    constructor(address vat_, address jar_, address spot_, address _jug) public {
+    constructor(address vat_, address jar_, address spot_, address jug_) public {
         spot = SpotLike(spot_);
-        jug = JugLike(_jug);
+        jug = JugLike(jug_);
         vat = VatLike(vat_);
         jar = jar_;
     }
@@ -187,6 +187,10 @@ contract Pool is Math, DSAuth, LibNote {
 
         require(next >= rho, "calcCushion: next-in-the-past");
 
+        // note that makerdao governance could change jug.base() before the actual
+        // liquidation happens. but there is 48 hours time lock on makerdao votes
+        // so liquidators should withdraw their funds if they think such event will
+        // happen
         uint nextRate = rmul(rpow(add(jug.base(), duty), next - rho, RAY), prev);
         uint nextnextRate = rmul(rpow(add(jug.base(), duty), hop, RAY), nextRate);
 
