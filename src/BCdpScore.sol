@@ -39,19 +39,15 @@ contract BCdpScore is ScoringMachine {
         bytes32 asset = artAsset(ilk);
 
         uint left = BCdpScoreConnector(address(manager)).left(maliciousCdp);
-        uint time = 0;
-        int dart = 0;
+
+        realArt = left > 0 ? 0 : realArt;
+        uint startTime = left > 0 ? left : now;
 
         uint calculatedArt = getCurrentBalance(maliciousUser, asset);
-        if(left > 0) {
-            time = left > start ? left : start;
-            dart = -int(calculatedArt);
-        } else {
-            require(realArt < calculatedArt, "slashScore-cdp-is-ok");
-            dart = int(realArt) - int(calculatedArt);
-            time = sub(now, 30 days);
-            if(time < start) time = start;
-        }
+        require(realArt < calculatedArt, "slashScore-cdp-is-ok");
+        int dart = int(realArt) - int(calculatedArt);
+        uint time = sub(startTime, 30 days);
+        if(time < start) time = start;
         
         updateScore(maliciousUser, asset, dart, time);
     }

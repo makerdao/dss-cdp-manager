@@ -135,7 +135,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 10 ether);
     }
 
-    function testQuitB() public {
+    function testSlashScoreForQuitB() public {
         timeReset();
 
         score.spin();
@@ -169,11 +169,11 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), 300 ether);
         assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), 300 ether);
 
-        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 10 ether);
-        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 10 ether);
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 0);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 0);
     }
 
-    function testQuitBInNextSpin() public {
+    function testSlashScoreForQuitBInNextSpin() public {
         timeReset();
 
         score.spin();
