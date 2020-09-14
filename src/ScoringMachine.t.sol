@@ -1,7 +1,7 @@
 pragma solidity ^0.5.12;
 
 import { BCdpManagerTestBase, Hevm, FakeUser } from "./BCdpManager.t.sol";
-import { BCdpScore } from "./BCdpScore.sol";
+import { BCdpFullScore } from "./BCdpFullScore.sol";
 import { BCdpScoreConnector } from "./BCdpScoreConnector.sol";
 import { LiquidationMachine } from "./LiquidationMachine.sol";
 import { ScoringMachine } from "../user-rating/contracts/score/ScoringMachine.sol";
@@ -10,7 +10,7 @@ import { ScoringMachine } from "../user-rating/contracts/score/ScoringMachine.so
 contract ScoringMachineTest is BCdpManagerTestBase {
     uint currTime;
 
-    BCdpScore score;
+    BCdpFullScore score;
     MockScoringMachine sm;
 
     function setUp() public {
@@ -19,7 +19,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         currTime = now;
         hevm.warp(currTime);
 
-        score = BCdpScore(address(BCdpScoreConnector(manager).score()));
+        score = BCdpFullScore(address(BCdpScoreConnector(manager).score()));
         sm = new MockScoringMachine();
     }
 
@@ -133,6 +133,116 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
         assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 10 ether);
         assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 10 ether);
+    }
+
+    function testSlashScoreForQuitB() public {
+        timeReset();
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether, 1 ether);
+        
+        forwardTime(10);
+        vat.hope(address(manager));
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), 100 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), 100 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 10 ether);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 10 ether);
+
+        manager.quitB(cdp);
+
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), 200 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), 200 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 20 ether);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 20 ether);
+
+        FakeUser user = new FakeUser();
+        user.doSlashScore(score, cdp);
+        
+        forwardTime(10);
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), 300 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), 300 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 0);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 0);
+    }
+
+    function testSlashScoreForQuitBInNextSpin() public {
+        timeReset();
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether, 1 ether);
+        
+        forwardTime(10);
+        vat.hope(address(manager));
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), 100 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), 100 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 10 ether);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 10 ether);        
+
+        forwardTime(10);
+
+        manager.quitB(cdp);
+
+        // next spin
+        score.spin();
+        forwardTime(10);
+        FakeUser user = new FakeUser();
+        user.doSlashScore(score, cdp);
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), 100 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), 100 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 0);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 0);
+    }
+
+    function testSlashScoreForQuitBOfOneMonth() public {
+        timeReset();
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether, 1 ether);
+
+        vat.hope(address(manager));
+
+        forwardTime(31 days);
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), 31 days * 10 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), 31 days * 10 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 31 days * 1 ether);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 31 days * 1 ether);        
+
+        forwardTime(4 days);
+
+        manager.quitB(cdp);
+
+        uint extraDays = 5 days;
+        forwardTime(extraDays);
+
+        FakeUser user = new FakeUser();
+        user.doSlashScore(score, cdp);
+        
+        uint totalDaysForInk = 31 days + 4 days + extraDays;
+        uint totalDaysForArt = 31 days + 4 days;
+        uint daysShashed = 30 days;
+        uint daysRemains = totalDaysForArt - daysShashed;
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), totalDaysForInk * 10 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), totalDaysForInk * 10 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), daysRemains * 1 ether);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), daysRemains * 1 ether);        
     }
 
     function testEnter() public {
