@@ -206,6 +206,45 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 0);
     }
 
+    function testSlashScoreForQuitBOfOneMonth() public {
+        timeReset();
+
+        score.spin();
+
+        uint cdp = openCdp(10 ether, 1 ether);
+
+        vat.hope(address(manager));
+
+        forwardTime(31 days);
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), 31 days * 10 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), 31 days * 10 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), 31 days * 1 ether);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), 31 days * 1 ether);        
+
+        forwardTime(4 days);
+
+        manager.quitB(cdp);
+
+        uint extraDays = 5 days;
+        forwardTime(extraDays);
+
+        FakeUser user = new FakeUser();
+        user.doSlashScore(score, cdp);
+        
+        uint totalDaysForInk = 31 days + 4 days + extraDays;
+        uint totalDaysForArt = 31 days + 4 days;
+        uint daysShashed = 30 days;
+        uint daysRemains = totalDaysForArt - daysShashed;
+
+        assertEq(score.getInkScore(cdp, "ETH", currTime, score.start()), totalDaysForInk * 10 ether);
+        assertEq(score.getInkGlobalScore("ETH", currTime, score.start()), totalDaysForInk * 10 ether);
+
+        assertEq(score.getArtScore(cdp, "ETH", currTime, score.start()), daysRemains * 1 ether);
+        assertEq(score.getArtGlobalScore("ETH", currTime, score.start()), daysRemains * 1 ether);        
+    }
+
     function testEnter() public {
         weth.mint(10 ether);
         weth.approve(address(ethJoin), 10 ether);
