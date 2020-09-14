@@ -5,7 +5,7 @@ import { GetCdps } from "./GetCdps.sol";
 import { BCdpManager } from "./BCdpManager.sol";
 import { LiquidationMachine } from "./LiquidationMachine.sol";
 import { Pool } from "./pool/Pool.sol";
-import { BCdpScoreV2 } from "./BCdpScoreV2.sol";
+import { BCdpFullScore } from "./BCdpFullScore.sol";
 import { BCdpScoreLike } from "./BCdpScoreConnector.sol";
 
 contract Hevm {
@@ -159,7 +159,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeUser liquidator;
     FakePriceFeed realPrice;
     Pool pool;
-    BCdpScoreV2 score;
+    BCdpFullScore score;
     FakeUser jar;
     Hevm hevm;
     FakeOSM osm;
@@ -179,7 +179,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         osm = new FakeOSM();
 
         pool = new Pool(address(vat), address(jar), address(spotter), address(jug));
-        score = new BCdpScoreV2();
+        score = new BCdpFullScore();
         manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice), address(score));
         score.setManager(address(manager));        
         pool.setCdpManager(manager);
@@ -276,8 +276,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         return _pool;
     }
 
-    function deployNewScoreContract() internal returns (BCdpScoreV2) {
-        BCdpScoreV2 _score = new BCdpScoreV2();
+    function deployNewScoreContract() internal returns (BCdpFullScore) {
+        BCdpFullScore _score = new BCdpFullScore();
         _score.spin();
         _score.setManager(address(manager));
         return _score;
