@@ -104,6 +104,13 @@ contract FakeUser {
     ) public {
         manager.setScoreContract(score);
     }
+
+    function doSlashScore(
+        BCdpFullScore score,
+        uint cdp
+    ) public {
+        score.slashScore(cdp);
+    }
 }
 
 contract FakePriceFeed {

@@ -47,7 +47,7 @@ contract BCdpScore is ScoringMachine {
 
         uint calculatedArt = getCurrentBalance(maliciousUser, asset);
         if(left > 0) {
-            if(left > start) time = left;
+            time = left > start ? left : start;
             dart = -int(calculatedArt);
         } else {
             require(realArt < calculatedArt, "slashScore-cdp-is-ok");
