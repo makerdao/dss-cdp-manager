@@ -19,10 +19,6 @@ contract BCdpScore is ScoringMachine {
         return keccak256(abi.encodePacked("BCdpScore", cdp));
     }
 
-    function inkAsset(bytes32 ilk) public pure returns(bytes32) {
-        return keccak256(abi.encodePacked("BCdpScore", "ink", ilk));
-    }
-
     function artAsset(bytes32 ilk) public pure returns(bytes32) {
         return keccak256(abi.encodePacked("BCdpScore", "art", ilk));
     }
@@ -32,7 +28,7 @@ contract BCdpScore is ScoringMachine {
     }
 
     function updateScore(uint cdp, bytes32 ilk, int dink, int dart, uint time) external onlyManager {
-        updateScore(user(cdp), inkAsset(ilk), dink, time);
+        dink; // shh compiler warning
         updateScore(user(cdp), artAsset(ilk), dart, time);
     }
 
@@ -53,14 +49,6 @@ contract BCdpScore is ScoringMachine {
         if(time < start) time = start;
 
         updateScore(maliciousUser, asset, dart, time);
-    }
-
-    function getInkScore(uint cdp, bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
-        return getScore(user(cdp), inkAsset(ilk), time, spinStart, 0);
-    }
-
-    function getInkGlobalScore(bytes32 ilk, uint time, uint spinStart) public view returns(uint) {
-        return getScore(GLOBAL_USER, inkAsset(ilk), time, spinStart, 0);
     }
 
     function getArtScore(uint cdp, bytes32 ilk, uint time, uint spinStart) public view returns(uint) {

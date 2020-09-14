@@ -1,7 +1,7 @@
 pragma solidity ^0.5.12;
 
 import { BCdpManagerTestBase, Hevm, FakeUser } from "./BCdpManager.t.sol";
-import { BCdpScore } from "./BCdpScore.sol";
+import { BCdpScoreV2 } from "./BCdpScoreV2.sol";
 import { BCdpScoreConnector } from "./BCdpScoreConnector.sol";
 import { LiquidationMachine } from "./LiquidationMachine.sol";
 import { ScoringMachine } from "../user-rating/contracts/score/ScoringMachine.sol";
@@ -10,7 +10,7 @@ import { ScoringMachine } from "../user-rating/contracts/score/ScoringMachine.so
 contract ScoringMachineTest is BCdpManagerTestBase {
     uint currTime;
 
-    BCdpScore score;
+    BCdpScoreV2 score;
     MockScoringMachine sm;
 
     function setUp() public {
@@ -19,7 +19,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         currTime = now;
         hevm.warp(currTime);
 
-        score = BCdpScore(address(BCdpScoreConnector(manager).score()));
+        score = BCdpScoreV2(address(BCdpScoreConnector(manager).score()));
         sm = new MockScoringMachine();
     }
 
