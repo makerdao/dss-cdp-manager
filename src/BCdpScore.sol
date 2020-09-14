@@ -2,10 +2,7 @@ pragma solidity ^0.5.12;
 
 import { ScoringMachine } from "../user-rating/contracts/score/ScoringMachine.sol";
 import { BCdpManager } from "./BCdpManager.sol";
-
-contract ScoreConnectorLike {
-    function left(uint cdp) public returns (uint);
-}
+import { BCdpScoreConnector } from "./BCdpScoreConnector.sol";
 
 contract BCdpScore is ScoringMachine {
     BCdpManager public manager;
@@ -41,7 +38,7 @@ contract BCdpScore is ScoringMachine {
         bytes32 maliciousUser = user(maliciousCdp);
         bytes32 asset = artAsset(ilk);
 
-        uint left = ScoreConnectorLike(address(manager)).left(maliciousCdp);
+        uint left = BCdpScoreConnector(address(manager)).left(maliciousCdp);
         uint time = 0;
         int dart = 0;
 
