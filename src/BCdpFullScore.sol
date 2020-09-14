@@ -2,6 +2,10 @@ pragma solidity ^0.5.12;
 
 import { BCdpScore } from "./BCdpScore.sol";
 
+contract ScoreConnectorLike {
+    function left(uint cdp) public returns (uint);
+}
+
 contract BCdpFullScore is BCdpScore {
 
     function inkAsset(bytes32 ilk) public pure returns(bytes32) {
@@ -27,13 +31,21 @@ contract BCdpFullScore is BCdpScore {
         bytes32 maliciousUser = user(maliciousCdp);
         bytes32 asset = artAsset(ilk);
 
+        uint left = ScoreConnectorLike(address(manager)).left(maliciousCdp);
+        uint time = 0;
+        int dart = 0;
+
         uint calculatedArt = getCurrentBalance(maliciousUser, asset);
-        require(realArt < calculatedArt, "slashScore-cdp-is-ok");
-        int dart = int(realArt) - int(calculatedArt);
-
-        uint time = sub(now, 30 days);
-        if(time < start) time = start;
-
+        if(left > 0) {
+            if(left > start) time = left;
+            dart = -int(calculatedArt);
+        } else {
+            require(realArt < calculatedArt, "slashScore-cdp-is-ok");
+            dart = int(realArt) - int(calculatedArt);
+            time = sub(now, 30 days);
+            if(time < start) time = start;
+        }
+        
         updateScore(maliciousUser, asset, dart, time);
     }
 
