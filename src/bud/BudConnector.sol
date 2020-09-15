@@ -7,10 +7,7 @@ interface OSMLike {
 }
 
 interface Spotty {
-    function ilks(bytes32) external view returns (
-        PipLike pip,
-        uint256 mat
-    );
+    function ilks(bytes32) external view returns (PipLike pip, uint256 mat);
 }
 
 interface PipLike {

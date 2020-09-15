@@ -9,6 +9,24 @@ contract MockOSM {
     }
 }
 
+contract MockEnd {
+    MockSpot public spot = new MockSpot();
+}
+
+contract MockSpot {
+    MockPip pip = new MockPip();
+    function ilks(bytes32 ilk) public returns (MockPip, uint) {
+        ilk; // shh compiler warning
+        return (pip, 0);
+    }
+}
+
+contract MockPip {
+    function read() external view returns (bytes32) {
+        return "0x22";
+    }
+}
+
 contract FakeUser {
     function doAuthorize(BudConnector target, address addr) public {
         target.authorize(addr);
@@ -21,16 +39,23 @@ contract FakeUser {
     function doPeep(BudConnector target) public returns (bytes32, bool) {
         return target.peep();
     }
+
+    function doRead(BudConnector target) public returns (bytes32) {
+        bytes32 fakeIlk = "0xff";
+        return target.read(fakeIlk);
+    }
 }
 
 contract BudConnectorTest is DSTest {
 
     MockOSM osm;
+    MockEnd end;
     BudConnector budConnector;
 
     function setUp() public {
         osm = new MockOSM();
-        budConnector = new BudConnector(OSMLike(address(osm)), EndLike(address(0)));
+        end = new MockEnd();
+        budConnector = new BudConnector(OSMLike(address(osm)), EndLike(address(end)));
     }
 
     function testAuthToAuthorize() public {
@@ -81,5 +106,22 @@ contract BudConnectorTest is DSTest {
 
         // call must revert
         user.doPeep(budConnector);
+    }
+
+    function testAuthorizedToCallRead() public {
+        FakeUser user = new FakeUser();
+        budConnector.authorize(address(user));
+        assertTrue(budConnector.authorized(address(user)));
+
+        bytes32 price = user.doRead(budConnector);
+        assertEq32(price, "0x22");
+    }
+
+    function testFailNonAuthorizedToCallRead() public {
+        FakeUser user = new FakeUser();
+        assertTrue(budConnector.authorized(address(user)) == false);
+
+        // call must revert
+        user.doRead(budConnector);
     }
 }
