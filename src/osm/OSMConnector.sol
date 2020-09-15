@@ -3,7 +3,6 @@ pragma solidity ^0.5.12;
 import { DSAuth } from "ds-auth/auth.sol";
 
 interface OSMLike {
-    function bud(address) external view returns (uint);
     function peep() external view returns (bytes32, bool);
 }
 
@@ -12,7 +11,7 @@ contract OSMConnector is DSAuth {
     mapping(address => bool) public authorized;
     OSMLike public osm;
 
-    constructor(OSMLike osm_, address medianizer_) public {
+    constructor(OSMLike osm_) public {
         osm = osm_;
     }
 
@@ -24,9 +23,8 @@ contract OSMConnector is DSAuth {
         authorized[addr] = false;
     }
 
-    function peep() external returns (uint price) {
-        require(authorized[msg.sender] && osm.bud(address(this)) == 1, "!allowed");
-        (bytes32 val,) = osm.peep(); 
-        price = uint(val);
+    function peep() external returns (bytes32, bool) {
+        require(authorized[msg.sender], "!authorized");
+        return osm.peep(); 
     }
 }
