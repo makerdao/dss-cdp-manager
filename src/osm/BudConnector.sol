@@ -19,10 +19,9 @@ interface PipLike {
 
 interface EndLike {
     function spot() external view returns (Spotty);
-
 }
 
-contract OSMConnector is DSAuth {
+contract BudConnector is DSAuth {
 
     mapping(address => bool) public authorized;
     OSMLike public osm;
@@ -47,6 +46,7 @@ contract OSMConnector is DSAuth {
     }
 
     function read(bytes32 ilk) external returns (bytes32) {
+        require(authorized[msg.sender], "!authorized");
         (PipLike pip,) = end.spot().ilks(ilk);
         return pip.read();
     }
