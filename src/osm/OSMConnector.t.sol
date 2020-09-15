@@ -1,7 +1,7 @@
 pragma solidity ^0.5.12;
 
 import { DSTest } from "ds-test/test.sol";
-import { OSMConnector, OSMLike } from "./OSMConnector.sol";
+import { OSMConnector, OSMLike, EndLike } from "./OSMConnector.sol";
 
 contract MockOSM {
     function peep() external view returns (bytes32, bool) {
@@ -30,7 +30,7 @@ contract OSMConnectorTest is DSTest {
 
     function setUp() public {
         osm = new MockOSM();
-        osmConnector = new OSMConnector(OSMLike(address(osm)));
+        osmConnector = new OSMConnector(OSMLike(address(osm)), EndLike(address(0)));
     }
 
     function testAuthToAuthorize() public {
