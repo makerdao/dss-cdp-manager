@@ -158,6 +158,17 @@ contract FakeOSM {
     }
 }
 
+contract FakeDaiToUsdPriceFeed {
+    uint price = 1e18;
+    function setPrice(uint newPrice) public {
+        price = newPrice;
+    }
+
+    function getMarketPrice(uint marketId) public view returns (uint) {
+        marketId; // shh compiler warning
+        return price;
+    }
+}
 
 contract BCdpManagerTestBase is DssDeployTestBase {
     BCdpManager manager;
@@ -170,7 +181,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeUser jar;
     Hevm hevm;
     FakeOSM osm;
-    address fakeDaiToUsdPriceFeed;
+    FakeDaiToUsdPriceFeed daiToUsdPriceFeed;
     uint currTime;
 
     function setUp() public {
@@ -185,9 +196,9 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         user = new FakeUser();
         liquidator = new FakeUser();
         osm = new FakeOSM();
-        fakeDaiToUsdPriceFeed = address(0);
+        daiToUsdPriceFeed = new FakeDaiToUsdPriceFeed();
 
-        pool = new Pool(address(vat), address(jar), address(spotter), address(jug), fakeDaiToUsdPriceFeed);
+        pool = new Pool(address(vat), address(jar), address(spotter), address(jug), address(daiToUsdPriceFeed));
         score = new BCdpFullScore();
         manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice), address(score));
         score.setManager(address(manager));        
@@ -273,7 +284,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     }
 
     function deployNewPoolContract(FakeUser jar_) internal returns (Pool) {
-        Pool _pool = new Pool(address(vat), address(jar_), address(spotter), address(jug), fakeDaiToUsdPriceFeed);
+        Pool _pool = new Pool(address(vat), address(jar_), address(spotter), address(jug), address(daiToUsdPriceFeed));
         _pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);

@@ -326,6 +326,7 @@ contract Pool is Math, DSAuth, LibNote {
         // update user rad
         rad[msg.sender] = sub(rad[msg.sender], sub(radBefore, radAfter));
 
+        // DAI to USD rate, scale 1e18
         uint d2uPrice = dai2usd.getMarketPrice(3); // marketId = 3
 
         // dMemberInk = debt * 1.065 * d2uPrice
@@ -337,9 +338,6 @@ contract Pool is Math, DSAuth, LibNote {
 
         // Remaining to Jar
         uint userInk = sub(dink, dMemberInk);
-
-        //uint userInk = mul(dink, shrn) / shrd;
-        //dMemberInk = sub(dink, userInk);
 
         require(dMemberInk >= minInk, "bite: low-dink");
 
