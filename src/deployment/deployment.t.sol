@@ -96,7 +96,8 @@ contract VatDeployer {
 
         spotter.poke("ETH-A");
 
-        pool = new Pool(address(vat), address(0x12345678), address(spotter), address(new FakeJug()));
+        address fakeDaiToUsdPriceFeed = address(0);
+        pool = new Pool(address(vat), address(0x12345678), address(spotter), address(new FakeJug()), fakeDaiToUsdPriceFeed);
         score = BCdpScore(address(new FakeScore())); //new BCdpScore();
         man = new BCdpManager(address(vat), address(end), address(pool), address(pipETH), address(score));
         //score.setManager(address(man));

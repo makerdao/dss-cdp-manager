@@ -34,6 +34,10 @@ contract OSMLike {
     function zzz()  external view returns(uint64);
 }
 
+contract DaiToUsdPriceFeed {
+    function getMarketPrice(uint marketId) public view returns (uint);
+}
+
 contract Pool is Math, DSAuth, LibNote {
     address[] public members;
     mapping(bytes32 => bool) public ilks;
@@ -47,6 +51,7 @@ contract Pool is Math, DSAuth, LibNote {
     SpotLike                  public spot;
     JugLike                   public jug;
     address                   public jar;
+    DaiToUsdPriceFeed         public dai2usd;
 
     mapping(uint => CdpData)  internal cdpData;
 
@@ -71,11 +76,12 @@ contract Pool is Math, DSAuth, LibNote {
         _;
     }
 
-    constructor(address vat_, address jar_, address spot_, address jug_) public {
+    constructor(address vat_, address jar_, address spot_, address jug_, address dai2usd_) public {
         spot = SpotLike(spot_);
         jug = JugLike(jug_);
         vat = VatLike(vat_);
         jar = jar_;
+        dai2usd = DaiToUsdPriceFeed(dai2usd_);
     }
 
     function getCdpData(uint cdp) external view returns(uint art, uint cushion, address[] memory members_, uint[] memory bite) {
@@ -104,6 +110,10 @@ contract Pool is Math, DSAuth, LibNote {
 
     function setMinArt(uint minArt_) external auth note {
         minArt = minArt_;
+    }
+
+    function setDaiToUsdPriceFeed(address dai2usd_) external auth note {
+        dai2usd = DaiToUsdPriceFeed(dai2usd_);
     }
 
     function setProfitParams(uint num, uint den) external auth note {
