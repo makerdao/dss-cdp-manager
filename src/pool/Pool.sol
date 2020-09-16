@@ -326,8 +326,20 @@ contract Pool is Math, DSAuth, LibNote {
         // update user rad
         rad[msg.sender] = sub(rad[msg.sender], sub(radBefore, radAfter));
 
-        uint userInk = mul(dink, shrn) / shrd;
-        dMemberInk = sub(dink, userInk);
+        uint d2uPrice = dai2usd.getMarketPrice(3); // marketId = 3
+
+        // dMemberInk = debt * 1.065 * d2uPrice
+        // dMemberInk = dink * (shrn/shrd) * (d2uPrice/1e18)
+        dMemberInk = mul(mul(dink, shrn), d2uPrice) / mul(shrd, uint(1e18));
+
+        // To protect edge case when 1 DAI > 1.13 USD
+        if(dMemberInk > dink) dMemberInk = dink;
+
+        // Remaining to Jar
+        uint userInk = sub(dink, dMemberInk);
+
+        //uint userInk = mul(dink, shrn) / shrd;
+        //dMemberInk = sub(dink, userInk);
 
         require(dMemberInk >= minInk, "bite: low-dink");
 
