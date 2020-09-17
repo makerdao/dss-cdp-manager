@@ -1,6 +1,6 @@
 pragma solidity ^0.5.12;
 
-import { BCdpManagerTestBase, Hevm, FakeUser } from "./../BCdpManager.t.sol";
+import { BCdpManagerTestBase, Hevm, FakeUser, FakeDaiToUsdPriceFeed } from "./../BCdpManager.t.sol";
 import { BCdpScore } from "./../BCdpScore.sol";
 import { Pool } from "./Pool.sol";
 import { LiquidationMachine } from "./../LiquidationMachine.sol";
@@ -55,7 +55,7 @@ contract PoolTest is BCdpManagerTestBase {
         }
 
         pool.setMembers(memoryMembers);
-        pool.setProfitParams(1, 100);
+        pool.setProfitParams(99, 100);
         pool.setIlk("ETH", true);
 
         member = members[0];
@@ -123,7 +123,7 @@ contract PoolTest is BCdpManagerTestBase {
     }
 
     function almostEqual(uint a, uint b) internal returns(bool) {
-        assert(a < uint(1) << 200 && b < uint(1) << 200);
+        assertTrue(a < uint(1) << 200 && b < uint(1) << 200);
 
         if(a > b) return almostEqual(b, a);
         if(a * (1e6 + 1) < b * 1e6) return false;
@@ -269,19 +269,19 @@ contract PoolTest is BCdpManagerTestBase {
     // todo test real functionallity
     function testSetIlk() public {
         pool.setIlk("ETH-A", true);
-        assert(pool.ilks("ETH-A") == true);
+        assertTrue(pool.ilks("ETH-A") == true);
         pool.setIlk("ETH-A", false);
-        assert(pool.ilks("ETH-A") == false);
+        assertTrue(pool.ilks("ETH-A") == false);
 
         pool.setIlk("ETH-B", false);
         pool.setIlk("ETH-C", true);
         pool.setIlk("ETH-D", false);
         pool.setIlk("ETH-E", true);
 
-        assert(pool.ilks("ETH-B") == false);
-        assert(pool.ilks("ETH-C") == true);
-        assert(pool.ilks("ETH-D") == false);
-        assert(pool.ilks("ETH-E") == true);
+        assertTrue(pool.ilks("ETH-B") == false);
+        assertTrue(pool.ilks("ETH-C") == true);
+        assertTrue(pool.ilks("ETH-D") == false);
+        assertTrue(pool.ilks("ETH-E") == true);
     }
 
     // TODO - test real functionallity
@@ -312,7 +312,7 @@ contract PoolTest is BCdpManagerTestBase {
 
         timeReset();
         while(one || two || three || four) {
-            assert(maxNumIter-- > 0);
+            assertTrue(maxNumIter-- > 0);
 
             address[] memory winners = pool.chooseMember(0, 404, getMembers());
             assertEq(winners.length, 1);
@@ -675,7 +675,7 @@ contract PoolTest is BCdpManagerTestBase {
 
         //uint ethBefore = vat.gem("ETH", address(members[0]));
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(1, 100); // 1% goes to jar
+        pool.setProfitParams(99, 100); // 1% goes to jar
         // for 10 ether we expect 10/130 * 1.1 = 11/130, from which 99% goes to member
         uint expectedEth = uint(99) * 11 ether / (130 * 100);
         assert(! canKeepersBite(cdp));
@@ -715,7 +715,7 @@ contract PoolTest is BCdpManagerTestBase {
 
         //uint ethBefore = vat.gem("ETH", address(members[0]));
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(2, 100); // 2% goes to jar
+        pool.setProfitParams(98, 100); // 2% goes to jar
         // for 26 ether we expect 26/130 * 1.1 = 28.6/130, from which 98% goes to member
         uint expectedEth = uint(98) * 286 ether / (130 * 100 * 10);
         for(uint i = 0 ; i < 4 ; i++) {
@@ -744,8 +744,8 @@ contract PoolTest is BCdpManagerTestBase {
         uint shrd = pool.shrd();
 
         // 10% chop
-        uint expectedJar = (dart * 1e18 * 110 / (price*100)) * shrn / shrd;
-        uint expectedInk = (dart * 1e18 * 110 / (price*100)) - expectedJar;
+        uint expectedInk = (dart * 1e18 * 110 / (price*100)) * shrn / shrd;
+        uint expectedJar = (dart * 1e18 * 110 / (price*100)) - expectedInk;
 
         if(rate) {
             (, uint currentRate,,,) = vat.ilks("ETH");
@@ -756,9 +756,9 @@ contract PoolTest is BCdpManagerTestBase {
         uint mInkBefore = vat.gem("ETH", address(m));
         uint jarInkBefore = vat.gem("ETH", address(jar));
 
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
         m.doBite(pool, cdp, dart, expectedInk);
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
 
         uint mInkAfter = vat.gem("ETH", address(m));
         uint jarInkAfter = vat.gem("ETH", address(jar));
@@ -766,8 +766,8 @@ contract PoolTest is BCdpManagerTestBase {
         //assertEq(mInkAfter - mInkBefore,expectedInk);
         //assertEq(jarInkAfter - jarInkBefore,expectedJar);
 
-        assert(mInkAfter - mInkBefore <= expectedInk + 2 && expectedInk <= 2 + mInkAfter - mInkBefore);
-        assert(jarInkAfter - jarInkBefore <= expectedJar + 2 && expectedJar <= 2 + jarInkAfter - jarInkBefore);
+        assertTrue(mInkAfter - mInkBefore <= expectedInk + 2 && expectedInk <= 2 + mInkAfter - mInkBefore);
+        assertTrue(jarInkAfter - jarInkBefore <= expectedJar + 2 && expectedJar <= 2 + jarInkAfter - jarInkBefore);
     }
 
     function testBiteInPartsThenUntop() public {
@@ -790,7 +790,7 @@ contract PoolTest is BCdpManagerTestBase {
         realPrice.set("ETH", 130 * 1e18);
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(65, 1000); // 6.5% goes to jar
+        pool.setProfitParams(935, 1000); // 6.5% goes to jar
 
         doBite(members[1], pool, cdp, 15 ether, false);
         doBite(members[0], pool, cdp, 13 ether, false);
@@ -799,11 +799,11 @@ contract PoolTest is BCdpManagerTestBase {
         doBite(members[0], pool, cdp, 10 ether, false);
         doBite(members[0], pool, cdp, 3 ether, false);
 
-        assert(LiquidationMachine(manager).bitten(cdp));
+        assertTrue(LiquidationMachine(manager).bitten(cdp));
 
         // fast forward until no longer bitten
         forwardTime(60*60 + 1);
-        assert(! LiquidationMachine(manager).bitten(cdp));
+        assertTrue(! LiquidationMachine(manager).bitten(cdp));
 
         // do dummy operation to untop
         manager.frob(cdp, -1, 0);
@@ -840,7 +840,7 @@ contract PoolTest is BCdpManagerTestBase {
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(65, 1000); // 6.5% goes to jar
+        pool.setProfitParams(935, 1000); // 6.5% goes to jar
 
         members[0].doTopup(pool, cdp);
 
@@ -864,7 +864,7 @@ contract PoolTest is BCdpManagerTestBase {
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(65, 1000); // 6.5% goes to jar
+        pool.setProfitParams(935, 1000); // 6.5% goes to jar
 
         members[0].doTopup(pool, cdp);
 
@@ -888,7 +888,7 @@ contract PoolTest is BCdpManagerTestBase {
         osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(65, 1000); // 6.5% goes to jar
+        pool.setProfitParams(935, 1000); // 6.5% goes to jar
 
         members[0].doTopup(pool, cdp);
 
@@ -927,7 +927,7 @@ contract PoolTest is BCdpManagerTestBase {
         realPrice.set("ETH", 149 * 1e18);
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(65, 1000); // 6.5% goes to jar
+        pool.setProfitParams(935, 1000); // 6.5% goes to jar
 
         jug.drip("ETH");
         (, uint currentRate,,,) = vat.ilks("ETH");
@@ -942,11 +942,11 @@ contract PoolTest is BCdpManagerTestBase {
         doBite(members[0], pool, cdp, 10 ether, true);
         doBite(members[0], pool, cdp, 3 ether, true);
 
-        assert(LiquidationMachine(manager).bitten(cdp));
+        assertTrue(LiquidationMachine(manager).bitten(cdp));
 
         // fast forward until no longer bitten
         forwardTime(60*60 + 1);
-        assert(! LiquidationMachine(manager).bitten(cdp));
+        assertTrue(! LiquidationMachine(manager).bitten(cdp));
 
         // do dummy operation to untop
         manager.frob(cdp, -1, 0);
@@ -1001,15 +1001,15 @@ contract PoolTest is BCdpManagerTestBase {
 
         // uint ethBefore = vat.gem("ETH", address(members[0]));
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(2, 100); // 2% goes to jar
+        pool.setProfitParams(98, 100); // 2% goes to jar
 
         // for 26 ether we expect 26/140 * rate * 1.1 = 28.6/140 * rate, from which 98% goes to member
         uint expectedEth = uint(98) * 286 ether * currRate / (100 * 1400 * RAY);
 
         for(uint i = 0 ; i < 4 ; i++) {
-            assert(! canKeepersBite(cdp));
+            assertTrue(! canKeepersBite(cdp));
             uint dink = members[i].doPoolBite(pool, cdp, 26 ether, expectedEth);
-            assert(! canKeepersBite(cdp));
+            assertTrue(! canKeepersBite(cdp));
             assertEq(uint(dink), expectedEth);
             assertEq(vat.gem("ETH", address(members[i])), expectedEth);
             (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
@@ -1105,7 +1105,7 @@ contract PoolTest is BCdpManagerTestBase {
 
         // uint ethBefore = vat.gem("ETH", address(members[0]));
         this.file(address(cat), "ETH", "chop", _1p1);
-        pool.setProfitParams(2, 100); // 2% goes to jar
+        pool.setProfitParams(98, 100); // 2% goes to jar
 
         uint expectedAvailBite = daiAmt / members.length;
         uint expectedDust = daiAmt % members.length;
@@ -1119,30 +1119,32 @@ contract PoolTest is BCdpManagerTestBase {
         uint amt = daiAmt / members.length;
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
-        pool.setProfitParams(2, 100); // 2% goes to jar
+        pool.setProfitParams(98, 100); // 2% goes to jar
 
         // for 26 ether we expect 26/140 * rate * 1.1 = 28.6/140 * rate, from which 98% goes to member
         jug.drip("ETH");
         (, uint currRate,,,) = vat.ilks("ETH");
-        uint expectedEth = uint(98) * amt * 11 * currRate / (100 * 1400 * RAY);
+        uint _100Percent = amt * 11 * currRate / (1400 * RAY);
+        uint expectedEth = _100Percent * uint(98) / 100;
+        uint expectedEthInJar = _100Percent - expectedEth;
 
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
         members[0].doPoolBite(pool, cdp, amt + expectedDust, expectedEth);
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
         members[1].doPoolBite(pool, cdp, amt, expectedEth);
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
         members[2].doPoolBite(pool, cdp, amt, expectedEth);
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
         members[3].doPoolBite(pool, cdp, amt, expectedEth);
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
 
         assertEq(pool.availBite(cdp, address(members[0])), 0);
         assertEq(pool.availBite(cdp, address(members[1])), 0);
         assertEq(pool.availBite(cdp, address(members[2])), 0);
         assertEq(pool.availBite(cdp, address(members[3])), 0);
 
-        // jar should get 2% from 104 * 1.1 * 1.1 / 140
-        assertEq(vat.gem("ETH", address(jar)), expectedEth * 4 * 2 / 98 - 1);
+        // jar should get 2% 
+        assertEq(vat.gem("ETH", address(jar)), expectedEthInJar * 4);
     }
 
     function testCalcCushionHigherSpot() public {
@@ -1190,7 +1192,7 @@ contract PoolTest is BCdpManagerTestBase {
         (,uint currRate,,,) = vat.ilks("ETH");
 
         // make sure cushion is enough
-        assert((100 ether - dart) * currRate * 15 / 10 < 1 ether * 150 ether * 1e9);
+        assertTrue((100 ether - dart) * currRate * 15 / 10 < 1 ether * 150 ether * 1e9);
 
         // make sure cushion is precise
         assertEq(1 + radToWei((100 ether - dart + 1 ether) * currRate * 15 / 10), radToWei(1 ether * 150 ether * 1e9));
@@ -1220,6 +1222,20 @@ contract PoolTest is BCdpManagerTestBase {
 
         pool.emergencyExecute(address(d), data);
     }
+
+    function testSetDaiToUsdPriceFeed() public {
+        address oldPriceFeed = address(pool.dai2usd());
+
+        FakeDaiToUsdPriceFeed dai2usdPriceFeed = new FakeDaiToUsdPriceFeed();
+        pool.setDaiToUsdPriceFeed(address(dai2usdPriceFeed));
+
+        address newPriceFeed = address(pool.dai2usd());
+        assertTrue(oldPriceFeed != address(0));
+        assertTrue(oldPriceFeed != newPriceFeed);
+        assertTrue(address(dai2usdPriceFeed) == newPriceFeed);
+        
+    }
+
 
     // tests to do
 

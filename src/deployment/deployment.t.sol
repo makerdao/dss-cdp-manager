@@ -109,7 +109,7 @@ contract VatDeployer {
         members[1] = 0xf214dDE57f32F3F34492Ba3148641693058D4A9e;
         pool.setMembers(members);
         pool.setIlk("ETH-A", true);
-        pool.setProfitParams(6, 100);
+        pool.setProfitParams(94, 100);
         pool.setOwner(msg.sender);
     }
 

@@ -206,7 +206,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
         pool.setMembers(members);
-        pool.setProfitParams(1, 100);
+        pool.setProfitParams(99, 100);
         pool.setIlk("ETH", true);
         pool.setOsm("ETH", address(osm));
         getCdps = new GetCdps();
@@ -289,7 +289,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
         _pool.setMembers(members);
-        _pool.setProfitParams(1, 100);
+        _pool.setProfitParams(99, 100);
         _pool.setIlk("ETH", true);
         _pool.setOsm("ETH", address(osm));
         liquidator.doHope(vat, address(_pool));
