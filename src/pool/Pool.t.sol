@@ -1363,6 +1363,7 @@ contract PoolTest is BCdpManagerTestBase {
         uint _100Percent = 286 ether / (130 * 10);
         // _100Percent * 93% * 1.15
         uint expectedEth = _100Percent * uint(93) * 115 / (100 * 100);
+        expectedEth = (expectedEth > _100Percent) ? _100Percent : expectedEth;
         uint expectedInJar = 0;
 
         for(uint i = 0 ; i < 4 ; i++) {
