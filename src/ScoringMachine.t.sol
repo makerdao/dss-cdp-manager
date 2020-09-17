@@ -546,7 +546,7 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         address urn = manager.urns(cdp);
         (uint inkBefore,) = vat.urns("ETH", urn);
         liquidator.doBite(pool, cdp, 25 ether, 0);
-        assert(LiquidationMachine(manager).bitten(cdp));
+        assertTrue(LiquidationMachine(manager).bitten(cdp));
         (uint inkAfter,) = vat.urns("ETH", urn);
 
         forwardTime(10);
@@ -567,11 +567,11 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
         sm._updateAssetScore("user", "ETH", _INT256_MIN, time);
         score_ = sm._getScore("user", "ETH", now, time, time);
-        assert(score_ > 0);
+        assertTrue(score_ > 0);
         (score_, balance,) = sm._getAssetScore("user", "ETH");
         // Math calc would underflow when uint(_INT256_MIN) is performed.
         // Hence, balance will be set to 0
-        assert(balance == 0);
+        assertTrue(balance == 0);
     }
 
     function testUpdateAssetScoreWithMaxValue() public {
@@ -582,15 +582,15 @@ contract ScoringMachineTest is BCdpManagerTestBase {
 
         uint score_; uint balance;
         (, balance,) = sm._getAssetScore("user", "ETH");
-        assert(balance < (uint(-1) - uint(_INT256_MAX)));
+        assertTrue(balance < (uint(-1) - uint(_INT256_MAX)));
 
         sm._updateAssetScore("user", "ETH", _INT256_MAX, time);
         score_ = sm._getScore("user", "ETH", now, time, time);
-        assert(score_ > 0);
+        assertTrue(score_ > 0);
         (score_, balance,) = sm._getAssetScore("user", "ETH");
         // Math calc would not overflow as uint(_INT256_MAX) is converted to 256 bit value
         // which is less than 2^256-1, henve balance will be increased
-        assert(balance > 0);
+        assertTrue(balance > 0);
     }
 
     function resetAndMakeFakeScore(uint time) internal {
@@ -603,9 +603,9 @@ contract ScoringMachineTest is BCdpManagerTestBase {
         forwardTime(10);
         sm._updateScore("user", "ETH", 1 ether, now);
         score_ = sm._getScore("user", "ETH", now, time, time);
-        assert(score_ > 0);
+        assertTrue(score_ > 0);
         (score_, balance,) = sm._getAssetScore("user", "ETH");
-        assert(balance > 0);
+        assertTrue(balance > 0);
     }
 }
 

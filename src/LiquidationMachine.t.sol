@@ -167,7 +167,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         realPrice.set("ETH", 70 * 1e18);
 
         fPool.doBite(lm, cdp, 15 ether);
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
 
         fPool.doUntopByPool(lm, cdp);
     }
@@ -236,7 +236,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
 
         uint daiBefore = vat.dai(address(fPool));
         uint dink = fPool.doBite(lm, cdp, 10 ether);
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         uint daiAfter = vat.dai(address(fPool));
 
         assertEq(dink, (10 ether * 113 / 100)/uint(70));
@@ -258,7 +258,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
 
         uint daiBefore = vat.dai(address(fPool));
         uint dink = fPool.doBite(lm, cdp, 50 ether);
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         uint daiAfter = vat.dai(address(fPool));
 
         assertEq(dink, (50 ether * 113 / 100)/uint(70));
@@ -286,7 +286,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         daiBefore = vat.dai(address(fPool));
         dink = fPool.doBite(lm, cdp, 10 ether);
         expectedBalance += dink;
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
         assertEq(dink, (10 ether * 113 / 100)/uint(70));
         // 10/5 ETH were reused from the cushion
@@ -297,7 +297,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         daiBefore = vat.dai(address(fPool));
         dink = fPool.doBite(lm, cdp, 15 ether);
         expectedBalance += dink;
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
         assertEq(dink, (15 ether * 113 / 100)/uint(70));
         // 10 * 15/50 ETH were reused from the cushion
@@ -308,7 +308,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         daiBefore = vat.dai(address(fPool));
         dink = fPool.doBite(lm, cdp, 25 ether);
         expectedBalance += dink;
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
         assertEq(dink, (25 ether * 113 / 100)/uint(70));
         // 10 * 25/50 ETH were reused from the cushion
@@ -334,7 +334,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         daiBefore = vat.dai(address(fPool));
         dink = fPool.doBite(lm, cdp, 10 ether);
         expectedBalance += dink;
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
         assertEq(dink, (10 ether * 113 / 100)/uint(70));
         // 10/5 ETH were reused from the cushion
@@ -351,7 +351,7 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         daiBefore = vat.dai(address(fPool));
         dink = fPool.doBite(lm, cdp, 15 ether);
         expectedBalance += dink;
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
         assertEq(dink, (15 ether * 113 / 100)/uint(700));
         // 10 * 15/50 ETH were reused from the cushion
@@ -380,11 +380,11 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         daiBefore = vat.dai(address(fPool));
         dink = fPool.doBite(lm, cdp, 10 ether);
         expectedBalance += dink;
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         daiAfter = vat.dai(address(fPool));
         uint estimatedInk = 110 * ( (10 ether * 113 / 100)/uint(70) ) / 100;
-        assert(dink >= estimatedInk);
-        assert(dink <= estimatedInk + 1);
+        assertTrue(dink >= estimatedInk);
+        assertTrue(dink <= estimatedInk + 1);
         // 10/5 ETH were reused from the cushion
         assertEq(daiBefore - daiAfter, (10 ether - 2 ether) * 110 * RAY/100);
         assertEq(vat.gem("ETH", address(fPool)), expectedBalance);
@@ -459,18 +459,18 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
         spotter.poke("ETH");
         realPrice.set("ETH", 70 * 1e18);
 
-        assert(! lm.bitten(cdp));
+        assertTrue(! lm.bitten(cdp));
 
         fPool.doBite(lm, cdp, 10 ether);
 
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         forwardTime(lm.GRACE() / 2);
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         forwardTime(lm.GRACE() / 2 - 1);
-        assert(lm.bitten(cdp));
+        assertTrue(lm.bitten(cdp));
         forwardTime(1);
-        assert(! lm.bitten(cdp));
+        assertTrue(! lm.bitten(cdp));
         forwardTime(1000);
-        assert(! lm.bitten(cdp));
+        assertTrue(! lm.bitten(cdp));
     }
 }

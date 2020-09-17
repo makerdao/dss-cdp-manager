@@ -200,7 +200,7 @@ contract DeploymentTest is BCdpManagerTestBase {
         deployer.poke(1 ether, 20 ether);
         deployer.poke(2 ether, 30 ether);
 
-        assert(deployer.vat().gem("ETH-A", address(this)) >= 1e18 * 1e6);
+        assertTrue(deployer.vat().gem("ETH-A", address(this)) >= 1e18 * 1e6);
         assertEq(deployer.vat().live(), 1);
 
         uint cdp1 = deployer.cdpUnsafe();
@@ -214,9 +214,9 @@ contract DeploymentTest is BCdpManagerTestBase {
 
         uint dartX;
         (dartX,,) = deployer.pool().topAmount(cdp1);
-        assert(dartX > 0);
+        assertTrue(dartX > 0);
         (dartX,,) = deployer.pool().topAmount(cdp2);
-        assert(dartX > 0);
+        assertTrue(dartX > 0);
 
         FakeMember m = deployer.member();
         Pool p = deployer.pool();
