@@ -677,13 +677,18 @@ contract PoolTest is BCdpManagerTestBase {
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
         pool.setProfitParams(99, 100); // 1% goes to jar
         // for 10 ether we expect 10/130 * 1.1 = 11/130, from which 99% goes to member
-        uint expectedEth = uint(99) * 11 ether / (130 * 100);
+        uint _100Percent = 11 ether / uint(130);
+        uint expectedEth = _100Percent * uint(99) / 100;
+        uint expectedEthInJar = _100Percent - expectedEth;
+
+        assertTrue(_100Percent >= expectedEth);
+
         assert(! canKeepersBite(cdp));
         uint dink = members[0].doPoolBite(pool, cdp, 10 ether, expectedEth);
         assert(! canKeepersBite(cdp));
         assertEq(uint(dink), expectedEth);
         assertEq(vat.gem("ETH", address(members[0])), expectedEth);
-        assertEq(vat.gem("ETH", address(jar)), 11 ether / uint(130 * 100));
+        assertEq(vat.gem("ETH", address(jar)), expectedEthInJar);
 
         (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
         cdpArt; //shh
@@ -1004,7 +1009,10 @@ contract PoolTest is BCdpManagerTestBase {
         pool.setProfitParams(98, 100); // 2% goes to jar
 
         // for 26 ether we expect 26/140 * rate * 1.1 = 28.6/140 * rate, from which 98% goes to member
-        uint expectedEth = uint(98) * 286 ether * currRate / (100 * 1400 * RAY);
+        uint _100Percent = 286 ether * currRate / (1400 * RAY);
+        uint expectedEth = _100Percent * uint(98) / 100;
+        assertTrue(_100Percent >= expectedEth);
+        uint expectedInJar = _100Percent - expectedEth;
 
         for(uint i = 0 ; i < 4 ; i++) {
             assertTrue(! canKeepersBite(cdp));
@@ -1021,7 +1029,7 @@ contract PoolTest is BCdpManagerTestBase {
         }
 
         // jar should get 2%
-        assertEq(vat.gem("ETH", address(jar)), expectedEth * 4 * 2 / 98 - 1);
+        assertEq(vat.gem("ETH", address(jar)), expectedInJar * 4);
     }
 
     function testAvailBiteWithDust() public {
@@ -1363,6 +1371,8 @@ contract PoolTest is BCdpManagerTestBase {
         uint _100Percent = 286 ether / (130 * 10);
         // _100Percent * 93% * 1.15
         uint expectedEth = _100Percent * uint(93) * 115 / (100 * 100);
+
+        assertTrue(_100Percent < expectedEth);
         expectedEth = (expectedEth > _100Percent) ? _100Percent : expectedEth;
         uint expectedInJar = 0;
 
