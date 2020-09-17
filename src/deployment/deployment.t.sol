@@ -1,6 +1,6 @@
 pragma solidity ^0.5.12;
 
-import { BCdpManagerTestBase, Hevm, FakeUser, FakeOSM, BCdpManager } from "./../BCdpManager.t.sol";
+import { BCdpManagerTestBase, Hevm, FakeUser, FakeOSM, BCdpManager, FakeDaiToUsdPriceFeed } from "./../BCdpManager.t.sol";
 import { DssDeployTestBase, Vat, Cat, Spotter, DSValue } from "dss-deploy/DssDeploy.t.base.sol";
 import { BCdpScore } from "./../BCdpScore.sol";
 import { Pool } from "./../pool/Pool.sol";
@@ -56,6 +56,7 @@ contract VatDeployer {
     FakeOSM public osm;
     FakeMember public member;
     BCdpScore public score;
+    FakeDaiToUsdPriceFeed public dai2usdPriceFeed;
 
     uint public cdpUnsafe;
     uint public cdpUnsafeNext;
@@ -96,7 +97,8 @@ contract VatDeployer {
 
         spotter.poke("ETH-A");
 
-        pool = new Pool(address(vat), address(0x12345678), address(spotter), address(new FakeJug()));
+        dai2usdPriceFeed = new FakeDaiToUsdPriceFeed();
+        pool = new Pool(address(vat), address(0x12345678), address(spotter), address(new FakeJug()), address(dai2usdPriceFeed));
         score = BCdpScore(address(new FakeScore())); //new BCdpScore();
         man = new BCdpManager(address(vat), address(end), address(pool), address(pipETH), address(score));
         //score.setManager(address(man));
@@ -108,7 +110,7 @@ contract VatDeployer {
         members[1] = 0xf214dDE57f32F3F34492Ba3148641693058D4A9e;
         pool.setMembers(members);
         pool.setIlk("ETH-A", true);
-        pool.setProfitParams(6, 100);
+        pool.setProfitParams(94, 100);
         pool.setOwner(msg.sender);
     }
 
