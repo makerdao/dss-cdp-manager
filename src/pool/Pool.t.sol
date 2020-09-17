@@ -1241,7 +1241,30 @@ contract PoolTest is BCdpManagerTestBase {
         assertTrue(oldPriceFeed != address(0));
         assertTrue(oldPriceFeed != newPriceFeed);
         assertTrue(address(dai2usdPriceFeed) == newPriceFeed);
-        
+    }
+
+    function testDaiToUsdSetPrice() public {
+        address priceFeedAddr = address(pool.dai2usd());
+
+        FakeDaiToUsdPriceFeed dai2usdPriceFeed = FakeDaiToUsdPriceFeed(priceFeedAddr);
+        assertEq(dai2usdPriceFeed.getMarketPrice(3), 1 ether);
+
+        dai2usdPriceFeed.setPrice(2 ether);
+
+        assertEq(dai2usdPriceFeed.getMarketPrice(3), 2 ether);
+    }
+
+    function testDaiToUsdMarketPrice() public {
+        address priceFeedAddr = address(pool.dai2usd());
+        FakeDaiToUsdPriceFeed dai2usdPriceFeed = FakeDaiToUsdPriceFeed(priceFeedAddr);
+        assertEq(dai2usdPriceFeed.getMarketPrice(3), 1 ether);
+    }
+
+    function testFailDaiToUsdMarketPriceInvalidMarketId() public {
+        address priceFeedAddr = address(pool.dai2usd());
+        FakeDaiToUsdPriceFeed dai2usdPriceFeed = FakeDaiToUsdPriceFeed(priceFeedAddr);
+        // must revert
+        dai2usdPriceFeed.getMarketPrice(2);
     }
 
     // 1 DAI = 1.03 USD
@@ -1392,6 +1415,56 @@ contract PoolTest is BCdpManagerTestBase {
 
         // jar should get 2% from 104 * 1.1 / 130
         assertEq(vat.gem("ETH", address(jar)), expectedInJar);
+    }
+
+    // 1 DAI = 0.8 USD
+    function testVeryLowDaiRateInUsd() public {
+        members[0].doDeposit(pool, 1000 ether * RAY);
+        members[1].doDeposit(pool, 950 ether * RAY);
+        members[2].doDeposit(pool, 900 ether * RAY);
+        members[3].doDeposit(pool, 850 ether * RAY);
+
+        uint cdp = openCdp(1 ether, 104 ether); // 1 eth, 110 dai
+
+        // set next price to 150, which means a cushion of 10 dai is expected
+        osm.setPrice(150 * 1e18); // 1 ETH = 150 DAI
+
+        members[0].doTopup(pool, cdp);
+
+        pipETH.poke(bytes32(uint(150 * 1e18)));
+        spotter.poke("ETH");
+        realPrice.set("ETH", 130 * 1e18);
+
+        // Update DAI to USD rate
+        FakeDaiToUsdPriceFeed dai2usd = FakeDaiToUsdPriceFeed(address(pool.dai2usd()));
+        dai2usd.setPrice(0.8 * 1e18); // 1 DAI = 0.8 USD
+
+        //uint ethBefore = vat.gem("ETH", address(members[0]));
+        this.file(address(cat), "ETH", "chop", WAD + WAD/10);
+        pool.setProfitParams(93, 100); // 7% goes to jar
+        // for 26 ether we expect 26/130 * 1.1 = 28.6/130, from which 93% goes to member
+        uint _100Percent = 286 ether / (130 * 10);
+        // _100Percent * 93% * 0.8
+        uint expectedEth = _100Percent * uint(93) * 8 / (100 * 10);
+        assertTrue(_100Percent > expectedEth);
+        uint expectedInJar = _100Percent - expectedEth;
+
+        for(uint i = 0 ; i < 4 ; i++) {
+            assertTrue(! canKeepersBite(cdp));
+            uint dink = members[i].doPoolBite(pool, cdp, 26 ether, expectedEth);
+            assertTrue(! canKeepersBite(cdp));
+            assertEq(uint(dink), expectedEth);
+            assertEq(vat.gem("ETH", address(members[i])), expectedEth);
+            (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);
+            cdpArt; //shh
+            cdpCushion; //shh
+            winners; //shh
+            assertEq(bite[i], 26 ether);
+            assertEq(pool.rad(address(members[i])), (1000 ether - 50 ether * i - 26 ether) * RAY - 1);
+        }
+
+        // jar should get 2% from 104 * 1.1 / 130
+        assertEq(vat.gem("ETH", address(jar)), expectedInJar * 4);
     }
 
     // tests to do

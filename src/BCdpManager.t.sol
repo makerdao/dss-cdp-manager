@@ -165,7 +165,7 @@ contract FakeDaiToUsdPriceFeed {
     }
 
     function getMarketPrice(uint marketId) public view returns (uint) {
-        marketId; // shh compiler warning
+        require(marketId == 3, "invalid-marketId");
         return price;
     }
 }

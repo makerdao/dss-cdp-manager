@@ -1,6 +1,6 @@
 pragma solidity ^0.5.12;
 
-import { BCdpManagerTestBase, Hevm, FakeUser, FakeOSM, BCdpManager } from "./../BCdpManager.t.sol";
+import { BCdpManagerTestBase, Hevm, FakeUser, FakeOSM, BCdpManager, FakeDaiToUsdPriceFeed } from "./../BCdpManager.t.sol";
 import { DssDeployTestBase, Vat, Cat, Spotter, DSValue } from "dss-deploy/DssDeploy.t.base.sol";
 import { BCdpScore } from "./../BCdpScore.sol";
 import { Pool } from "./../pool/Pool.sol";
@@ -56,6 +56,7 @@ contract VatDeployer {
     FakeOSM public osm;
     FakeMember public member;
     BCdpScore public score;
+    FakeDaiToUsdPriceFeed public dai2usdPriceFeed;
 
     uint public cdpUnsafe;
     uint public cdpUnsafeNext;
@@ -96,8 +97,8 @@ contract VatDeployer {
 
         spotter.poke("ETH-A");
 
-        address fakeDaiToUsdPriceFeed = address(0);
-        pool = new Pool(address(vat), address(0x12345678), address(spotter), address(new FakeJug()), fakeDaiToUsdPriceFeed);
+        dai2usdPriceFeed = new FakeDaiToUsdPriceFeed();
+        pool = new Pool(address(vat), address(0x12345678), address(spotter), address(new FakeJug()), address(dai2usdPriceFeed));
         score = BCdpScore(address(new FakeScore())); //new BCdpScore();
         man = new BCdpManager(address(vat), address(end), address(pool), address(pipETH), address(score));
         //score.setManager(address(man));

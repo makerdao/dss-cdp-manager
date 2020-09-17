@@ -39,6 +39,7 @@ contract DaiToUsdPriceFeed {
 }
 
 contract Pool is Math, DSAuth, LibNote {
+    uint public constant DAI_TO_USD_MARKET_IT = 3;
     address[] public members;
     mapping(bytes32 => bool) public ilks;
     uint                     public minArt; // min debt to share among members
@@ -327,11 +328,11 @@ contract Pool is Math, DSAuth, LibNote {
         rad[msg.sender] = sub(rad[msg.sender], sub(radBefore, radAfter));
 
         // DAI to USD rate, scale 1e18
-        uint d2uPrice = dai2usd.getMarketPrice(3); // marketId = 3
+        uint d2uPrice = dai2usd.getMarketPrice(DAI_TO_USD_MARKET_IT);
 
         // dMemberInk = debt * 1.065 * d2uPrice
         // dMemberInk = dink * (shrn/shrd) * (d2uPrice/1e18)
-        dMemberInk = mul(mul(dink, shrn), d2uPrice) / mul(shrd, uint(1e18));
+        dMemberInk = mul(mul(dink, shrn), d2uPrice) / mul(shrd, uint(1 ether));
 
         // To protect edge case when 1 DAI > 1.13 USD
         if(dMemberInk > dink) dMemberInk = dink;
