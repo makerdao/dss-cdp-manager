@@ -97,8 +97,8 @@ contract UserInfoTest is BCdpManagerTestBase {
                          spotterLike, registryLike, address(123), address(dai));
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
-        assert(! userInfo.hasCdp());
-        assert(! userInfo.makerdaoHasCdp());
+        assertTrue(! userInfo.hasCdp());
+        assertTrue(! userInfo.makerdaoHasCdp());
 
         assertEq(address(this).balance, userInfo.ethBalance());
         assertEq(456, userInfo.daiAllowance());
@@ -138,12 +138,12 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertEq(userInfo.cdp(), bCdp);
-        assert(userInfo.hasCdp());
+        assertTrue(userInfo.hasCdp());
         assertEq(userInfo.ethDeposit(), 1 ether);
         assertEq(userInfo.daiDebt(), 20 ether);
         assertEq(userInfo.maxDaiDebt(), 200 ether); // 150% with spot price of $300
         assertEq(userInfo.spotPrice(), 300e18);
-        assert(! userInfo.makerdaoHasCdp());
+        assertTrue(! userInfo.makerdaoHasCdp());
     }
 
     function testMakerDaoCdp() public {
@@ -155,12 +155,12 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertEq(userInfo.makerdaoCdp(), bCdp);
-        assert(userInfo.makerdaoHasCdp());
+        assertTrue(userInfo.makerdaoHasCdp());
         assertEq(userInfo.makerdaoEthDeposit(), 1 ether);
         assertEq(userInfo.makerdaoDaiDebt(), 20 ether);
         assertEq(userInfo.makerdaoMaxDaiDebt(), 200 ether); // 150% with spot price of $300
         assertEq(userInfo.spotPrice(), 300e18);
-        assert(! userInfo.hasCdp());
+        assertTrue(! userInfo.hasCdp());
     }
 
     function testBothHaveCdp() public {
@@ -175,14 +175,14 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertEq(userInfo.cdp() , bCdp);
-        assert(userInfo.hasCdp());
+        assertTrue(userInfo.hasCdp());
         assertEq(userInfo.ethDeposit(), 1 ether);
         assertEq(userInfo.daiDebt(), 20 ether);
         assertEq(userInfo.maxDaiDebt(), 200 ether); // 150% with spot price of $300
         assertEq(userInfo.spotPrice(), 300e18);
 
         assertEq(userInfo.makerdaoCdp(), mCdp);
-        assert(userInfo.makerdaoHasCdp());
+        assertTrue(userInfo.makerdaoHasCdp());
         assertEq(userInfo.makerdaoEthDeposit(), 2 ether);
         assertEq(userInfo.makerdaoDaiDebt(), 30 ether);
         assertEq(userInfo.makerdaoMaxDaiDebt(), 400 ether); // 150% with spot price of $300
@@ -204,7 +204,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertEq(userInfo.cdp(), bCdp);
-        assert(userInfo.hasCdp());
+        assertTrue(userInfo.hasCdp());
         assertEq(userInfo.ethDeposit(), 1 ether);
         assertEq(userInfo.daiDebt(), 22 ether);
         // -1 is a rounding error
@@ -212,7 +212,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.spotPrice(), 300e18);
 
         assertEq(userInfo.makerdaoCdp(), mCdp);
-        assert(userInfo.makerdaoHasCdp());
+        assertTrue(userInfo.makerdaoHasCdp());
         assertEq(userInfo.makerdaoEthDeposit(), 2 ether);
         assertEq(userInfo.makerdaoDaiDebt(), 33 ether);
         // -1 is a rounding error
@@ -258,7 +258,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertEq(userInfo.cdp(), bCdp);
-        assert(userInfo.hasCdp());
+        assertTrue(userInfo.hasCdp());
         assertEq(userInfo.ethDeposit(), 1 ether);
         assertEq(userInfo.daiDebt(), 22 ether);
         // -1 is a rounding error
@@ -266,7 +266,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(userInfo.spotPrice(), 123e18);
 
         assertEq(userInfo.makerdaoCdp(), mCdp);
-        assert(userInfo.makerdaoHasCdp());
+        assertTrue(userInfo.makerdaoHasCdp());
         assertEq(userInfo.makerdaoEthDeposit(), 2 ether);
         assertEq(userInfo.makerdaoDaiDebt(), 33 ether);
         // -1 is a rounding error
@@ -283,12 +283,12 @@ contract UserInfoTest is BCdpManagerTestBase {
         address urn = manager.urns(bCdp);
         (uint ink, uint art) = vat.urns("ETH", urn);
         ink; //shh
-        assert(art < 50 ether); // make sure there is a cushion
+        assertTrue(art < 50 ether); // make sure there is a cushion
 
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
                          spotterLike, registryLike, address(123), address(dai));
 
-        assert(userInfo.hasCdp());
+        assertTrue(userInfo.hasCdp());
         assertEq(userInfo.daiDebt(), 50 ether);
     }
 
@@ -316,7 +316,7 @@ contract UserInfoTest is BCdpManagerTestBase {
     }
 
     function almostEqual(uint a, uint b) internal returns(bool) {
-        assert(a < uint(1) << 200 && b < uint(1) << 200);
+        assertTrue(a < uint(1) << 200 && b < uint(1) << 200);
 
         if(a > b) return almostEqual(b, a);
         if(a * (1e6 + 1) < b * 1e6) return false;

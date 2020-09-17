@@ -683,9 +683,9 @@ contract PoolTest is BCdpManagerTestBase {
 
         assertTrue(_100Percent >= expectedEth);
 
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
         uint dink = members[0].doPoolBite(pool, cdp, 10 ether, expectedEth);
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
         assertEq(uint(dink), expectedEth);
         assertEq(vat.gem("ETH", address(members[0])), expectedEth);
         assertEq(vat.gem("ETH", address(jar)), expectedEthInJar);
@@ -724,9 +724,9 @@ contract PoolTest is BCdpManagerTestBase {
         // for 26 ether we expect 26/130 * 1.1 = 28.6/130, from which 98% goes to member
         uint expectedEth = uint(98) * 286 ether / (130 * 100 * 10);
         for(uint i = 0 ; i < 4 ; i++) {
-            assert(! canKeepersBite(cdp));
+            assertTrue(! canKeepersBite(cdp));
             uint dink = members[i].doPoolBite(pool, cdp, 26 ether, expectedEth);
-            assert(! canKeepersBite(cdp));
+            assertTrue(! canKeepersBite(cdp));
             assertEq(uint(dink), expectedEth);
             assertEq(vat.gem("ETH", address(members[i])), expectedEth);
             (uint cdpArt, uint cdpCushion, address[] memory winners, uint[] memory bite) = pool.getCdpData(cdp);

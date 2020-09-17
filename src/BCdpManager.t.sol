@@ -262,11 +262,11 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         // bite
         address urn = manager.urns(cdp);
         (, uint art) = vat.urns("ETH", urn);
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
         liquidator.doBite(pool, cdp, art/2, 0);
-        assert(! canKeepersBite(cdp));
+        assertTrue(! canKeepersBite(cdp));
 
-        assert(LiquidationMachine(manager).bitten(cdp));
+        assertTrue(LiquidationMachine(manager).bitten(cdp));
     }
 
     function canKeepersBite(uint cdp) internal view returns (bool) {
@@ -660,7 +660,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
         manager.frob(cdp, 1 ether, 50 ether);
         reachTopup(cdp);
-        assert(LiquidationMachine(manager).cushion(cdp) > 0);
+        assertTrue(LiquidationMachine(manager).cushion(cdp) > 0);
 
         manager.frob(cdp, 0 ether, -50 ether);
         (, uint art) = vat.urns("ETH", manager.urns(cdp));
@@ -1235,7 +1235,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
         assertEq(vat.gem("ETH", address(newJar)), 0);
         reachBite(cdp);
         // expect some balance after bite
-        assert(vat.gem("ETH", address(newJar)) > 0);
+        assertTrue(vat.gem("ETH", address(newJar)) > 0);
 
     }
 
