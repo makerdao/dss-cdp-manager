@@ -71,7 +71,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         uint dtab = mul(rate, dtopup);
 
         vat.move(pool, address(this), dtab);
-        vat.frob(ilk, urn, urn, address(this), 0, -int(dtopup));
+        vat.frob(ilk, urn, urn, address(this), 0, -toInt(dtopup));
 
         cushion[cdp] = add(cushion[cdp], dtopup);
     }
@@ -109,8 +109,8 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
 
         vat.move(pool, address(this), dtab);
 
-        vat.frob(ilk, urn, urn, address(this), 0, -int(dart));
-        vat.frob(ilk, urn, msg.sender, urn, -int(dink), 0);
+        vat.frob(ilk, urn, urn, address(this), 0, -toInt(dart));
+        vat.frob(ilk, urn, msg.sender, urn, -toInt(dink), 0);
     }
 
     function calcDink(uint dart, uint rate, bytes32 ilk) internal returns(uint dink) {
