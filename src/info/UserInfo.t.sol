@@ -67,7 +67,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         userInfo = new UserInfo(address(dai), address(weth));
         JarConnector _jarConnector = new JarConnector(address(manager), address(ethJoin), "ETH", [uint(100000), uint(100000)]);
         jarConnector = JarConnectorLike(address(_jarConnector));
-        jar = new Jar(1, 30 days, address(jarConnector));
+        jar = new Jar(uint(1), uint(now + 30 days), address(jarConnector));
 
         vatLike = VatLike(address(vat));
         registryLike = ProxyRegistryLike(address(registry));
