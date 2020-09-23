@@ -149,6 +149,24 @@ contract VatDeployer {
     }
 }
 
+contract UserDeployment {
+    address constant VAT = 0xbA987bDB501d131f766fEe8180Da5d81b34b69d9;
+    address constant END = 0x24728AcF2E2C403F5d2db4Df6834B8998e56aA5F;
+    address constant POOL = address(0x0);
+    address constant REAL = 0x75dD74e8afE8110C8320eD397CcCff3B8134d981;
+
+    address public manager;
+
+    constructor() public {
+        BCdpScore score = new BCdpScore();
+        BCdpManager man = new BCdpManager(VAT, END, POOL, REAL, address(score));
+        score.setManager(address(man));
+        score.spin();
+
+        manager = address(man);
+    }
+}
+
 
 contract DeploymentTest is BCdpManagerTestBase {
     uint currTime;
