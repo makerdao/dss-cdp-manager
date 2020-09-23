@@ -11,6 +11,7 @@ import { Math } from "./../Math.sol";
 contract VatLike {
     function urns(bytes32 ilk, address u) public view returns (uint ink, uint art);
     function ilks(bytes32 ilk) public view returns(uint Art, uint rate, uint spot, uint line, uint dust);
+    function gem(bytes32 ilk, address user) external view returns(uint);
 }
 
 contract DSProxyLike {
@@ -213,19 +214,19 @@ contract UserInfo is Math, UserInfoStorage {
 
     function getUserRatingInfo(
         address guy,
-        JarConnectorLike jar,
+        JarConnectorLike jarConnector,
         VatLike vat,
+        address weth,
         bytes32 ilk,
         uint cdp
     ) public view returns(UserRatingInfo memory info) {
         // TODO - set real sizes
-        guy; // shh compiler warning
-        info.userRating = jar.getUserScore(bytes32(cdp));
+        info.userRating = jarConnector.getUserScore(bytes32(cdp));
         (, info.userRatingProgressPerSec) = vat.urns(ilk, guy);
-        info.totalRating = jar.getGlobalScore();
+        info.totalRating = jarConnector.getGlobalScore();
         info.totalRatingProgressPerSec = 13e18;
-        // weth + gem 
-        info.jarBalance = 1e4 * 1e18;
+        //uint wethBal = ERC20Like(weth).balanceOf(jar);
+        //info.jarBalance = add(wethBal, vat.gem(ilk, guy));
     }
 
     function setInfo(
@@ -237,8 +238,9 @@ contract UserInfo is Math, UserInfoStorage {
         VatLike vat,
         SpotLike spot,
         ProxyRegistryLike registry,
-        JarConnectorLike jar,
-        address dai
+        JarConnectorLike jarConnector,
+        address dai,
+        address weth
     ) public {
         UserState memory state;
 
@@ -262,7 +264,7 @@ contract UserInfo is Math, UserInfoStorage {
         state.userWalletInfo.daiBalance = ERC20Like(dai).balanceOf(user);
         state.userWalletInfo.daiAllowance = ERC20Like(dai).allowance(user, guy);
 
-        state.userRatingInfo = getUserRatingInfo(guy, jar, vat, ilk, state.bCdpInfo.cdp);
+        state.userRatingInfo = getUserRatingInfo(guy, jarConnector, vat, weth, ilk, state.bCdpInfo.cdp);
 
         set(state);
     }
@@ -276,10 +278,11 @@ contract UserInfo is Math, UserInfoStorage {
         VatLike vat,
         SpotLike spot,
         ProxyRegistryLike registry,
-        JarConnectorLike jar,
-        address dai
+        JarConnectorLike jarConnector,
+        address dai,
+        address weth
     ) public returns(UserState memory state) {
-        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jar, dai);
+        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jarConnector, dai, weth);
         return userState;
     }
 }
