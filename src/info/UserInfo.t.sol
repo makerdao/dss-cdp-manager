@@ -6,7 +6,8 @@ import { BCdpManagerTestBase, Hevm, FakeUser } from "./../BCdpManager.t.sol";
 import { BCdpManager } from "./../BCdpManager.sol";
 import { DssCdpManager } from "./../DssCdpManager.sol";
 import { GetCdps } from "./../GetCdps.sol";
-import { UserInfo, VatLike, DSProxyLike, ProxyRegistryLike, SpotLike } from "./UserInfo.sol";
+import { UserInfo, VatLike, DSProxyLike, ProxyRegistryLike, SpotLike, JarConnectorLike } from "./UserInfo.sol";
+import { JarConnector } from "./../JarConnector.sol";
 
 
 contract FakeProxy is FakeUser {
@@ -53,6 +54,7 @@ contract UserInfoTest is BCdpManagerTestBase {
     VatLike vatLike;
     ProxyRegistryLike registryLike;
     SpotLike spotterLike;
+    JarConnectorLike jarConnector;
 
     function setUp() public {
 
@@ -62,10 +64,13 @@ contract UserInfoTest is BCdpManagerTestBase {
         getCdps = new GetCdps();
         registry = new FakeRegistry();
         userInfo = new UserInfo();
+        JarConnector jar = new JarConnector(address(manager), address(ethJoin), "ETH", [uint(10), uint(100)]);
+        jarConnector = JarConnectorLike(address(jar));
 
         vatLike = VatLike(address(vat));
         registryLike = ProxyRegistryLike(address(registry));
         spotterLike = SpotLike(address(spotter));
+
     }
 
     function openCdp(address man, uint ink, uint art) internal returns(uint){
@@ -94,7 +99,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         dai.approve(address(proxy), 456);
 
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertTrue(! userInfo.hasCdp());
@@ -116,7 +121,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         this.file(address(vat), "ETH", "dust", 20 ether * RAY);
 
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
 
         assertEq(userInfo.daiBalance(), 50 ether);
         assertEq(userInfo.dustInWei(), 20 ether);
@@ -124,7 +129,7 @@ contract UserInfoTest is BCdpManagerTestBase {
 
     function testNoProxy() public {
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(0));
         assertEq(address(userInfo.userProxy()), address(0));
     }
@@ -134,7 +139,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         uint bCdp = openCdp(address(manager), 1 ether, 20 ether);
         manager.give(bCdp, address(proxy));
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertEq(userInfo.cdp(), bCdp);
@@ -151,7 +156,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         uint bCdp = openCdp(address(dsManager), 1 ether, 20 ether);
         dsManager.give(bCdp, address(proxy));
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertEq(userInfo.makerdaoCdp(), bCdp);
@@ -170,7 +175,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         manager.give(bCdp, address(proxy));
         dsManager.give(mCdp, address(proxy));
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
 
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
@@ -199,7 +204,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         manager.give(bCdp, address(proxy));
         dsManager.give(mCdp, address(proxy));
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
 
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
@@ -253,7 +258,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         dsManager.give(mCdp2, address(proxy));
 
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
 
         assertEq(userInfo.hasProxy() ? uint(1) : uint(0), uint(1));
         assertEq(address(userInfo.userProxy()), address(proxy));
@@ -286,7 +291,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertTrue(art < 50 ether); // make sure there is a cushion
 
         userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
-                         spotterLike, registryLike, address(123), address(dai));
+                         spotterLike, registryLike, jarConnector, address(dai));
 
         assertTrue(userInfo.hasCdp());
         assertEq(userInfo.daiDebt(), 50 ether);

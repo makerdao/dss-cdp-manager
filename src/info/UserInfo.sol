@@ -31,6 +31,11 @@ contract ERC20Like {
     function allowance(address owner, address spender) public view returns (uint);
 }
 
+contract JarConnectorLike {
+    function getUserScore(bytes32 user) external view returns (uint);
+    function getGlobalScore() external view returns (uint);
+}
+
 // this is just something to help avoiding solidity quirks
 contract UserInfoStorage {
     struct ProxyInfo {
@@ -206,13 +211,18 @@ contract UserInfo is Math, UserInfoStorage {
         }
     }
 
-    function getUserRatingInfo(address guy, address jar) public pure returns(UserRatingInfo memory info) {
+    function getUserRatingInfo(
+        address guy,
+        JarConnectorLike jar,
+        VatLike vat,
+        bytes32 ilk,
+        uint cdp
+    ) public view returns(UserRatingInfo memory info) {
         // TODO - set real sizes
         guy; // shh compiler warning
-        jar; // shh compiler warning
-        info.userRating = 70000e18;
-        info.userRatingProgressPerSec = 1e18;
-        info.totalRating = info.userRating * 11;
+        info.userRating = jar.getUserScore(bytes32(cdp));
+        (, info.userRatingProgressPerSec) = vat.urns(ilk, guy);
+        info.totalRating = jar.getGlobalScore();
         info.totalRatingProgressPerSec = 13e18;
         info.jarSize = 1e4 * 1e18;
     }
@@ -226,7 +236,7 @@ contract UserInfo is Math, UserInfoStorage {
         VatLike vat,
         SpotLike spot,
         ProxyRegistryLike registry,
-        address jar,
+        JarConnectorLike jar,
         address dai
     ) public {
         UserState memory state;
@@ -251,7 +261,7 @@ contract UserInfo is Math, UserInfoStorage {
         state.userWalletInfo.daiBalance = ERC20Like(dai).balanceOf(user);
         state.userWalletInfo.daiAllowance = ERC20Like(dai).allowance(user, guy);
 
-        state.userRatingInfo = getUserRatingInfo(guy, jar);
+        state.userRatingInfo = getUserRatingInfo(guy, jar, vat, ilk, state.bCdpInfo.cdp);
 
         set(state);
     }
@@ -265,7 +275,7 @@ contract UserInfo is Math, UserInfoStorage {
         VatLike vat,
         SpotLike spot,
         ProxyRegistryLike registry,
-        address jar,
+        JarConnectorLike jar,
         address dai
     ) public returns(UserState memory state) {
         setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jar, dai);
