@@ -213,11 +213,12 @@ contract UserInfo is Math, UserInfoStorage {
     }
 
     function getUserRatingInfo(
+        bytes32 ilk,
         address guy,
         JarConnectorLike jarConnector,
+        address jar,
         VatLike vat,
         address weth,
-        bytes32 ilk,
         uint cdp
     ) public view returns(UserRatingInfo memory info) {
         // TODO - set real sizes
@@ -225,8 +226,8 @@ contract UserInfo is Math, UserInfoStorage {
         (, info.userRatingProgressPerSec) = vat.urns(ilk, guy);
         info.totalRating = jarConnector.getGlobalScore();
         info.totalRatingProgressPerSec = 13e18;
-        //uint wethBal = ERC20Like(weth).balanceOf(jar);
-        //info.jarBalance = add(wethBal, vat.gem(ilk, guy));
+        uint wethBalance = ERC20Like(weth).balanceOf(jar);
+        info.jarBalance = add(wethBalance, vat.gem(ilk, guy));
     }
 
     function setInfo(
@@ -239,6 +240,7 @@ contract UserInfo is Math, UserInfoStorage {
         SpotLike spot,
         ProxyRegistryLike registry,
         JarConnectorLike jarConnector,
+        address jar,
         address dai,
         address weth
     ) public {
@@ -264,7 +266,9 @@ contract UserInfo is Math, UserInfoStorage {
         state.userWalletInfo.daiBalance = ERC20Like(dai).balanceOf(user);
         state.userWalletInfo.daiAllowance = ERC20Like(dai).allowance(user, guy);
 
-        state.userRatingInfo = getUserRatingInfo(guy, jarConnector, vat, weth, ilk, state.bCdpInfo.cdp);
+        uint cdp = state.bCdpInfo.cdp;
+        //notice, sending ilk as first param avoids `Stack too deep` error
+        state.userRatingInfo = getUserRatingInfo(ilk, guy, jarConnector, jar, vat, weth, cdp);
 
         set(state);
     }
@@ -279,10 +283,11 @@ contract UserInfo is Math, UserInfoStorage {
         SpotLike spot,
         ProxyRegistryLike registry,
         JarConnectorLike jarConnector,
+        address jar,
         address dai,
         address weth
     ) public returns(UserState memory state) {
-        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jarConnector, dai, weth);
+        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jarConnector, jar, dai, weth);
         return userState;
     }
 }
