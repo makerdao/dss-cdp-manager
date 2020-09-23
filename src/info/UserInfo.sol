@@ -37,6 +37,10 @@ contract JarConnectorLike {
     function getGlobalScore() external view returns (uint);
 }
 
+contract JarLike {
+    function connector() external view returns (address);
+}
+
 // this is just something to help avoiding solidity quirks
 contract UserInfoStorage {
     struct ProxyInfo {
@@ -151,6 +155,17 @@ contract UserInfo is Math, UserInfoStorage {
 
 
     uint constant ONE = 1e27;
+    address public jar;
+    address public dai;
+    address public weth;
+
+    constructor(
+        address dai_,
+        address weth_
+    ) public {
+        dai = dai_;
+        weth = weth_;
+    }
 
     function getFirstCdp(GetCdps getCdp, address manager, address guy, bytes32 ilk) internal view returns(uint) {
         (uint[] memory ids,, bytes32[] memory ilks) = getCdp.getCdpsAsc(manager, guy);
@@ -215,13 +230,12 @@ contract UserInfo is Math, UserInfoStorage {
     function getUserRatingInfo(
         bytes32 ilk,
         address guy,
-        JarConnectorLike jarConnector,
-        address jar,
         VatLike vat,
-        address weth,
-        uint cdp
+        uint cdp,
+        address jar
     ) public view returns(UserRatingInfo memory info) {
         // TODO - set real sizes
+        JarConnectorLike jarConnector = JarConnectorLike(address(JarLike(jar).connector()));
         info.userRating = jarConnector.getUserScore(bytes32(cdp));
         (, info.userRatingProgressPerSec) = vat.urns(ilk, guy);
         info.totalRating = jarConnector.getGlobalScore();
@@ -239,10 +253,7 @@ contract UserInfo is Math, UserInfoStorage {
         VatLike vat,
         SpotLike spot,
         ProxyRegistryLike registry,
-        JarConnectorLike jarConnector,
-        address jar,
-        address dai,
-        address weth
+        address jar
     ) public {
         UserState memory state;
 
@@ -268,7 +279,7 @@ contract UserInfo is Math, UserInfoStorage {
 
         uint cdp = state.bCdpInfo.cdp;
         //notice, sending ilk as first param avoids `Stack too deep` error
-        state.userRatingInfo = getUserRatingInfo(ilk, guy, jarConnector, jar, vat, weth, cdp);
+        state.userRatingInfo = getUserRatingInfo(ilk, guy, vat, cdp, jar);
 
         set(state);
     }
@@ -282,12 +293,9 @@ contract UserInfo is Math, UserInfoStorage {
         VatLike vat,
         SpotLike spot,
         ProxyRegistryLike registry,
-        JarConnectorLike jarConnector,
-        address jar,
-        address dai,
-        address weth
+        address jar
     ) public returns(UserState memory state) {
-        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jarConnector, jar, dai, weth);
+        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jar);
         return userState;
     }
 }
