@@ -57,7 +57,7 @@ contract UserInfoStorage {
         uint userRatingProgressPerSec;
         uint totalRating;
         uint totalRatingProgressPerSec;
-        uint jarSize;
+        uint jarBalance;
     }
 
     struct MiscInfo {
@@ -102,7 +102,7 @@ contract UserInfoStorage {
     uint public userRatingProgressPerSec;
     uint public totalRating;
     uint public totalRatingProgressPerSec;
-    uint public jarSize;
+    uint public jarBalance;
 
     uint public spotPrice;
     uint public dustInWei;
@@ -140,7 +140,7 @@ contract UserInfoStorage {
         userRatingProgressPerSec = state.userRatingInfo.userRatingProgressPerSec;
         totalRating = state.userRatingInfo.totalRating;
         totalRatingProgressPerSec = state.userRatingInfo.totalRatingProgressPerSec;
-        jarSize = state.userRatingInfo.jarSize;
+        jarBalance = state.userRatingInfo.jarBalance;
 
         userState = state;
     }
@@ -224,7 +224,8 @@ contract UserInfo is Math, UserInfoStorage {
         (, info.userRatingProgressPerSec) = vat.urns(ilk, guy);
         info.totalRating = jar.getGlobalScore();
         info.totalRatingProgressPerSec = 13e18;
-        info.jarSize = 1e4 * 1e18;
+        // weth + gem 
+        info.jarBalance = 1e4 * 1e18;
     }
 
     function setInfo(
