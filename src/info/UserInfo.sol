@@ -155,7 +155,6 @@ contract UserInfo is Math, UserInfoStorage {
 
 
     uint constant ONE = 1e27;
-    address public jar;
     address public dai;
     address public weth;
 
@@ -229,19 +228,18 @@ contract UserInfo is Math, UserInfoStorage {
 
     function getUserRatingInfo(
         bytes32 ilk,
-        address guy,
+        address urn,
         VatLike vat,
         uint cdp,
         address jar
     ) public view returns(UserRatingInfo memory info) {
-        // TODO - set real sizes
         JarConnectorLike jarConnector = JarConnectorLike(address(JarLike(jar).connector()));
         info.userRating = jarConnector.getUserScore(bytes32(cdp));
-        (, info.userRatingProgressPerSec) = vat.urns(ilk, guy);
+        (, info.userRatingProgressPerSec) = vat.urns(ilk, urn);
         info.totalRating = jarConnector.getGlobalScore();
-        info.totalRatingProgressPerSec = 13e18;
+        info.totalRatingProgressPerSec = 13e18; // TODO
         uint wethBalance = ERC20Like(weth).balanceOf(jar);
-        info.jarBalance = add(wethBalance, vat.gem(ilk, guy));
+        info.jarBalance = add(wethBalance, vat.gem(ilk, jar));
     }
 
     function setInfo(
@@ -278,8 +276,9 @@ contract UserInfo is Math, UserInfoStorage {
         state.userWalletInfo.daiAllowance = ERC20Like(dai).allowance(user, guy);
 
         uint cdp = state.bCdpInfo.cdp;
-        //notice, sending ilk as first param avoids `Stack too deep` error
-        state.userRatingInfo = getUserRatingInfo(ilk, guy, vat, cdp, jar);
+        address urn = manager.urns(cdp);
+
+        state.userRatingInfo = getUserRatingInfo(ilk, urn, vat, cdp, jar);
 
         set(state);
     }
