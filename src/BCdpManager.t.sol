@@ -280,11 +280,11 @@ contract BCdpManagerTestBase is DssDeployTestBase {
 
     function deployNewPoolContract() internal returns (Pool) {
         jar = new FakeUser();
-        return deployNewPoolContract(jar);
+        return deployNewPoolContract(address(jar));
     }
 
-    function deployNewPoolContract(FakeUser jar_) internal returns (Pool) {
-        Pool _pool = new Pool(address(vat), address(jar_), address(spotter), address(jug), address(daiToUsdPriceFeed));
+    function deployNewPoolContract(address jar_) internal returns (Pool) {
+        Pool _pool = new Pool(address(vat), jar_, address(spotter), address(jug), address(daiToUsdPriceFeed));
         _pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
@@ -1225,7 +1225,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
     function testChangePoolContract() public {
         FakeUser newJar = new FakeUser();
-        pool = deployNewPoolContract(newJar);
+        pool = deployNewPoolContract(address(newJar));
 
         manager.setPoolContract(address(pool));
 

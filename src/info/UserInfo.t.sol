@@ -2,13 +2,14 @@ pragma solidity ^0.5.12;
 //pragma experimental ABIEncoderV2;
 
 import { Vat, Spotter } from "dss-deploy/DssDeploy.t.base.sol";
-import { BCdpManagerTestBase, Hevm, FakeUser } from "./../BCdpManager.t.sol";
+import { BCdpManagerTestBase, Hevm, FakeUser, BCdpScoreLike } from "./../BCdpManager.t.sol";
 import { BCdpManager } from "./../BCdpManager.sol";
 import { DssCdpManager } from "./../DssCdpManager.sol";
 import { GetCdps } from "./../GetCdps.sol";
 import { UserInfo, VatLike, DSProxyLike, ProxyRegistryLike, SpotLike, JarConnectorLike } from "./UserInfo.sol";
 import { JarConnector } from "./../JarConnector.sol";
 import { Jar } from "./../../user-rating/contracts/jar/Jar.sol";
+import { Pool } from "./../pool/Pool.sol";
 
 contract FakeProxy is FakeUser {
     address public owner;
@@ -54,7 +55,7 @@ contract UserInfoTest is BCdpManagerTestBase {
     VatLike vatLike;
     ProxyRegistryLike registryLike;
     SpotLike spotterLike;
-    JarConnectorLike jarConnector;
+    JarConnector jarConnector;
     Jar jar;
 
     function setUp() public {
@@ -65,8 +66,8 @@ contract UserInfoTest is BCdpManagerTestBase {
         getCdps = new GetCdps();
         registry = new FakeRegistry();
         userInfo = new UserInfo(address(dai), address(weth));
-        JarConnector _jarConnector = new JarConnector(address(manager), address(ethJoin), "ETH", [uint(100000), uint(100000)]);
-        jarConnector = JarConnectorLike(address(_jarConnector));
+
+        jarConnector = new JarConnector(address(manager), address(ethJoin), "ETH", [uint(100000), uint(100000)]);
         jar = new Jar(uint(1), uint(now + 30 days), address(jarConnector));
 
         vatLike = VatLike(address(vat));
@@ -297,6 +298,45 @@ contract UserInfoTest is BCdpManagerTestBase {
 
         assertTrue(userInfo.hasCdp());
         assertEq(userInfo.daiDebt(), 50 ether);
+    }
+
+    function testUserRatingInfo() public {
+        timeReset();
+        FakeProxy proxy = registry.build();
+
+        score.transferOwnership(address(jarConnector));
+        jarConnector.spin();
+
+        pool = deployNewPoolContract(address(jar));
+        manager.setPoolContract(address(pool));
+
+        uint cdp = manager.open("ETH", address(this));
+        uint fwdTimeBy = 10;
+        reachBite(cdp);
+        forwardTime(fwdTimeBy);
+        manager.give(cdp, address(proxy));
+
+        userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
+                         spotterLike, registryLike, address(jar));
+        
+        assertTrue(address(jar.connector()) == address(jarConnector));
+        assertEq(jarConnector.round(), 1);
+    
+
+        assertTrue(userInfo.hasProxy());
+        assertEq(address(userInfo.userProxy()), address(proxy));
+
+        assertTrue(userInfo.hasCdp());
+        assertTrue(userInfo.userRating() > 0);
+        assertEq(jarConnector.getUserScore(bytes32(cdp)), userInfo.userRating());
+        
+        assertTrue(userInfo.userRatingProgressPerSec() > 0);
+
+        assertTrue(userInfo.totalRating() > 0);
+        assertEq(userInfo.totalRating(), jarConnector.getGlobalScore());
+
+        assertEq(userInfo.totalRatingProgressPerSec(), 13e18);
+        assertTrue(userInfo.jarBalance() > 0);
     }
 
     // todo - test cushion
