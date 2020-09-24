@@ -50,6 +50,7 @@ contract UserInfoStorage {
 
     struct CdpInfo {
         bool hasCdp;
+        bool bitten;
         uint cdp;
         uint ethDeposit;
         uint daiDebt; // in wad - not in rad
@@ -91,12 +92,15 @@ contract UserInfoStorage {
     bool public hasProxy;
     address public userProxy;
 
+    // CdpInfo of B
     bool public hasCdp;
+    bool public bitten;
     uint public cdp;
     uint public ethDeposit;
     uint public daiDebt; // in wad - not in rad
     uint public maxDaiDebt;
 
+    // CdpInfo of Mkr
     bool public makerdaoHasCdp;
     uint public makerdaoCdp;
     uint public makerdaoEthDeposit;
@@ -122,6 +126,7 @@ contract UserInfoStorage {
         userProxy = address(state.proxyInfo.userProxy);
 
         hasCdp = state.bCdpInfo.hasCdp;
+        bitten = state.bCdpInfo.bitten;
         cdp = state.bCdpInfo.cdp;
         ethDeposit = state.bCdpInfo.ethDeposit;
         daiDebt = state.bCdpInfo.daiDebt;
@@ -215,15 +220,46 @@ contract UserInfo is Math, UserInfoStorage {
         GetCdps getCdp,
         bool b
     ) public view returns(CdpInfo memory info) {
-        info.cdp = getFirstCdp(getCdp, manager, guy, ilk);
-        info.hasCdp = info.cdp > 0;
-        if(info.hasCdp) {
-            (uint ink, uint art) = vat.urns(ilk, DssCdpManager(manager).urns(info.cdp));
-            if(b) art = add(art, LiquidationMachine(manager).cushion(info.cdp));
-            info.ethDeposit = ink;
-            info.daiDebt = artToDaiDebt(vat, ilk, art);
-            info.maxDaiDebt = calcMaxDebt(vat, ilk, ink);
+        if(b) {
+            // B.Protocol
+            info.cdp = getFirstCdp(getCdp, manager, guy, ilk);
+            info.hasCdp = info.cdp > 0;
+            if(info.hasCdp) {
+                (uint ink, uint art) = vat.urns(ilk, DssCdpManager(manager).urns(info.cdp));
+                art = add(art, LiquidationMachine(manager).cushion(info.cdp));
+                info.bitten = LiquidationMachine(manager).bitten(info.cdp);
+                info.ethDeposit = ink;
+                info.daiDebt = artToDaiDebt(vat, ilk, art);
+                info.maxDaiDebt = calcMaxDebt(vat, ilk, ink);
+            }
+        } else {
+            // MakerDAO
+            info.cdp = findFirstNonZeroInkCdp(manager, guy, ilk, vat, getCdp);
+            info.hasCdp = info.cdp > 0;
+            if(info.hasCdp) {
+                (uint ink, uint art) = vat.urns(ilk, DssCdpManager(manager).urns(info.cdp));
+                info.ethDeposit = ink;
+                info.daiDebt = artToDaiDebt(vat, ilk, art);
+                info.maxDaiDebt = calcMaxDebt(vat, ilk, ink);
+            }
         }
+    }
+
+    function findFirstNonZeroInkCdp(
+        address manager,
+        address guy,
+        bytes32 ilk,
+        VatLike vat,
+        GetCdps getCdp
+    ) public view returns (uint) {
+        (uint[] memory ids,, bytes32[] memory ilks) = getCdp.getCdpsAsc(manager, guy);
+        for(uint i = 0 ; i < ilks.length ; i++) {
+            if(ilks[i] == ilk) {
+                (uint ink,) = vat.urns(ilk, DssCdpManager(manager).urns(ids[i]));
+                if(ink > 0) return ids[i];
+            }
+        }
+        return 0;
     }
 
     function getUserRatingInfo(
