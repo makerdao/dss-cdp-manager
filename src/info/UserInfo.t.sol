@@ -6,7 +6,7 @@ import { BCdpManagerTestBase, Hevm, FakeUser, BCdpScoreLike } from "./../BCdpMan
 import { BCdpManager } from "./../BCdpManager.sol";
 import { DssCdpManager } from "./../DssCdpManager.sol";
 import { GetCdps } from "./../GetCdps.sol";
-import { UserInfo, VatLike, DSProxyLike, ProxyRegistryLike, SpotLike, JarConnectorLike } from "./UserInfo.sol";
+import { UserInfo, UserInfoStorage, VatLike, DSProxyLike, ProxyRegistryLike, SpotLike, JarConnectorLike } from "./UserInfo.sol";
 import { JarConnector } from "./../JarConnector.sol";
 import { Jar } from "./../../user-rating/contracts/jar/Jar.sol";
 import { Pool } from "./../pool/Pool.sol";
@@ -147,6 +147,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         assertEq(address(userInfo.userProxy()), address(proxy));
         assertEq(userInfo.cdp(), bCdp);
         assertTrue(userInfo.hasCdp());
+        assertTrue(userInfo.bitten() == false);
         assertEq(userInfo.ethDeposit(), 1 ether);
         assertEq(userInfo.daiDebt(), 20 ether);
         assertEq(userInfo.maxDaiDebt(), 200 ether); // 150% with spot price of $300
@@ -337,6 +338,55 @@ contract UserInfoTest is BCdpManagerTestBase {
 
         assertEq(userInfo.totalRatingProgressPerSec(), 13e18);
         assertTrue(userInfo.jarBalance() > 0);
+    }
+
+    function testGetCdpInfoBitten() public {
+        timeReset();
+        FakeProxy proxy = registry.build();
+
+        uint cdp = manager.open("ETH", address(this));
+
+        userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
+                         spotterLike, registryLike, address(jar));
+
+        assertTrue(userInfo.bitten() == false);
+
+        reachBite(cdp);
+
+        manager.give(cdp, address(proxy));
+        userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
+                         spotterLike, registryLike, address(jar));
+
+        assertTrue(userInfo.cdp() > 0);
+        assertTrue(userInfo.hasCdp());
+        assertTrue(userInfo.bitten());
+    }
+
+    function testGetCdpInfoMakerDao() public {
+        FakeProxy proxy1 = registry.build();
+        FakeProxy proxy2 = registry.build();
+        FakeProxy proxy3 = registry.build();
+
+        uint bCdp1 = openCdp(address(dsManager), 0, 0);
+        uint bCdp2 = openCdp(address(dsManager), 0, 0);
+        uint bCdp3 = openCdp(address(dsManager), 1 ether, 20 ether);
+
+        dsManager.give(bCdp1, address(proxy1));
+        dsManager.give(bCdp2, address(proxy2));
+        dsManager.give(bCdp3, address(proxy3));
+
+        userInfo.setInfo(address(this), "ETH", manager, dsManager, getCdps, vatLike,
+                         spotterLike, registryLike, address(jar));
+
+        assertTrue(userInfo.hasProxy());
+        assertEq(address(userInfo.userProxy()), address(proxy3));
+        assertEq(userInfo.makerdaoCdp(), bCdp3);
+        assertTrue(userInfo.makerdaoHasCdp());
+        assertEq(userInfo.makerdaoEthDeposit(), 1 ether);
+        assertEq(userInfo.makerdaoDaiDebt(), 20 ether);
+        assertEq(userInfo.makerdaoMaxDaiDebt(), 200 ether); // 150% with spot price of $300
+        assertEq(userInfo.spotPrice(), 300e18);
+        assertTrue(! userInfo.hasCdp());
     }
 
     // todo - test cushion
