@@ -1,51 +1,46 @@
 pragma solidity ^0.5.16;
 
-import { DSAuth } from "ds-auth/auth.sol";
 import { BCdpManager } from "../BCdpManager.sol";
 import { Math } from "../Math.sol";
 import { Timelock } from "./TimeLock.sol";
 import { JarConnector } from "../JarConnector.sol";
 
-contract Migrate is DSAuth, Math {
+contract Migrate is Math {
 
     struct Proposal {
         uint forVotes;
-        State state;
+        address newOwner;
         mapping (uint => bool) voted; // cdp => voted
     }
-
-    enum State { NONE, VOTING, EXECUTED}
 
     Timelock public timelock;
     JarConnector public jarConnector;
     BCdpManager public man;
-    address public newOwner;
 
-    Proposal public proposal;
+    Proposal[] public proposals;
 
     constructor(
         Timelock timelock_,
         JarConnector jarConnector_,
-        BCdpManager man_,
-        address newOwner_
+        BCdpManager man_
     ) public {
         timelock = timelock_;
         jarConnector = jarConnector_;
         man = man_;
-        newOwner = newOwner_;
     }
 
-    function propose() external auth {
-        require(proposal.state == State.NONE, "already-proposed");
+    function propose(address newOwner) external {
         require(jarConnector.round() > 2, "six-months-not-passed");
-        proposal = Proposal({
+        Proposal memory proposal = Proposal({
             forVotes:0,
-            state: State.VOTING
+            newOwner: newOwner
         });
+        proposals.push(proposal);
     }
 
-    function vote(uint cdp) external {
-        require(proposal.state == State.VOTING, "not-in-voting");
+    function vote(uint proposalId, uint cdp) external {
+        Proposal storage proposal = proposals[proposalId];
+        require(proposal.newOwner != address(0), "proposal-not-exist");
         require(! proposal.voted[cdp], "already-voted");
         require(msg.sender == man.owns(cdp), "not-cdp-owner");
         
@@ -54,8 +49,9 @@ contract Migrate is DSAuth, Math {
         proposal.voted[cdp] = true;
     }
 
-    function cancelVote(uint cdp) external {
-        require(proposal.state == State.VOTING, "not-in-voting");
+    function cancelVote(uint proposalId, uint cdp) external {
+        Proposal storage proposal = proposals[proposalId];
+        require(proposal.newOwner != address(0), "proposal-not-exist");
         require(proposal.voted[cdp], "not-voted");
         require(msg.sender == man.owns(cdp), "not-cdp-owner");
 
@@ -64,15 +60,17 @@ contract Migrate is DSAuth, Math {
         proposal.voted[cdp] = false;
     }
 
-    function queueProposal() external {
-        require(proposal.state == State.VOTING, "not-in-voting");
+    function queueProposal(uint proposalId) external {
         uint quorum = add(jarConnector.getGlobalScore() / 2, uint(1));
+        Proposal memory proposal = proposals[proposalId];
+        require(proposal.newOwner != address(0), "proposal-not-exist");
         require(proposal.forVotes >= quorum, "quorum-not-passed");
 
-        timelock.queueTransaction(address(man), 0, "setOwner(address)", abi.encode(newOwner), 48 hours);
+        timelock.queueTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), 48 hours);
     }
 
-    function executeProposal() external {
-        timelock.executeTransaction(address(man), 0, "setOwner(address)", abi.encode(newOwner), 48 hours);
+    function executeProposal(uint proposalId) external {
+        Proposal memory proposal = proposals[proposalId];
+        timelock.executeTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), 48 hours);
     }
 }
