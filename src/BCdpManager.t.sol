@@ -7,6 +7,7 @@ import { LiquidationMachine } from "./LiquidationMachine.sol";
 import { Pool } from "./pool/Pool.sol";
 import { BCdpFullScore } from "./BCdpFullScore.sol";
 import { BCdpScoreLike } from "./BCdpScoreConnector.sol";
+import { Migrate } from "./governance/Migrate.sol";
 
 contract Hevm {
     function warp(uint256) public;
@@ -110,6 +111,22 @@ contract FakeUser {
         uint cdp
     ) public {
         score.slashScore(cdp);
+    }
+
+    function doVote(
+        Migrate migrate,
+        uint proposalId,
+        uint cdp
+    ) public {
+        migrate.vote(proposalId, cdp);
+    }
+
+    function doCancelVote(
+        Migrate migrate,
+        uint proposalId,
+        uint cdp
+    ) public {
+        migrate.cancelVote(proposalId, cdp);
     }
 }
 

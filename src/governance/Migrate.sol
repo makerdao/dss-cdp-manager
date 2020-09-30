@@ -9,6 +9,7 @@ contract Migrate is Math {
 
     struct Proposal {
         uint forVotes;
+        uint eta;
         address newOwner;
         mapping (uint => bool) voted; // cdp => voted
     }
@@ -32,14 +33,15 @@ contract Migrate is Math {
         timelock = timelock_;
     }
 
-    function propose(address newOwner) external {
+    function propose(address newOwner) external returns (uint) {
         require(jarConnector.round() > 2, "six-months-not-passed");
         require(newOwner != address(0), "newOwner-cannot-be-zero");
         Proposal memory proposal = Proposal({
-            forVotes:0,
+            forVotes: 0,
+            eta: 0,
             newOwner: newOwner
         });
-        proposals.push(proposal);
+        return sub(proposals.push(proposal), uint(1));
     }
 
     function vote(uint proposalId, uint cdp) external {
@@ -66,15 +68,17 @@ contract Migrate is Math {
 
     function queueProposal(uint proposalId) external {
         uint quorum = add(jarConnector.getGlobalScore() / 2, uint(1));
-        Proposal memory proposal = proposals[proposalId];
+        Proposal storage proposal = proposals[proposalId];
+        require(proposal.eta == 0, "already-queued");
         require(proposal.newOwner != address(0), "proposal-not-exist");
         require(proposal.forVotes >= quorum, "quorum-not-passed");
 
-        timelock.queueTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), 2 days);
+        proposal.eta = now + 2 days;
+        timelock.queueTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), proposal.eta);
     }
 
     function executeProposal(uint proposalId) external {
         Proposal memory proposal = proposals[proposalId];
-        timelock.executeTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), 2 days);
+        timelock.executeTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), proposal.eta);
     }
 }
