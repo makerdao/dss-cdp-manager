@@ -1,6 +1,5 @@
 pragma solidity ^0.5.12;
 
-import { LibNote } from "dss/lib.sol";
 import { DssCdpManager } from "./DssCdpManager.sol";
 import { BCdpScoreConnector } from "./BCdpScoreConnector.sol";
 import { Math } from "./Math.sol";
@@ -24,10 +23,9 @@ contract PriceFeedLike {
     function read(bytes32 ilk) external view returns(bytes32);
 }
 
-contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
+contract LiquidationMachine is DssCdpManager, BCdpScoreConnector, Math {
     VatLike                   public vat;
     EndLike                   public end;
-    DssCdpManager             public man;
     address                   public pool;
     PriceFeedLike             public real;
 
@@ -44,8 +42,7 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         _;
     }
 
-    constructor(DssCdpManager man_, VatLike vat_, EndLike end_, address pool_, PriceFeedLike real_) public {
-        man = man_;
+    constructor(VatLike vat_, EndLike end_, address pool_, PriceFeedLike real_) public {
         vat = vat_;
         end = end_;
         pool = pool_;
@@ -64,8 +61,8 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
     function topup(uint cdp, uint dtopup) external onlyPool {
         if(out[cdp]) return;
 
-        address urn = man.urns(cdp);
-        bytes32 ilk = man.ilks(cdp);
+        address urn = urns[cdp];
+        bytes32 ilk = ilks[cdp];
 
         (, uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, dtopup);
@@ -86,8 +83,8 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
         uint top = cushion[cdp];
         if(top == 0) return; // nothing to do
 
-        bytes32 ilk = man.ilks(cdp);
-        address urn = man.urns(cdp);
+        bytes32 ilk = ilks[cdp];
+        address urn = urns[cdp];
 
         (, uint rate,,,) = vat.ilks(ilk);
         uint dtab = mul(rate, top);
@@ -122,8 +119,8 @@ contract LiquidationMachine is LibNote, BCdpScoreConnector, Math {
     }
 
     function bite(uint cdp, uint dart) external onlyPool returns(uint dink){
-        address urn = man.urns(cdp);
-        bytes32 ilk = man.ilks(cdp);
+        address urn = urns[cdp];
+        bytes32 ilk = ilks[cdp];
 
         (uint ink, uint art) = vat.urns(ilk, urn);
         art = add(art, cushion[cdp]);
