@@ -2,7 +2,7 @@ pragma solidity ^0.5.16;
 
 import { BCdpManager } from "../BCdpManager.sol";
 import { Math } from "../Math.sol";
-import { Timelock } from "./TimeLock.sol";
+import { Timelock } from "./Timelock.sol";
 import { JarConnector } from "../JarConnector.sol";
 
 contract Migrate is Math {
@@ -20,17 +20,21 @@ contract Migrate is Math {
     Proposal[] public proposals;
 
     constructor(
-        Timelock timelock_,
         JarConnector jarConnector_,
         BCdpManager man_
     ) public {
-        timelock = timelock_;
         jarConnector = jarConnector_;
         man = man_;
     }
 
+    function setTimelock(Timelock timelock_) external {
+        require(timelock == Timelock(0), "timelock-already-set");
+        timelock = timelock_;
+    }
+
     function propose(address newOwner) external {
         require(jarConnector.round() > 2, "six-months-not-passed");
+        require(newOwner != address(0), "newOwner-cannot-be-zero");
         Proposal memory proposal = Proposal({
             forVotes:0,
             newOwner: newOwner
@@ -66,11 +70,11 @@ contract Migrate is Math {
         require(proposal.newOwner != address(0), "proposal-not-exist");
         require(proposal.forVotes >= quorum, "quorum-not-passed");
 
-        timelock.queueTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), 48 hours);
+        timelock.queueTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), 2 days);
     }
 
     function executeProposal(uint proposalId) external {
         Proposal memory proposal = proposals[proposalId];
-        timelock.executeTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), 48 hours);
+        timelock.executeTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), 2 days);
     }
 }
