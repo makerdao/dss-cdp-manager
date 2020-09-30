@@ -6,10 +6,10 @@ import { DssCdpManager } from "./DssCdpManager.sol";
 import { LiquidationMachine, VatLike, EndLike, PriceFeedLike} from "./LiquidationMachine.sol";
 import { BCdpScoreConnector, BCdpScoreLike } from "./BCdpScoreConnector.sol";
 
-contract BCdpManager is DssCdpManager, BCdpScoreConnector, LiquidationMachine, DSAuth {
+contract BCdpManager is BCdpScoreConnector, LiquidationMachine, DSAuth {
     constructor(address vat_, address end_, address pool_, address real_, address score_) public
         DssCdpManager(vat_)
-        LiquidationMachine(this, VatLike(vat_), EndLike(end_), pool_, PriceFeedLike(real_))
+        LiquidationMachine(VatLike(vat_), EndLike(end_), pool_, PriceFeedLike(real_))
         BCdpScoreConnector(BCdpScoreLike(score_))
     {
 
