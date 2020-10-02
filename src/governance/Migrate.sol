@@ -1,9 +1,9 @@
-pragma solidity ^0.5.16;
+pragma solidity ^0.5.12;
 
 import { BCdpManager } from "../BCdpManager.sol";
 import { Math } from "../Math.sol";
-import { Timelock } from "./Timelock.sol";
 import { JarConnector } from "../JarConnector.sol";
+import { GovernanceExecutor } from "./GovernanceExecutor.sol";
 
 contract Migrate is Math {
 
@@ -14,28 +14,28 @@ contract Migrate is Math {
         mapping (uint => bool) voted; // cdp => voted
     }
 
-    Timelock public timelock;
+    uint public constant DELAY = 2 days;
+
     JarConnector public jarConnector;
     BCdpManager public man;
+    GovernanceExecutor public executor;
 
     Proposal[] public proposals;
 
     constructor(
         JarConnector jarConnector_,
-        BCdpManager man_
+        BCdpManager man_,
+        GovernanceExecutor executor_
     ) public {
         jarConnector = jarConnector_;
         man = man_;
-    }
-
-    function setTimelock(Timelock timelock_) external {
-        require(timelock == Timelock(0), "timelock-already-set");
-        timelock = timelock_;
+        executor = executor_;
     }
 
     function propose(address newOwner) external returns (uint) {
         require(jarConnector.round() > 2, "six-months-not-passed");
         require(newOwner != address(0), "newOwner-cannot-be-zero");
+
         Proposal memory proposal = Proposal({
             forVotes: 0,
             eta: 0,
@@ -67,18 +67,20 @@ contract Migrate is Math {
     }
 
     function queueProposal(uint proposalId) external {
-        uint quorum = add(jarConnector.getGlobalScore() / 2, uint(1));
+        uint quorum = add(jarConnector.getGlobalScore() / 2, uint(1)); // 50%
         Proposal storage proposal = proposals[proposalId];
         require(proposal.eta == 0, "already-queued");
         require(proposal.newOwner != address(0), "proposal-not-exist");
         require(proposal.forVotes >= quorum, "quorum-not-passed");
 
-        proposal.eta = now + 2 days;
-        timelock.queueTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), proposal.eta);
+        proposal.eta = now + DELAY;
     }
 
     function executeProposal(uint proposalId) external {
         Proposal memory proposal = proposals[proposalId];
-        timelock.executeTransaction(address(man), 0, "setOwner(address)", abi.encode(proposal.newOwner), proposal.eta);
+        require(proposal.eta > 0, "proposal-not-queued");
+        require(now >= proposal.eta, "delay-not-over");
+
+        executor.doTransferAdmin(proposal.newOwner);
     }
 }
