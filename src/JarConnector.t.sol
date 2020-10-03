@@ -14,11 +14,13 @@ contract JarConnectorTest is BCdpManagerTestBase {
         durations[0] = 30 days;
         durations[1] = 5 * 30 days;
 
-        address[] memory gemJoins = new address[](1);
+        address[] memory gemJoins = new address[](2);
         gemJoins[0] = address(ethJoin);
+        gemJoins[1] = address(wbtcJoin);
 
-        bytes32[] memory ilks = new bytes32[](1);
+        bytes32[] memory ilks = new bytes32[](2);
         ilks[0] = "ETH";
+        ilks[1] = "WBTC";
 
         jarConnector = new JarConnector(address(manager), gemJoins, ilks, durations);
         score.transferOwnership(address(jarConnector));
@@ -51,6 +53,26 @@ contract JarConnectorTest is BCdpManagerTestBase {
         manager.frob(cdp, int(ink), int(art));
 
         return cdp;
+    }
+
+    function openCdpWithWBTC(uint ink, uint art) internal returns(uint) {
+        uint cdp = manager.open("WBTC", address(this));
+
+        wbtc.approve(address(ethJoin), ink);
+        wbtcJoin.join(manager.urns(cdp), ink);
+
+        //manager.frob(cdp, int(ink), int(art));
+
+        return cdp;
+    }
+
+    function testWBTCSetup() public {
+        uint bal = wbtc.balanceOf(address(this));
+        uint expectedBal = 10000 * (10 ** 8);
+        assertEq(bal, expectedBal);
+
+        uint ONE_BTC = 1 * (10 ** 8);
+        openCdpWithWBTC(ONE_BTC, 10 ether); // 1 BTC deposit, 10 DAI debt
     }
 
     function testExitEthExplicit() public {

@@ -2,7 +2,7 @@ pragma solidity ^0.5.12;
 
 import { DssDeployTestBase, Vat } from "dss-deploy/DssDeploy.t.base.sol";
 import { WBTC } from "dss-deploy/tokens.sol";
-import { GemJoin } from "dss/join.sol";
+import { GemJoin3 } from "dss-deploy/join.sol";
 import { DSValue } from "ds-value/value.sol";
 import { GetCdps } from "./GetCdps.sol";
 import { BCdpManager } from "./BCdpManager.sol";
@@ -187,8 +187,33 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeDaiToUsdPriceFeed daiToUsdPriceFeed;
     uint currTime;
     WBTC wbtc;
-    GemJoin wbtcJoin;
+    GemJoin3 wbtcJoin;
     DSValue pipWBTC;
+
+    // override 
+    function deploy() public {
+        deployKeepAuth();
+        addExtraDeployments(); // extending deployment
+        dssDeploy.releaseAuth();
+    }
+
+    function addExtraDeployments() public {
+        addWBTCSupport();
+    }
+
+    function addWBTCSupport() public {
+        // Add WBTC support
+        uint wbtcSupply = uint(10000) * (uint(10) ** uint(8));
+        wbtc = new WBTC(wbtcSupply);
+        pipWBTC = new DSValue();
+        wbtcJoin = new GemJoin3(address(vat), "WBTC", address(wbtc), 8);
+        dssDeploy.deployCollateral("WBTC", address(wbtcJoin), address(pipWBTC));
+        pipWBTC.poke(bytes32(uint(10400 * 10 ** 18))); // 10400 DAI = 1 WBTC
+        this.file(address(spotter), "WBTC", "mat", uint(1150000000 ether)); // Liquidation ratio 115%
+        spotter.poke("WBTC");
+        (,, uint spot,,) = vat.ilks("WBTC");
+        assertEq(spot, 10400 * RAY * RAY / 1150000000 ether);
+    }
 
     function setUp() public {
         super.setUp();
@@ -218,16 +243,6 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         getCdps = new GetCdps();
 
         liquidator.doHope(vat, address(pool));
-
-        // WBTC
-        uint wbtcSupply = uint(10000) * (uint(10) ** uint(8));
-        wbtc = new WBTC(wbtcSupply);
-        pipWBTC = new DSValue();
-        wbtcJoin = new GemJoin(address(vat), "WBTC", address(wbtc));
-        // dssDeploy.deployCollateral("WBTC", address(wbtcJoin), address(pipWBTC));
-
-        // pipWBTC.poke(bytes32(uint(10400 * 10 ** 18))); // 10400 DAI = 1 WBTC
-
     }
 
     function reachTopup(uint cdp) internal {
