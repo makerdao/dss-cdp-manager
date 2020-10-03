@@ -14,7 +14,13 @@ contract JarConnectorTest is BCdpManagerTestBase {
         durations[0] = 30 days;
         durations[1] = 5 * 30 days;
 
-        jarConnector = new JarConnector(address(manager), address(ethJoin), "ETH", durations);
+        address[] memory gemJoins = new address[](1);
+        gemJoins[0] = address(ethJoin);
+
+        bytes32[] memory ilks = new bytes32[](1);
+        ilks[0] = "ETH";
+
+        jarConnector = new JarConnector(address(manager), gemJoins, ilks, durations);
         score.transferOwnership(address(jarConnector));
     }
 
@@ -52,7 +58,7 @@ contract JarConnectorTest is BCdpManagerTestBase {
         sendGem(wad, address(jarConnector));
         assertEq(vat.gem("ETH", address(jarConnector)), wad);
 
-        jarConnector.ethExit(wad/2, "ETH");
+        jarConnector.gemExit(wad/2, "ETH");
         assertEq(weth.balanceOf(address(jarConnector)), wad/2);
     }
 
@@ -61,7 +67,7 @@ contract JarConnectorTest is BCdpManagerTestBase {
         sendGem(wad, address(jarConnector));
         assertEq(vat.gem("ETH", address(jarConnector)), wad);
 
-        jarConnector.ethExit();
+        jarConnector.gemExit("ETH");
         assertEq(weth.balanceOf(address(jarConnector)), wad);
     }
 

@@ -72,6 +72,10 @@ contract JarConnector is Math {
         gemJoins[ilk].exit(address(this), wad);
     }
 
+    function gemExit(uint wad, bytes32 ilk) public {
+        gemJoins[ilk].exit(address(this), wad);
+    }
+
     function getUserScore(bytes32 user) external view returns (uint) {
         if(round == 0) return 0;
 
@@ -85,7 +89,20 @@ contract JarConnector is Math {
         return add(getArtScore(cdp, time, start[1]), firstRoundScore);
     }
 
-    function getArtScore(uint cdp, uint time, uint spinStart) internal returns (uint totalScore) {
+    function getUserScore(bytes32 user, bytes32 ilk) external view returns (uint) {
+        if(round == 0) return 0;
+
+        uint cdp = uint(user);
+        if(round == 1) return 2 * score.getArtScore(cdp, ilk, now, start[0]);
+
+        uint firstRoundScore = 2 * score.getArtScore(cdp, ilk, start[1], start[0]);
+        uint time = now;
+        if(round > 2) time = end[1];
+
+        return add(score.getArtScore(cdp, ilk, time, start[1]), firstRoundScore);
+    }
+
+    function getArtScore(uint cdp, uint time, uint spinStart) internal view returns (uint totalScore) {
         for(uint i = 0; i < ilks.length; i++) {
             totalScore = add(totalScore, score.getArtScore(cdp, ilks[i], time, spinStart));
         }
@@ -103,7 +120,19 @@ contract JarConnector is Math {
         return add(getArtGlobalScore(time, start[1]), firstRoundScore);
     }
 
-    function getArtGlobalScore(uint time, uint spinStart) internal returns (uint totalScore) {
+    function getGlobalScore(bytes32 ilk) external view returns (uint) {
+        if(round == 0) return 0;
+
+        if(round == 1) return 2 * score.getArtGlobalScore(ilk, now, start[0]);
+
+        uint firstRoundScore = 2 * score.getArtGlobalScore(ilk, start[1], start[0]);
+        uint time = now;
+        if(round > 2) time = end[1];
+
+        return add(score.getArtGlobalScore(ilk, time, start[1]), firstRoundScore);
+    }
+
+    function getArtGlobalScore(uint time, uint spinStart) internal view returns (uint totalScore) {
         for(uint i = 0; i < ilks.length; i++) {
             totalScore = add(totalScore, score.getArtGlobalScore(ilks[i], time, spinStart));
         }

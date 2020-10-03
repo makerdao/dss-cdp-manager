@@ -1,6 +1,9 @@
 pragma solidity ^0.5.12;
 
 import { DssDeployTestBase, Vat } from "dss-deploy/DssDeploy.t.base.sol";
+import { WBTC } from "dss-deploy/tokens.sol";
+import { GemJoin } from "dss/join.sol";
+import { DSValue } from "ds-value/value.sol";
 import { GetCdps } from "./GetCdps.sol";
 import { BCdpManager } from "./BCdpManager.sol";
 import { LiquidationMachine } from "./LiquidationMachine.sol";
@@ -183,6 +186,9 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeOSM osm;
     FakeDaiToUsdPriceFeed daiToUsdPriceFeed;
     uint currTime;
+    WBTC wbtc;
+    GemJoin wbtcJoin;
+    DSValue pipWBTC;
 
     function setUp() public {
         super.setUp();
@@ -212,6 +218,16 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         getCdps = new GetCdps();
 
         liquidator.doHope(vat, address(pool));
+
+        // WBTC
+        uint wbtcSupply = uint(10000) * (uint(10) ** uint(8));
+        wbtc = new WBTC(wbtcSupply);
+        pipWBTC = new DSValue();
+        wbtcJoin = new GemJoin(address(vat), "WBTC", address(wbtc));
+        // dssDeploy.deployCollateral("WBTC", address(wbtcJoin), address(pipWBTC));
+
+        // pipWBTC.poke(bytes32(uint(10400 * 10 ** 18))); // 10400 DAI = 1 WBTC
+
     }
 
     function reachTopup(uint cdp) internal {
