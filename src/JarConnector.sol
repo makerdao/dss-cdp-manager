@@ -14,10 +14,10 @@ interface VatLike {
 
 contract JarConnector is Math {
     mapping (bytes32 => GemJoinLike) public gemJoins; // ilk => GemJoin
-    BCdpScore   score;
-    BCdpManager man;
-    VatLike     vat;
-    bytes32[]     ilks;
+    BCdpScore   public score;
+    BCdpManager public man;
+    bytes32[]   public ilks;
+    mapping(bytes32 => bool) public isIlkSupported;
 
     // end of every round
     uint[2] public end;
@@ -34,12 +34,11 @@ contract JarConnector is Math {
     ) public {
         require(_gemJoins.length == _ilks.length, "inconsitant-array-values");
         man = BCdpManager(_manager);
-        vat = VatLike(address(man.vat()));
         score = BCdpScore(address(man.score()));
         ilks = _ilks;
 
-        for(uint i = 0; i < _gemJoins.length; i++) {
-            gemJoins[ilks[i]] = GemJoinLike(_gemJoins[i]);
+        for(uint i = 0; i < _ilks.length; i++) {
+            isIlkSupported[_ilks[i]] = true;
         }
 
         end[0] = now + _duration[0];
@@ -67,24 +66,14 @@ contract JarConnector is Math {
         }
     }
 
-    // TODO Ensure that it can be called via delegatecall
-    function gemExit(bytes32 ilk) public {
-        uint wad = vat.gem(ilk, address(this));
-        gemJoins[ilk].exit(address(this), wad);
-    }
-
-    function gemExit(uint wad, bytes32 ilk) public {
-        gemJoins[ilk].exit(address(this), wad);
-    }
-
     function getUserScore(bytes32 user) external view returns (uint) {
         if(round == 0) return 0;
 
         uint cdp = uint(user);
         bytes32 ilk = man.ilks(cdp);
 
-        // No score for unsupported ilks
-        if(gemJoins[ilk] == GemJoinLike(0)) return 0;
+        // Should return 0 score for unsupported ilk
+        if( ! isIlkSupported[ilk]) return 0;
 
         if(round == 1) return 2 * score.getArtScore(cdp, ilk, now, start[0]);
 

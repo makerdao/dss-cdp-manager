@@ -1,11 +1,13 @@
 pragma solidity ^0.5.12;
 
 import { BCdpManagerTestBase, Hevm, FakeUser } from "./BCdpManager.t.sol";
-import { JarConnector } from "./JarConnector.sol";
+import { JarConnector, GemJoinLike } from "./JarConnector.sol";
+import { Jar } from "../user-rating/contracts/jar/Jar.sol";
 
 contract JarConnectorTest is BCdpManagerTestBase {
     JarConnector jarConnector;
     uint currTime;
+    Jar jar;
 
     function setUp() public {
         super.setUp();
@@ -24,6 +26,15 @@ contract JarConnectorTest is BCdpManagerTestBase {
 
         jarConnector = new JarConnector(address(manager), gemJoins, ilks, durations);
         score.transferOwnership(address(jarConnector));
+
+        jar = new Jar(
+            1, 
+            now + 30 days, 
+            address(jarConnector),
+            address(vat),
+            ilks,
+            gemJoins
+        );
     }
 
     function timeReset() internal {
@@ -41,6 +52,13 @@ contract JarConnectorTest is BCdpManagerTestBase {
         weth.approve(address(ethJoin), wad);
         ethJoin.join(address(this), wad);
         vat.flux("ETH", address(this), dest, wad);
+    }
+
+    function sendGemCOL(uint wad, address dest) internal returns(uint) {
+        col.mint(wad);
+        col.approve(address(colJoin), wad);
+        colJoin.join(address(this), wad);
+        vat.flux("COL", address(this), dest, wad);
     }
 
     function openCdp(uint ink, uint art) internal returns(uint){
@@ -67,22 +85,19 @@ contract JarConnectorTest is BCdpManagerTestBase {
         return cdp;
     }
 
-    function testExitEthExplicit() public {
+    function testGemExitFromJar() public {
         uint wad = 12345;
-        sendGem(wad, address(jarConnector));
-        assertEq(vat.gem("ETH", address(jarConnector)), wad);
+        sendGem(wad, address(jar));
+        sendGemCOL(wad, address(jar));
 
-        jarConnector.gemExit(wad/2, "ETH");
-        assertEq(weth.balanceOf(address(jarConnector)), wad/2);
-    }
+        assertEq(vat.gem("ETH", address(jar)), wad);
+        assertEq(vat.gem("COL", address(jar)), wad);
 
-    function testExitEth() public {
-        uint wad = 12345;
-        sendGem(wad, address(jarConnector));
-        assertEq(vat.gem("ETH", address(jarConnector)), wad);
+        // exit both
+        jar.gemExit();
 
-        jarConnector.gemExit("ETH");
-        assertEq(weth.balanceOf(address(jarConnector)), wad);
+        assertEq(weth.balanceOf(address(jar)), wad);
+        assertEq(col.balanceOf(address(jar)), wad);
     }
 
     function testToUser() public {
