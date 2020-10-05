@@ -17,7 +17,6 @@ contract GovernanceExecutor is DSAuth, Math {
     constructor(address man_, uint delay_) public {
         man = BCdpManager(man_);
         delay = delay_;
-        
     }
 
     /**
