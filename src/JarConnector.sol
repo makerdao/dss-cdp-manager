@@ -13,7 +13,7 @@ interface VatLike {
 }
 
 contract JarConnector is Math {
-    mapping (bytes32 => GemJoinLike) public gemJoins;
+    mapping (bytes32 => GemJoinLike) public gemJoins; // ilk => GemJoin
     BCdpScore   score;
     BCdpManager man;
     VatLike     vat;
@@ -67,6 +67,7 @@ contract JarConnector is Math {
         }
     }
 
+    // TODO Ensure that it can be called via delegatecall
     function gemExit(bytes32 ilk) public {
         uint wad = vat.gem(ilk, address(this));
         gemJoins[ilk].exit(address(this), wad);
@@ -80,19 +81,11 @@ contract JarConnector is Math {
         if(round == 0) return 0;
 
         uint cdp = uint(user);
-        if(round == 1) return 2 * getArtScore(cdp, now, start[0]);
+        bytes32 ilk = man.ilks(cdp);
 
-        uint firstRoundScore = 2 * getArtScore(cdp, start[1], start[0]);
-        uint time = now;
-        if(round > 2) time = end[1];
+        // No score for unsupported ilks
+        if(gemJoins[ilk] == GemJoinLike(0)) return 0;
 
-        return add(getArtScore(cdp, time, start[1]), firstRoundScore);
-    }
-
-    function getUserScore(bytes32 user, bytes32 ilk) external view returns (uint) {
-        if(round == 0) return 0;
-
-        uint cdp = uint(user);
         if(round == 1) return 2 * score.getArtScore(cdp, ilk, now, start[0]);
 
         uint firstRoundScore = 2 * score.getArtScore(cdp, ilk, start[1], start[0]);
@@ -100,12 +93,6 @@ contract JarConnector is Math {
         if(round > 2) time = end[1];
 
         return add(score.getArtScore(cdp, ilk, time, start[1]), firstRoundScore);
-    }
-
-    function getArtScore(uint cdp, uint time, uint spinStart) internal view returns (uint totalScore) {
-        for(uint i = 0; i < ilks.length; i++) {
-            totalScore = add(totalScore, score.getArtScore(cdp, ilks[i], time, spinStart));
-        }
     }
 
     function getGlobalScore() external view returns (uint) {
