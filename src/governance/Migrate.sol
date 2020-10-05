@@ -7,6 +7,12 @@ import { GovernanceExecutor } from "./GovernanceExecutor.sol";
 
 contract Migrate is Math {
 
+    event NewProposal(uint indexed proposalId, address newOwner);
+    event Voted(uint indexed proposalId, uint cdp, uint score);
+    event VoteCancelled(uint indexed proposalId, uint cdp, uint score);
+    event Queued(uint indexed proposalId);
+    event Executed(uint indexed proposalId);
+
     struct Proposal {
         uint forVotes;
         uint eta;
@@ -41,7 +47,11 @@ contract Migrate is Math {
             eta: 0,
             newOwner: newOwner
         });
-        return sub(proposals.push(proposal), uint(1));
+
+        uint proposalId = sub(proposals.push(proposal), uint(1));
+        emit NewProposal(proposalId, newOwner);
+
+        return proposalId;
     }
 
     function vote(uint proposalId, uint cdp) external {
@@ -53,6 +63,8 @@ contract Migrate is Math {
         uint score = jarConnector.getUserScore(bytes32(cdp));
         proposal.forVotes = add(proposal.forVotes, score);
         proposal.voted[cdp] = true;
+
+        emit Voted(proposalId, cdp, score);
     }
 
     function cancelVote(uint proposalId, uint cdp) external {
@@ -64,6 +76,8 @@ contract Migrate is Math {
         uint score = jarConnector.getUserScore(bytes32(cdp));
         proposal.forVotes = sub(proposal.forVotes, score);
         proposal.voted[cdp] = false;
+
+        emit VoteCancelled(proposalId, cdp, score);
     }
 
     function queueProposal(uint proposalId) external {
@@ -74,6 +88,8 @@ contract Migrate is Math {
         require(proposal.forVotes >= quorum, "quorum-not-passed");
 
         proposal.eta = now + DELAY;
+
+        emit Queued(proposalId);
     }
 
     function executeProposal(uint proposalId) external {
@@ -82,5 +98,7 @@ contract Migrate is Math {
         require(now >= proposal.eta, "delay-not-over");
 
         executor.doTransferAdmin(proposal.newOwner);
+
+        emit Executed(proposalId);
     }
 }

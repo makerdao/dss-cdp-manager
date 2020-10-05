@@ -59,7 +59,7 @@ contract GovernanceExecutor is DSAuth, Math {
      * @dev Execute pool contract upgrade after delay
      * @param pool Address of the new pool contract
      */
-    function execUpgradePool(address pool) external auth {
+    function execUpgradePool(address pool) external {
         uint reqTime = requests[pool];
         require(reqTime != 0, "request-not-valid");
         require(now >= add(reqTime, delay), "delay-not-over");
