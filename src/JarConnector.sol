@@ -17,7 +17,8 @@ contract JarConnector is Math {
     BCdpScore   public score;
     BCdpManager public man;
     bytes32[]   public ilks;
-    mapping(bytes32 => bool) public isIlkSupported;
+    // ilk => supported
+    mapping(bytes32 => bool) public milks;
 
     // end of every round
     uint[2] public end;
@@ -38,7 +39,7 @@ contract JarConnector is Math {
         ilks = _ilks;
 
         for(uint i = 0; i < _ilks.length; i++) {
-            isIlkSupported[_ilks[i]] = true;
+            milks[_ilks[i]] = true;
         }
 
         end[0] = now + _duration[0];
@@ -73,7 +74,7 @@ contract JarConnector is Math {
         bytes32 ilk = man.ilks(cdp);
 
         // Should return 0 score for unsupported ilk
-        if( ! isIlkSupported[ilk]) return 0;
+        if( ! milks[ilk]) return 0;
 
         if(round == 1) return 2 * score.getArtScore(cdp, ilk, now, start[0]);
 
