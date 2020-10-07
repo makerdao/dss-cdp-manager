@@ -33,10 +33,6 @@ contract BudConnector is DSAuth {
         authorized[addr] = true;
     }
 
-    function revoke(address addr) external auth {
-        authorized[addr] = false;
-    }
-
     function peep() external returns (bytes32, bool) {
         require(authorized[msg.sender], "!authorized");
         return osm.peep(); 

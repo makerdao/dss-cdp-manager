@@ -32,10 +32,6 @@ contract FakeUser {
         target.authorize(addr);
     }
 
-    function doRevoke(BudConnector target, address addr) public {
-        target.revoke(addr);
-    }
-
     function doPeep(BudConnector target) public returns (bytes32, bool) {
         return target.peep();
     }
@@ -71,23 +67,6 @@ contract BudConnectorTest is DSTest {
 
         // call must revert
         user.doAuthorize(budConnector, address(user));
-    }
-
-    function testAuthToRevoke() public {
-        FakeUser user = new FakeUser();
-        budConnector.authorize(address(user));
-        assertTrue(budConnector.authorized(address(user)));
-
-        budConnector.revoke(address(user));
-        assertTrue(budConnector.authorized(address(user)) == false);
-    }
-
-    function testFailNonAuthToRevoke() public {
-        FakeUser user = new FakeUser();
-        assertTrue(budConnector.authorized(address(user)) == false);
-
-        // call must revert
-        user.doRevoke(budConnector, address(user));
     }
 
     function testAuthorizedToCallPeep() public {
