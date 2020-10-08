@@ -231,7 +231,6 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         pool.setProfitParams(99, 100);
         pool.setIlk("ETH", true);
         pool.setOsm("ETH", address(bud));
-        //spotter.file("ETH", "pip", address(pipETH)); // Set pip
         getCdps = new GetCdps();
 
         liquidator.doHope(vat, address(pool));
