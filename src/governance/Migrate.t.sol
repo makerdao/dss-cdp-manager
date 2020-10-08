@@ -27,7 +27,8 @@ contract MigrateTest is BCdpManagerTestBase {
         ilks[0] = "ETH";
 
         executor = new GovernanceExecutor(address(manager), 2 days);
-        jarConnector = new JarConnector(address(manager), gemJoins, ilks, durations);
+        jarConnector = new JarConnector(gemJoins, ilks, durations);
+        jarConnector.setManager(address(manager));
         score.transferOwnership(address(jarConnector));
         jarConnector.spin();
 

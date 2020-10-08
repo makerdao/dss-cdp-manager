@@ -24,7 +24,8 @@ contract JarConnectorTest is BCdpManagerTestBase {
         ilks[0] = "ETH";
         ilks[1] = "COL";
 
-        jarConnector = new JarConnector(address(manager), gemJoins, ilks, durations);
+        jarConnector = new JarConnector(gemJoins, ilks, durations);
+        jarConnector.setManager(address(manager));
         score.transferOwnership(address(jarConnector));
 
         jar = new Jar(
