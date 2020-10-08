@@ -4,6 +4,8 @@ import { DSAuth } from "ds-auth/auth.sol";
 
 interface OSMLike {
     function peep() external view returns (bytes32, bool);
+    function hop()  external view returns(uint16);
+    function zzz()  external view returns(uint64);
 }
 
 interface Spotty {
@@ -42,5 +44,13 @@ contract BudConnector is DSAuth {
         require(authorized[msg.sender], "!authorized");
         (PipLike pip,) = end.spot().ilks(ilk);
         return pip.read();
+    }
+
+    function hop()  external view returns(uint16) {
+        return osm.hop();
+    }
+
+    function zzz()  external view returns(uint64) {
+        return osm.zzz();
     }
 }
