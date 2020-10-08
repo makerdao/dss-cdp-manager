@@ -46,11 +46,11 @@ contract BudConnector is DSAuth {
         return pip.read();
     }
 
-    function hop()  external view returns(uint16) {
+    function hop() external view returns(uint16) {
         return osm.hop();
     }
 
-    function zzz()  external view returns(uint64) {
+    function zzz() external view returns(uint64) {
         return osm.zzz();
     }
 }
