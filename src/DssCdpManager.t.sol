@@ -64,8 +64,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     GetCdps getCdps;
     FakeUser user;
 
-    function setUp() public {
-        super.setUp();
+    function setUpManager() public {
         deploy();
         manager = new DssCdpManager(address(vat));
         getCdps = new GetCdps();
@@ -73,6 +72,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testOpenCDP() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         assertEq(cdp, 1);
         assertEq(vat.can(address(bytes20(manager.urns(cdp))), address(manager)), 1);
@@ -80,21 +80,25 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testOpenCDPOtherAddress() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(123));
         assertEq(manager.owns(cdp), address(123));
     }
 
     function testFailOpenCDPZeroAddress() public {
+        setUpManager();
         manager.open("ETH", address(0));
     }
 
     function testGiveCDP() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         manager.give(cdp, address(123));
         assertEq(manager.owns(cdp), address(123));
     }
 
     function testAllowAllowed() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         manager.cdpAllow(cdp, address(user), 1);
         user.doCdpAllow(manager, cdp, address(123), 1);
@@ -102,11 +106,13 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailAllowNotAllowed() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         user.doCdpAllow(manager, cdp, address(123), 1);
     }
 
     function testGiveAllowed() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         manager.cdpAllow(cdp, address(user), 1);
         user.doGive(manager, cdp, address(123));
@@ -114,11 +120,13 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailGiveNotAllowed() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         user.doGive(manager, cdp, address(123));
     }
 
     function testFailGiveNotAllowed2() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         manager.cdpAllow(cdp, address(user), 1);
         manager.cdpAllow(cdp, address(user), 0);
@@ -126,6 +134,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailGiveNotAllowed3() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         uint cdp2 = manager.open("ETH", address(this));
         manager.cdpAllow(cdp2, address(user), 1);
@@ -133,16 +142,19 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailGiveToZeroAddress() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         manager.give(cdp, address(0));
     }
 
     function testFailGiveToSameOwner() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         manager.give(cdp, address(this));
     }
 
     function testDoubleLinkedList() public {
+        setUpManager();
         uint cdp1 = manager.open("ETH", address(this));
         uint cdp2 = manager.open("ETH", address(this));
         uint cdp3 = manager.open("ETH", address(this));
@@ -234,6 +246,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testGetCdpsAsc() public {
+        setUpManager();
         uint cdp1 = manager.open("ETH", address(this));
         uint cdp2 = manager.open("REP", address(this));
         uint cdp3 = manager.open("GOLD", address(this));
@@ -257,6 +270,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testGetCdpsDesc() public {
+        setUpManager();
         uint cdp1 = manager.open("ETH", address(this));
         uint cdp2 = manager.open("REP", address(this));
         uint cdp3 = manager.open("GOLD", address(this));
@@ -280,6 +294,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFrob() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
@@ -297,6 +312,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFrobAllowed() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
@@ -307,6 +323,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailFrobNotAllowed() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
@@ -315,6 +332,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFrobGetCollateralBack() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
@@ -333,6 +351,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testGetWrongCollateralBack() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         col.mint(1 ether);
         col.approve(address(colJoin), 1 ether);
@@ -345,6 +364,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testQuit() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
@@ -369,6 +389,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testQuitOtherDst() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
@@ -394,6 +415,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailQuitOtherDst() public {
+        setUpManager();
         uint cdp = manager.open("ETH", address(this));
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
@@ -412,6 +434,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testEnter() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
@@ -439,6 +462,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testEnterOtherSrc() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
@@ -468,6 +492,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailEnterOtherSrc() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
@@ -480,6 +505,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailEnterOtherSrc2() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
@@ -492,6 +518,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testEnterOtherCdp() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
@@ -521,6 +548,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailEnterOtherCdp() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
@@ -533,6 +561,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailEnterOtherCdp2() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
@@ -545,6 +574,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testShift() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.open("ETH", address(this));
@@ -572,6 +602,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testShiftOtherCdpDst() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.open("ETH", address(this));
@@ -601,6 +632,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailShiftOtherCdpDst() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.open("ETH", address(this));
@@ -613,6 +645,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testShiftOtherCdpSrc() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.open("ETH", address(this));
@@ -642,6 +675,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
     }
 
     function testFailShiftOtherCdpSrc() public {
+        setUpManager();
         weth.mint(1 ether);
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.open("ETH", address(this));
