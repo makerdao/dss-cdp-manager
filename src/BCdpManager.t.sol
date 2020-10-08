@@ -131,14 +131,6 @@ contract FakeUser {
     }
 }
 
-contract FakePriceFeed {
-    mapping(bytes32 => bytes32) public  read;
-
-    function set(bytes32 ilk, uint price) public {
-        read[ilk] = bytes32(price);
-    }
-}
-
 contract FakeOSM {
     bytes32 price;
     bool valid = true;
@@ -193,7 +185,6 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     GetCdps getCdps;
     FakeUser user;
     FakeUser liquidator;
-    FakePriceFeed realPrice;
     Pool pool;
     BCdpFullScore score;
     FakeUser jar;
@@ -210,7 +201,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         hevm.warp(604411200);
 
         deploy();
-        realPrice = new FakePriceFeed();
+
         jar = new FakeUser();
         user = new FakeUser();
         liquidator = new FakeUser();
@@ -274,7 +265,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         // change actual price to enable liquidation
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH", 70 * 1e18);
+        pipETH.poke(bytes32(uint(70 * 1e18)));
+
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
     }
 
@@ -400,7 +392,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
         //(, uint artPost) = vat.urns("ETH", urn);
 
-        realPrice.set("ETH", 70 * 1e18);
+        pipETH.poke(bytes32(uint(70 * 1e18)));
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
         assertEq(art, 50 ether);
