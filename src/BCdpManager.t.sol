@@ -8,6 +8,7 @@ import { Pool } from "./pool/Pool.sol";
 import { BCdpFullScore } from "./BCdpFullScore.sol";
 import { BCdpScoreLike } from "./BCdpScoreConnector.sol";
 import { Migrate } from "./governance/Migrate.sol";
+import { BudConnector, OSMLike, EndLike } from "./bud/BudConnector.sol";
 
 contract Hevm {
     function warp(uint256) public;
@@ -130,14 +131,6 @@ contract FakeUser {
     }
 }
 
-contract FakePriceFeed {
-    mapping(bytes32 => bytes32) public  read;
-
-    function set(bytes32 ilk, uint price) public {
-        read[ilk] = bytes32(price);
-    }
-}
-
 contract FakeOSM {
     bytes32 price;
     bool valid = true;
@@ -192,7 +185,6 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     GetCdps getCdps;
     FakeUser user;
     FakeUser liquidator;
-    FakePriceFeed realPrice;
     Pool pool;
     BCdpFullScore score;
     FakeUser jar;
@@ -200,6 +192,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeOSM osm;
     FakeDaiToUsdPriceFeed daiToUsdPriceFeed;
     uint currTime;
+    BudConnector bud;
 
     function setUp() public {
         super.setUp();
@@ -208,16 +201,19 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         hevm.warp(604411200);
 
         deploy();
-        realPrice = new FakePriceFeed();
+
         jar = new FakeUser();
         user = new FakeUser();
         liquidator = new FakeUser();
         osm = new FakeOSM();
+        bud = new BudConnector(OSMLike(address(osm)), EndLike(address(end)));
         daiToUsdPriceFeed = new FakeDaiToUsdPriceFeed();
 
         pool = new Pool(address(vat), address(jar), address(spotter), address(jug), address(daiToUsdPriceFeed));
+        bud.authorize(address(pool));
         score = new BCdpFullScore();
-        manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice), address(score));
+        manager = new BCdpManager(address(vat), address(end), address(pool), address(bud), address(score));
+        bud.authorize(address(manager));
         score.setManager(address(manager));        
         pool.setCdpManager(manager);
         address[] memory members = new address[](1);
@@ -225,7 +221,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         pool.setMembers(members);
         pool.setProfitParams(99, 100);
         pool.setIlk("ETH", true);
-        pool.setOsm("ETH", address(osm));
+        pool.setOsm("ETH", address(bud));
         getCdps = new GetCdps();
 
         liquidator.doHope(vat, address(pool));
@@ -269,7 +265,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         // change actual price to enable liquidation
         pipETH.poke(bytes32(uint(70 * 1e18)));
         spotter.poke("ETH");
-        realPrice.set("ETH", 70 * 1e18);
+        pipETH.poke(bytes32(uint(70 * 1e18)));
+
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
     }
 
@@ -308,7 +305,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         _pool.setMembers(members);
         _pool.setProfitParams(99, 100);
         _pool.setIlk("ETH", true);
-        _pool.setOsm("ETH", address(osm));
+        _pool.setOsm("ETH", address(bud));
+        bud.authorize(address(_pool));
         liquidator.doHope(vat, address(_pool));
         return _pool;
     }
@@ -394,7 +392,7 @@ contract BCdpManagerTest is BCdpManagerTestBase {
 
         //(, uint artPost) = vat.urns("ETH", urn);
 
-        realPrice.set("ETH", 70 * 1e18);
+        pipETH.poke(bytes32(uint(70 * 1e18)));
 
         this.file(address(cat), "ETH", "chop", WAD + WAD/10);
         assertEq(art, 50 ether);
