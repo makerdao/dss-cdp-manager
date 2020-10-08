@@ -201,8 +201,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeOSM osm;
     FakeDaiToUsdPriceFeed daiToUsdPriceFeed;
     uint currTime;
-    BudConnector budForPool;
-    BudConnector budForPriceFeed;
+    BudConnector bud;
 
     function setUp() public {
         super.setUp();
@@ -216,15 +215,14 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         user = new FakeUser();
         liquidator = new FakeUser();
         osm = new FakeOSM();
-        budForPool = new BudConnector(OSMLike(address(osm)), EndLike(address(end)));
-        budForPriceFeed = new BudConnector(OSMLike(address(realPrice)), EndLike(address(end)));
+        bud = new BudConnector(OSMLike(address(osm)), EndLike(address(end)));
         daiToUsdPriceFeed = new FakeDaiToUsdPriceFeed();
 
         pool = new Pool(address(vat), address(jar), address(spotter), address(jug), address(daiToUsdPriceFeed));
-        budForPool.authorize(address(pool));
+        bud.authorize(address(pool));
         score = new BCdpFullScore();
-        manager = new BCdpManager(address(vat), address(end), address(pool), address(budForPriceFeed), address(score));
-        budForPriceFeed.authorize(address(manager));
+        manager = new BCdpManager(address(vat), address(end), address(pool), address(bud), address(score));
+        bud.authorize(address(manager));
         score.setManager(address(manager));        
         pool.setCdpManager(manager);
         address[] memory members = new address[](1);
@@ -232,7 +230,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         pool.setMembers(members);
         pool.setProfitParams(99, 100);
         pool.setIlk("ETH", true);
-        pool.setOsm("ETH", address(budForPool));
+        pool.setOsm("ETH", address(bud));
+        //spotter.file("ETH", "pip", address(pipETH)); // Set pip
         getCdps = new GetCdps();
 
         liquidator.doHope(vat, address(pool));
@@ -315,8 +314,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         _pool.setMembers(members);
         _pool.setProfitParams(99, 100);
         _pool.setIlk("ETH", true);
-        _pool.setOsm("ETH", address(budForPool));
-        budForPool.authorize(address(_pool));
+        _pool.setOsm("ETH", address(bud));
+        bud.authorize(address(_pool));
         liquidator.doHope(vat, address(_pool));
         return _pool;
     }
