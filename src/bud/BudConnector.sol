@@ -35,12 +35,12 @@ contract BudConnector is DSAuth {
         authorized[addr] = true;
     }
 
-    function peep() external returns (bytes32, bool) {
+    function peep() external view returns (bytes32, bool) {
         require(authorized[msg.sender], "!authorized");
         return osm.peep(); 
     }
 
-    function read(bytes32 ilk) external returns (bytes32) {
+    function read(bytes32 ilk) external view returns (bytes32) {
         require(authorized[msg.sender], "!authorized");
         (PipLike pip,) = end.spot().ilks(ilk);
         return pip.read();

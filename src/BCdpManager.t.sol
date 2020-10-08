@@ -8,6 +8,7 @@ import { Pool } from "./pool/Pool.sol";
 import { BCdpFullScore } from "./BCdpFullScore.sol";
 import { BCdpScoreLike } from "./BCdpScoreConnector.sol";
 import { Migrate } from "./governance/Migrate.sol";
+import { BudConnector, OSMLike, EndLike } from "./bud/BudConnector.sol";
 
 contract Hevm {
     function warp(uint256) public;
@@ -200,6 +201,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
     FakeOSM osm;
     FakeDaiToUsdPriceFeed daiToUsdPriceFeed;
     uint currTime;
+    BudConnector bud;
 
     function setUp() public {
         super.setUp();
@@ -213,9 +215,11 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         user = new FakeUser();
         liquidator = new FakeUser();
         osm = new FakeOSM();
+        bud = new BudConnector(OSMLike(address(osm)), EndLike(address(end)));
         daiToUsdPriceFeed = new FakeDaiToUsdPriceFeed();
 
         pool = new Pool(address(vat), address(jar), address(spotter), address(jug), address(daiToUsdPriceFeed));
+        bud.authorize(address(pool));
         score = new BCdpFullScore();
         manager = new BCdpManager(address(vat), address(end), address(pool), address(realPrice), address(score));
         score.setManager(address(manager));        
@@ -225,7 +229,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         pool.setMembers(members);
         pool.setProfitParams(99, 100);
         pool.setIlk("ETH", true);
-        pool.setOsm("ETH", address(osm));
+        pool.setOsm("ETH", address(bud));
         getCdps = new GetCdps();
 
         liquidator.doHope(vat, address(pool));
@@ -308,7 +312,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         _pool.setMembers(members);
         _pool.setProfitParams(99, 100);
         _pool.setIlk("ETH", true);
-        _pool.setOsm("ETH", address(osm));
+        _pool.setOsm("ETH", address(bud));
+        bud.authorize(address(_pool));
         liquidator.doHope(vat, address(_pool));
         return _pool;
     }
