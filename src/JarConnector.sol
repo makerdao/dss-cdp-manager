@@ -4,16 +4,7 @@ import { BCdpScore } from "./BCdpScore.sol";
 import { BCdpManager } from "./BCdpManager.sol";
 import { Math } from "./Math.sol";
 
-interface GemJoinLike {
-    function exit(address, uint) external;
-}
-
-interface VatLike {
-    function gem(bytes32 ilk, address user) external view returns(uint);
-}
-
 contract JarConnector is Math {
-    mapping (bytes32 => GemJoinLike) public gemJoins; // ilk => GemJoin
     BCdpScore   public score;
     BCdpManager public man;
     bytes32[]   public ilks;
@@ -28,11 +19,9 @@ contract JarConnector is Math {
     uint public round;
 
     constructor(
-        address[] memory _gemJoins,
         bytes32[] memory _ilks,
         uint[2] memory _duration
     ) public {
-        require(_gemJoins.length == _ilks.length, "inconsitant-array-values");
         ilks = _ilks;
 
         for(uint i = 0; i < _ilks.length; i++) {

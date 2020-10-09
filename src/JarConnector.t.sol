@@ -1,7 +1,7 @@
 pragma solidity ^0.5.12;
 
 import { BCdpManagerTestBase, Hevm, FakeUser } from "./BCdpManager.t.sol";
-import { JarConnector, GemJoinLike } from "./JarConnector.sol";
+import { JarConnector } from "./JarConnector.sol";
 import { Jar } from "../user-rating/contracts/jar/Jar.sol";
 
 contract JarConnectorTest is BCdpManagerTestBase {
@@ -24,7 +24,7 @@ contract JarConnectorTest is BCdpManagerTestBase {
         ilks[0] = "ETH";
         ilks[1] = "COL";
 
-        jarConnector = new JarConnector(gemJoins, ilks, durations);
+        jarConnector = new JarConnector(ilks, durations);
         jarConnector.setManager(address(manager));
         score.transferOwnership(address(jarConnector));
 
