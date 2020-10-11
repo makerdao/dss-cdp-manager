@@ -8,7 +8,7 @@ import { Pool } from "./pool/Pool.sol";
 import { BCdpFullScore } from "./BCdpFullScore.sol";
 import { BCdpScoreLike } from "./BCdpScoreConnector.sol";
 import { Migrate } from "./governance/Migrate.sol";
-import { BudConnector, OSMLike, EndLike } from "./bud/BudConnector.sol";
+import { BudConnector, OSMLike } from "./bud/BudConnector.sol";
 
 contract Hevm {
     function warp(uint256) public;
@@ -94,14 +94,14 @@ contract FakeUser {
     }
 
     function doSetPool(
-        BCdpManager manager, 
+        BCdpManager manager,
         address pool
     ) public {
         manager.setPoolContract(pool);
     }
 
     function doSetScore(
-        BCdpManager manager, 
+        BCdpManager manager,
         BCdpScoreLike score
     ) public {
         manager.setScoreContract(score);
@@ -206,7 +206,8 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         user = new FakeUser();
         liquidator = new FakeUser();
         osm = new FakeOSM();
-        bud = new BudConnector(OSMLike(address(osm)), EndLike(address(end)));
+        bud = new BudConnector(OSMLike(address(osm)));
+        bud.setPip(address(pipETH), "ETH");
         daiToUsdPriceFeed = new FakeDaiToUsdPriceFeed();
 
         pool = new Pool(address(vat), address(jar), address(spotter), address(jug), address(daiToUsdPriceFeed));
@@ -214,7 +215,7 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         score = new BCdpFullScore();
         manager = new BCdpManager(address(vat), address(end), address(pool), address(bud), address(score));
         bud.authorize(address(manager));
-        score.setManager(address(manager));        
+        score.setManager(address(manager));
         pool.setCdpManager(manager);
         address[] memory members = new address[](1);
         members[0] = address(liquidator);
