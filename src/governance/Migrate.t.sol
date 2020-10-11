@@ -20,14 +20,12 @@ contract MigrateTest is BCdpManagerTestBase {
         durations[0] = 30 days;
         durations[1] = 5 * 30 days;
 
-        address[] memory gemJoins = new address[](1);
-        gemJoins[0] = address(ethJoin);
-
         bytes32[] memory ilks = new bytes32[](1);
         ilks[0] = "ETH";
 
         executor = new GovernanceExecutor(address(manager), 2 days);
-        jarConnector = new JarConnector(address(manager), gemJoins, ilks, durations);
+        jarConnector = new JarConnector(ilks, durations);
+        jarConnector.setManager(address(manager));
         score.transferOwnership(address(jarConnector));
         jarConnector.spin();
 
