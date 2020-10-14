@@ -11,6 +11,7 @@ import { Math } from "./../Math.sol";
 contract VatLike {
     function urns(bytes32 ilk, address u) public view returns (uint ink, uint art);
     function ilks(bytes32 ilk) public view returns(uint Art, uint rate, uint spot, uint line, uint dust);
+    function gem(bytes32 ilk, address user) external view returns(uint);
 }
 
 contract DSProxyLike {
@@ -31,6 +32,15 @@ contract ERC20Like {
     function allowance(address owner, address spender) public view returns (uint);
 }
 
+contract JarConnectorLike {
+    function getUserScore(bytes32 user) external view returns (uint);
+    function getGlobalScore() external view returns (uint);
+}
+
+contract JarLike {
+    function connector() external view returns (address);
+}
+
 // this is just something to help avoiding solidity quirks
 contract UserInfoStorage {
     struct ProxyInfo {
@@ -40,6 +50,7 @@ contract UserInfoStorage {
 
     struct CdpInfo {
         bool hasCdp;
+        bool bitten;
         uint cdp;
         uint ethDeposit;
         uint daiDebt; // in wad - not in rad
@@ -52,7 +63,7 @@ contract UserInfoStorage {
         uint userRatingProgressPerSec;
         uint totalRating;
         uint totalRatingProgressPerSec;
-        uint jarSize;
+        uint jarBalance;
     }
 
     struct MiscInfo {
@@ -81,12 +92,15 @@ contract UserInfoStorage {
     bool public hasProxy;
     address public userProxy;
 
+    // CdpInfo of B
     bool public hasCdp;
+    bool public bitten;
     uint public cdp;
     uint public ethDeposit;
     uint public daiDebt; // in wad - not in rad
     uint public maxDaiDebt;
 
+    // CdpInfo of Mkr
     bool public makerdaoHasCdp;
     uint public makerdaoCdp;
     uint public makerdaoEthDeposit;
@@ -97,7 +111,7 @@ contract UserInfoStorage {
     uint public userRatingProgressPerSec;
     uint public totalRating;
     uint public totalRatingProgressPerSec;
-    uint public jarSize;
+    uint public jarBalance;
 
     uint public spotPrice;
     uint public dustInWei;
@@ -112,6 +126,7 @@ contract UserInfoStorage {
         userProxy = address(state.proxyInfo.userProxy);
 
         hasCdp = state.bCdpInfo.hasCdp;
+        bitten = state.bCdpInfo.bitten;
         cdp = state.bCdpInfo.cdp;
         ethDeposit = state.bCdpInfo.ethDeposit;
         daiDebt = state.bCdpInfo.daiDebt;
@@ -135,7 +150,7 @@ contract UserInfoStorage {
         userRatingProgressPerSec = state.userRatingInfo.userRatingProgressPerSec;
         totalRating = state.userRatingInfo.totalRating;
         totalRatingProgressPerSec = state.userRatingInfo.totalRatingProgressPerSec;
-        jarSize = state.userRatingInfo.jarSize;
+        jarBalance = state.userRatingInfo.jarBalance;
 
         userState = state;
     }
@@ -145,6 +160,16 @@ contract UserInfo is Math, UserInfoStorage {
 
 
     uint constant ONE = 1e27;
+    address public dai;
+    address public weth;
+
+    constructor(
+        address dai_,
+        address weth_
+    ) public {
+        dai = dai_;
+        weth = weth_;
+    }
 
     function getFirstCdp(GetCdps getCdp, address manager, address guy, bytes32 ilk) internal view returns(uint) {
         (uint[] memory ids,, bytes32[] memory ilks) = getCdp.getCdpsAsc(manager, guy);
@@ -195,26 +220,62 @@ contract UserInfo is Math, UserInfoStorage {
         GetCdps getCdp,
         bool b
     ) public view returns(CdpInfo memory info) {
-        info.cdp = getFirstCdp(getCdp, manager, guy, ilk);
-        info.hasCdp = info.cdp > 0;
-        if(info.hasCdp) {
-            (uint ink, uint art) = vat.urns(ilk, DssCdpManager(manager).urns(info.cdp));
-            if(b) art = add(art, LiquidationMachine(manager).cushion(info.cdp));
-            info.ethDeposit = ink;
-            info.daiDebt = artToDaiDebt(vat, ilk, art);
-            info.maxDaiDebt = calcMaxDebt(vat, ilk, ink);
+        if(b) {
+            // B.Protocol
+            info.cdp = getFirstCdp(getCdp, manager, guy, ilk);
+            info.hasCdp = info.cdp > 0;
+            if(info.hasCdp) {
+                (uint ink, uint art) = vat.urns(ilk, DssCdpManager(manager).urns(info.cdp));
+                art = add(art, LiquidationMachine(manager).cushion(info.cdp));
+                info.bitten = LiquidationMachine(manager).bitten(info.cdp);
+                info.ethDeposit = ink;
+                info.daiDebt = artToDaiDebt(vat, ilk, art);
+                info.maxDaiDebt = calcMaxDebt(vat, ilk, ink);
+            }
+        } else {
+            // MakerDAO
+            info.cdp = findFirstNonZeroInkCdp(manager, guy, ilk, vat, getCdp);
+            info.hasCdp = info.cdp > 0;
+            if(info.hasCdp) {
+                (uint ink, uint art) = vat.urns(ilk, DssCdpManager(manager).urns(info.cdp));
+                info.ethDeposit = ink;
+                info.daiDebt = artToDaiDebt(vat, ilk, art);
+                info.maxDaiDebt = calcMaxDebt(vat, ilk, ink);
+            }
         }
     }
 
-    function getUserRatingInfo(address guy, address jar) public pure returns(UserRatingInfo memory info) {
-        // TODO - set real sizes
-        guy; // shh compiler warning
-        jar; // shh compiler warning
-        info.userRating = 70000e18;
-        info.userRatingProgressPerSec = 1e18;
-        info.totalRating = info.userRating * 11;
-        info.totalRatingProgressPerSec = 13e18;
-        info.jarSize = 1e4 * 1e18;
+    function findFirstNonZeroInkCdp(
+        address manager,
+        address guy,
+        bytes32 ilk,
+        VatLike vat,
+        GetCdps getCdp
+    ) public view returns (uint) {
+        (uint[] memory ids,, bytes32[] memory ilks) = getCdp.getCdpsAsc(manager, guy);
+        for(uint i = 0 ; i < ilks.length ; i++) {
+            if(ilks[i] == ilk) {
+                (uint ink,) = vat.urns(ilk, DssCdpManager(manager).urns(ids[i]));
+                if(ink > 0) return ids[i];
+            }
+        }
+        return 0;
+    }
+
+    function getUserRatingInfo(
+        bytes32 ilk,
+        address urn,
+        VatLike vat,
+        uint cdp,
+        address jar
+    ) public view returns(UserRatingInfo memory info) {
+        JarConnectorLike jarConnector = JarConnectorLike(address(JarLike(jar).connector()));
+        info.userRating = jarConnector.getUserScore(bytes32(cdp));
+        (, info.userRatingProgressPerSec) = vat.urns(ilk, urn);
+        info.totalRating = jarConnector.getGlobalScore();
+        info.totalRatingProgressPerSec = 13e18; // TODO
+        uint wethBalance = ERC20Like(weth).balanceOf(jar);
+        info.jarBalance = add(wethBalance, vat.gem(ilk, jar));
     }
 
     function setInfo(
@@ -226,8 +287,7 @@ contract UserInfo is Math, UserInfoStorage {
         VatLike vat,
         SpotLike spot,
         ProxyRegistryLike registry,
-        address jar,
-        address dai
+        address jar
     ) public {
         UserState memory state;
 
@@ -251,7 +311,10 @@ contract UserInfo is Math, UserInfoStorage {
         state.userWalletInfo.daiBalance = ERC20Like(dai).balanceOf(user);
         state.userWalletInfo.daiAllowance = ERC20Like(dai).allowance(user, guy);
 
-        state.userRatingInfo = getUserRatingInfo(guy, jar);
+        uint cdp = state.bCdpInfo.cdp;
+        address urn = manager.urns(cdp);
+
+        state.userRatingInfo = getUserRatingInfo(ilk, urn, vat, cdp, jar);
 
         set(state);
     }
@@ -265,10 +328,9 @@ contract UserInfo is Math, UserInfoStorage {
         VatLike vat,
         SpotLike spot,
         ProxyRegistryLike registry,
-        address jar,
-        address dai
+        address jar
     ) public returns(UserState memory state) {
-        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jar, dai);
+        setInfo(user, ilk, manager, makerDAOManager, getCdp, vat, spot, registry, jar);
         return userState;
     }
 }
