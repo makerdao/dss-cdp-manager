@@ -2,10 +2,12 @@ pragma solidity ^0.5.12;
 
 import { BCdpManagerTestBase, Hevm, FakeUser } from "./BCdpManager.t.sol";
 import { JarConnector } from "./JarConnector.sol";
+import { Jar } from "../user-rating/contracts/jar/Jar.sol";
 
 contract JarConnectorTest is BCdpManagerTestBase {
     JarConnector jarConnector;
     uint currTime;
+    Jar jar;
 
     function setUp() public {
         super.setUp();
@@ -14,8 +16,26 @@ contract JarConnectorTest is BCdpManagerTestBase {
         durations[0] = 30 days;
         durations[1] = 5 * 30 days;
 
-        jarConnector = new JarConnector(address(manager), address(ethJoin), "ETH", durations);
+        address[] memory gemJoins = new address[](2);
+        gemJoins[0] = address(ethJoin);
+        gemJoins[1] = address(colJoin);
+
+        bytes32[] memory ilks = new bytes32[](2);
+        ilks[0] = "ETH";
+        ilks[1] = "COL";
+
+        jarConnector = new JarConnector(ilks, durations);
+        jarConnector.setManager(address(manager));
         score.transferOwnership(address(jarConnector));
+
+        jar = new Jar(
+            1, 
+            now + 30 days, 
+            address(jarConnector),
+            address(vat),
+            ilks,
+            gemJoins
+        );
     }
 
     function timeReset() internal {
@@ -35,6 +55,13 @@ contract JarConnectorTest is BCdpManagerTestBase {
         vat.flux("ETH", address(this), dest, wad);
     }
 
+    function sendGemCOL(uint wad, address dest) internal returns(uint) {
+        col.mint(wad);
+        col.approve(address(colJoin), wad);
+        colJoin.join(address(this), wad);
+        vat.flux("COL", address(this), dest, wad);
+    }
+
     function openCdp(uint ink, uint art) internal returns(uint){
         uint cdp = manager.open("ETH", address(this));
 
@@ -47,22 +74,31 @@ contract JarConnectorTest is BCdpManagerTestBase {
         return cdp;
     }
 
-    function testExitEthExplicit() public {
-        uint wad = 12345;
-        sendGem(wad, address(jarConnector));
-        assertEq(vat.gem("ETH", address(jarConnector)), wad);
+    function openCdpWithCOL(uint ink, uint art) internal returns(uint) {
+        uint cdp = manager.open("COL", address(this));
 
-        jarConnector.ethExit(wad/2, "ETH");
-        assertEq(weth.balanceOf(address(jarConnector)), wad/2);
+        col.mint(ink);
+        col.approve(address(colJoin), ink);
+        colJoin.join(manager.urns(cdp), ink);
+
+        manager.frob(cdp, int(ink), int(art));
+
+        return cdp;
     }
 
-    function testExitEth() public {
+    function testGemExitFromJar() public {
         uint wad = 12345;
-        sendGem(wad, address(jarConnector));
-        assertEq(vat.gem("ETH", address(jarConnector)), wad);
+        sendGem(wad, address(jar));
+        sendGemCOL(wad, address(jar));
 
-        jarConnector.ethExit();
-        assertEq(weth.balanceOf(address(jarConnector)), wad);
+        assertEq(vat.gem("ETH", address(jar)), wad);
+        assertEq(vat.gem("COL", address(jar)), wad);
+
+        // exit both
+        jar.gemExit();
+
+        assertEq(weth.balanceOf(address(jar)), wad);
+        assertEq(col.balanceOf(address(jar)), wad);
     }
 
     function testToUser() public {
@@ -171,6 +207,51 @@ contract JarConnectorTest is BCdpManagerTestBase {
         assertEq(0, jarConnector.getUserScore(bytes32(cdp3 + 1)));
 
         assertEq(expectedScore1 + expectedScore2 + expectedScore3, jarConnector.getGlobalScore());
+    }
+
+    function testScoreWithMultiIlk() public {
+        timeReset();
+
+        uint cdp1 = openCdp(10 ether, 100 ether); // 10 ETH, 100 DAI
+        uint cdp2 = openCdpWithCOL(10 ether, 101 ether); // 10 COL, 101 DAI
+
+        forwardTime(101);
+
+        assertEq(jarConnector.round(), 0);
+
+        assertEq(jarConnector.getUserScore(bytes32(cdp1)), 0);
+        assertEq(jarConnector.getUserScore(bytes32(cdp2)), 0);
+        assertEq(jarConnector.getGlobalScore(), 0);
+
+        jarConnector.spin();
+        assertEq(jarConnector.round(), 1);
+
+        forwardTime(30 days);
+
+        uint expectedScore1 = 2 * 30 days * 100 ether;
+        uint expectedScore2 = 2 * 30 days * 101 ether;
+
+        assertEq(jarConnector.getUserScore(bytes32(cdp1)), expectedScore1);
+        assertEq(jarConnector.getUserScore(bytes32(cdp2)), expectedScore2);
+
+        assertEq(jarConnector.getGlobalScore("ETH"), expectedScore1);
+        assertEq(jarConnector.getGlobalScore("COL"), expectedScore2);
+        assertEq(jarConnector.getGlobalScore(), expectedScore1 + expectedScore2);
+
+        jarConnector.spin();
+        assertEq(jarConnector.round(), 2);
+
+        forwardTime(5 * 30 days);
+
+        expectedScore1 += 5 * 30 days * 100 ether;
+        expectedScore2 += 5 * 30 days * 101 ether;
+
+        assertEq(jarConnector.getUserScore(bytes32(cdp1)), expectedScore1);
+        assertEq(jarConnector.getUserScore(bytes32(cdp2)), expectedScore2);
+
+        assertEq(jarConnector.getGlobalScore("ETH"), expectedScore1);
+        assertEq(jarConnector.getGlobalScore("COL"), expectedScore2);
+        assertEq(jarConnector.getGlobalScore(), expectedScore1 + expectedScore2);
     }
 
     function testSpinTooEarly() public {

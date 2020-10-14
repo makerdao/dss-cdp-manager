@@ -2,21 +2,14 @@ pragma solidity ^0.5.12;
 
 import { BCdpScore } from "./BCdpScore.sol";
 import { BCdpManager } from "./BCdpManager.sol";
+import { Math } from "./Math.sol";
 
-interface GemJoinLike {
-    function exit(address, uint) external;
-}
-
-interface VatLike {
-    function gem(bytes32 ilk, address user) external view returns(uint);
-}
-
-contract JarConnector {
-    GemJoinLike ethJoin;
-    BCdpScore   score;
-    BCdpManager man;
-    VatLike     vat;
-    bytes32     ilk;
+contract JarConnector is Math {
+    BCdpScore   public score;
+    BCdpManager public man;
+    bytes32[]   public ilks;
+    // ilk => supported
+    mapping(bytes32 => bool) public milks;
 
     // end of every round
     uint[2] public end;
@@ -25,17 +18,26 @@ contract JarConnector {
 
     uint public round;
 
-    constructor(address _manager, address _ethJoin, bytes32 _ilk, uint[2] memory _duration) public {
-        man = BCdpManager(_manager);
-        vat = VatLike(address(man.vat()));
-        score = BCdpScore(address(man.score()));
-        ethJoin = GemJoinLike(_ethJoin);
-        ilk = _ilk;
+    constructor(
+        bytes32[] memory _ilks,
+        uint[2] memory _duration
+    ) public {
+        ilks = _ilks;
+
+        for(uint i = 0; i < _ilks.length; i++) {
+            milks[_ilks[i]] = true;
+        }
 
         end[0] = now + _duration[0];
         end[1] = now + _duration[0] + _duration[1];
 
         round = 0;
+    }
+
+    function setManager(address _manager) public {
+        require(man == BCdpManager(0), "manager-already-set");
+        man = BCdpManager(_manager);
+        score = BCdpScore(address(man.score()));
     }
 
     // callable by anyone
@@ -57,30 +59,37 @@ contract JarConnector {
         }
     }
 
-    // callable by anyone
-    function ethExit(uint wad, bytes32 ilk_) public {
-        ilk_; // shh compiler wanring
-        ethJoin.exit(address(this), wad);
-    }
-
-    function ethExit() public {
-        ethExit(vat.gem(ilk, address(this)), ilk);
-    }
-
     function getUserScore(bytes32 user) external view returns (uint) {
         if(round == 0) return 0;
 
         uint cdp = uint(user);
+        bytes32 ilk = man.ilks(cdp);
+
+        // Should return 0 score for unsupported ilk
+        if( ! milks[ilk]) return 0;
+
         if(round == 1) return 2 * score.getArtScore(cdp, ilk, now, start[0]);
 
         uint firstRoundScore = 2 * score.getArtScore(cdp, ilk, start[1], start[0]);
         uint time = now;
         if(round > 2) time = end[1];
 
-        return score.getArtScore(cdp, ilk, time, start[1]) + firstRoundScore;
+        return add(score.getArtScore(cdp, ilk, time, start[1]), firstRoundScore);
     }
 
     function getGlobalScore() external view returns (uint) {
+        if(round == 0) return 0;
+
+        if(round == 1) return 2 * getArtGlobalScore(now, start[0]);
+
+        uint firstRoundScore = 2 * getArtGlobalScore(start[1], start[0]);
+        uint time = now;
+        if(round > 2) time = end[1];
+
+        return add(getArtGlobalScore(time, start[1]), firstRoundScore);
+    }
+
+    function getGlobalScore(bytes32 ilk) external view returns (uint) {
         if(round == 0) return 0;
 
         if(round == 1) return 2 * score.getArtGlobalScore(ilk, now, start[0]);
@@ -89,7 +98,13 @@ contract JarConnector {
         uint time = now;
         if(round > 2) time = end[1];
 
-        return score.getArtGlobalScore(ilk, time, start[1]) + firstRoundScore;
+        return add(score.getArtGlobalScore(ilk, time, start[1]), firstRoundScore);
+    }
+
+    function getArtGlobalScore(uint time, uint spinStart) internal view returns (uint totalScore) {
+        for(uint i = 0; i < ilks.length; i++) {
+            totalScore = add(totalScore, score.getArtGlobalScore(ilks[i], time, spinStart));
+        }
     }
 
     function toUser(bytes32 user) external view returns (address) {

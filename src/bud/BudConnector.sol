@@ -4,47 +4,48 @@ import { DSAuth } from "ds-auth/auth.sol";
 
 interface OSMLike {
     function peep() external view returns (bytes32, bool);
-}
-
-interface Spotty {
-    function ilks(bytes32) external view returns (PipLike pip, uint256 mat);
+    function hop()  external view returns(uint16);
+    function zzz()  external view returns(uint64);
 }
 
 interface PipLike {
     function read() external view returns (bytes32);
 }
 
-interface EndLike {
-    function spot() external view returns (Spotty);
-}
-
 contract BudConnector is DSAuth {
 
     mapping(address => bool) public authorized;
     OSMLike public osm;
-    EndLike public end;
+    mapping(bytes32 => PipLike) pips;
 
-    constructor(OSMLike osm_, EndLike end_) public {
+    constructor(OSMLike osm_) public {
         osm = osm_;
-        end = end_;
     }
 
     function authorize(address addr) external auth {
         authorized[addr] = true;
     }
 
-    function revoke(address addr) external auth {
-        authorized[addr] = false;
+    function setPip(address pip, bytes32 ilk) external auth {
+        require(pips[ilk] == PipLike(0), "ilk-already-init");
+        pips[ilk] = PipLike(pip);
     }
 
-    function peep() external returns (bytes32, bool) {
+    function peep() external view returns (bytes32, bool) {
         require(authorized[msg.sender], "!authorized");
-        return osm.peep(); 
+        return osm.peep();
     }
 
-    function read(bytes32 ilk) external returns (bytes32) {
+    function read(bytes32 ilk) external view returns (bytes32) {
         require(authorized[msg.sender], "!authorized");
-        (PipLike pip,) = end.spot().ilks(ilk);
-        return pip.read();
+        return pips[ilk].read();
+    }
+
+    function hop() external view returns(uint16) {
+        return osm.hop();
+    }
+
+    function zzz() external view returns(uint64) {
+        return osm.zzz();
     }
 }
