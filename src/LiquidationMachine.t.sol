@@ -5,6 +5,7 @@ import { BCdpManagerTestBase, Hevm, FakeUser } from "./BCdpManager.t.sol";
 import { LiquidationMachine } from "./LiquidationMachine.sol";
 import { BCdpScore } from "./BCdpScore.sol";
 import { BCdpManager } from "./BCdpManager.sol";
+import { EndConnector } from "./EndConnector.sol";
 
 contract FakePool {
     function doTopup(LiquidationMachine lm, uint cdp, uint dtopup) public {
@@ -38,6 +39,8 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
 
         fPool = new FakePool();
         BCdpScore score = new BCdpScore();
+        EndConnector endConnector = new EndConnector(address(vat));
+        endConnector.setCat(address(end), true);
         manager = new BCdpManager(address(vat), address(end), address(fPool), address(bud), address(score));
         bud.authorize(address(manager));
         score.setManager(address(manager));
