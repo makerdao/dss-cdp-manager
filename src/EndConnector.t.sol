@@ -88,23 +88,34 @@ contract EndConnectorTest is BCdpManagerTestBase {
 
         ec.setCat(address(mockEnd1), true);
     }
+
+    function testFailedTestZeroCat() public {
+        this.rely(address(vat), address(0x0));
+        ec.setCat(address(new MockEnd4()), true);
+    }
 }
 
 
 contract MockEnd1 {
-    function cat() public returns(address) {
+    function cat() public pure returns(address) {
         return address(0x1);
     }
 }
 
 contract MockEnd2 {
-    function dog() public returns(address) {
+    function dog() public pure returns(address) {
         return address(0x2);
     }
 }
 
 contract MockEnd3 {
-    function lion() public returns(address) {
+    function lion() public pure returns(address) {
         return address(0x3);
+    }
+}
+
+contract MockEnd4 {
+    function cat() public pure returns(address) {
+        return address(0x0);
     }
 }

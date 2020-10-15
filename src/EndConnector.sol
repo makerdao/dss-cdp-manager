@@ -27,6 +27,7 @@ contract EndConnector {
         if(useCat) cat = FutureEndLike(newEnd).cat();
         else cat = FutureEndLike(newEnd).dog();
 
+        require(cat != address(0));
         require(vat.wards(cat) == 1, "new-cat-is-not-authorized");
 
         emit NewCat(cat);
