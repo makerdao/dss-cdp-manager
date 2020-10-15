@@ -66,9 +66,14 @@ contract UserInfoTest is BCdpManagerTestBase {
         getCdps = new GetCdps();
         registry = new FakeRegistry();
         userInfo = new UserInfo(address(dai), address(weth));
+        bytes32[] memory ilks = new bytes32[](1);
+        ilks[0] = "ETH";
 
-        jarConnector = new JarConnector(address(manager), address(ethJoin), "ETH", [uint(100000), uint(100000)]);
-        jar = new Jar(uint(1), uint(now + 30 days), address(jarConnector));
+        address[] memory gemJoins = new address[](1);
+        gemJoins[0] = address(ethJoin);
+
+        jarConnector = new JarConnector(ilks, [uint(100000), uint(100000)]);
+        jar = new Jar(uint(1), uint(now + 30 days), address(jarConnector), address(vat), ilks, gemJoins);
 
         vatLike = VatLike(address(vat));
         registryLike = ProxyRegistryLike(address(registry));
@@ -306,6 +311,7 @@ contract UserInfoTest is BCdpManagerTestBase {
         FakeProxy proxy = registry.build();
 
         score.transferOwnership(address(jarConnector));
+        jarConnector.setManager(address(manager));
         jarConnector.spin();
 
         pool = deployNewPoolContract(address(jar));
