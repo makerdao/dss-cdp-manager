@@ -9,6 +9,7 @@ import { BCdpFullScore } from "./BCdpFullScore.sol";
 import { BCdpScoreLike } from "./BCdpScoreConnector.sol";
 import { Migrate } from "./governance/Migrate.sol";
 import { BudConnector, OSMLike } from "./bud/BudConnector.sol";
+import { EndConnector } from "./EndConnector.sol";
 
 contract Hevm {
     function warp(uint256) public;
@@ -213,7 +214,9 @@ contract BCdpManagerTestBase is DssDeployTestBase {
         pool = new Pool(address(vat), address(jar), address(spotter), address(jug), address(daiToUsdPriceFeed));
         bud.authorize(address(pool));
         score = new BCdpFullScore();
-        manager = new BCdpManager(address(vat), address(end), address(pool), address(bud), address(score));
+        EndConnector endConnector = new EndConnector(address(vat));
+        endConnector.setCat(address(end), true);
+        manager = new BCdpManager(address(vat), address(endConnector), address(pool), address(bud), address(score));
         bud.authorize(address(manager));
         score.setManager(address(manager));
         pool.setCdpManager(manager);
