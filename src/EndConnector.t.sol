@@ -26,12 +26,30 @@ contract EndConnectorTest is BCdpManagerTestBase {
         assertEq(ec.cat(), address(0x1));
     }
 
+    function testCatAdmin() public {
+        MockEnd1 mockEnd1 = new MockEnd1();
+        this.rely(address(vat), address(mockEnd1));
+        this.rely(address(vat), address(0x1));
+
+        ec.setCatAdmin(address(mockEnd1), true);
+        assertEq(ec.cat(), address(0x1));
+    }
+
     function testDog() public {
         MockEnd2 mockEnd2 = new MockEnd2();
         this.rely(address(vat), address(mockEnd2));
         this.rely(address(vat), address(0x2));
 
         ec.setCat(address(mockEnd2), false);
+        assertEq(ec.cat(), address(0x2));
+    }
+
+    function testDogAdmin() public {
+        MockEnd2 mockEnd2 = new MockEnd2();
+        this.rely(address(vat), address(mockEnd2));
+        this.rely(address(vat), address(0x2));
+
+        ec.setCatAdmin(address(mockEnd2), false);
         assertEq(ec.cat(), address(0x2));
     }
 
@@ -57,6 +75,14 @@ contract EndConnectorTest is BCdpManagerTestBase {
         testCat();
         vat.deny(address(0x1));
         testDog();
+    }
+
+    function testUpgradeAdmin() public {
+        testCurrentEnd();
+        // do not delist old cat
+        testCatAdmin();
+        // do not delist old cat
+        testDogAdmin();
     }
 
     function testFailedUpgradeWithoutChangeCat() public {
@@ -92,6 +118,12 @@ contract EndConnectorTest is BCdpManagerTestBase {
     function testFailedTestZeroCat() public {
         this.rely(address(vat), address(0x0));
         ec.setCat(address(new MockEnd4()), true);
+    }
+
+    function testFailedAdminNoAuth() public {
+        testCurrentEnd();
+        ec.setOwner(address(0x123));
+        testCatAdmin();
     }
 }
 
