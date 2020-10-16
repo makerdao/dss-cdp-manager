@@ -92,7 +92,7 @@ contract EndConnectorTest is BCdpManagerTestBase {
 
     function testFailedUpgradeWithoutChangeDog() public {
         testCurrentEnd();
-        testCat();
+        testDog();
     }
 
     function testFailedCatUnAuthNewCat() public {
