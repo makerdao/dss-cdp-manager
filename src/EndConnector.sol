@@ -1,8 +1,11 @@
 pragma solidity ^0.5.12;
 import { DSAuth } from "ds-auth/auth.sol";
 
-contract FutureEndLike {
+contract CurrentEndLike {
     function cat() public returns(address);
+}
+
+contract FutureEndLike {
     function dog() public returns(address);
 }
 
@@ -34,7 +37,7 @@ contract EndConnector is DSAuth {
     function set(address newEnd, bool useCat) internal {
         require(vat.wards(newEnd) == 1, "end-is-not-authorized");
 
-        if(useCat) cat = FutureEndLike(newEnd).cat();
+        if(useCat) cat = CurrentEndLike(newEnd).cat();
         else cat = FutureEndLike(newEnd).dog();
 
         require(cat != address(0));
