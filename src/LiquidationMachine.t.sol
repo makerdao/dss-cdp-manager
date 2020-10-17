@@ -1,11 +1,11 @@
 pragma solidity ^0.5.12;
 
 import { Vat, Jug } from "dss-deploy/DssDeploy.t.base.sol";
-import { BCdpManagerTestBase, Hevm, FakeUser } from "./BCdpManager.t.sol";
+import { BCdpManagerTestBase, Hevm, FakeUser, ChainLog } from "./BCdpManager.t.sol";
 import { LiquidationMachine } from "./LiquidationMachine.sol";
 import { BCdpScore } from "./BCdpScore.sol";
 import { BCdpManager } from "./BCdpManager.sol";
-import { EndConnector } from "./EndConnector.sol";
+import { ChainLogConnector } from "./ChainLogConnector.sol";
 
 contract FakePool {
     function doTopup(LiquidationMachine lm, uint cdp, uint dtopup) public {
@@ -39,9 +39,11 @@ contract LiquidationMachineTest is BCdpManagerTestBase {
 
         fPool = new FakePool();
         BCdpScore score = new BCdpScore();
-        EndConnector endConnector = new EndConnector(address(vat));
-        endConnector.setCat(address(end), true);
-        manager = new BCdpManager(address(vat), address(endConnector), address(fPool), address(bud), address(score));
+        ChainLog log = new ChainLog();
+        ChainLogConnector cc = new ChainLogConnector(address(vat), address(log));
+        log.setAddress("MCD_CAT", address(cat));
+        cc.setCat();
+        manager = new BCdpManager(address(vat), address(cc), address(fPool), address(bud), address(score));
         bud.authorize(address(manager));
         score.setManager(address(manager));
         fPool.doHope(vat, address(manager));
