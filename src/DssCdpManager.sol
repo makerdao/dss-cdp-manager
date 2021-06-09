@@ -19,8 +19,6 @@
 
 pragma solidity >=0.5.12;
 
-import { LibNote } from "dss/lib.sol";
-
 interface VatLike {
     function urns(bytes32, address) external view returns (uint, uint);
     function hope(address) external;
@@ -36,7 +34,7 @@ contract UrnHandler {
     }
 }
 
-contract DssCdpManager is LibNote {
+contract DssCdpManager {
     address                   public vat;
     uint                      public cdpi;      // Auto incremental
     mapping (uint => address) public urns;      // CDPId => UrnHandler
@@ -121,7 +119,7 @@ contract DssCdpManager is LibNote {
     function open(
         bytes32 ilk,
         address usr
-    ) public note returns (uint) {
+    ) public returns (uint) {
         require(usr != address(0), "usr-address-0");
 
         cdpi = add(cdpi, 1);
@@ -148,7 +146,7 @@ contract DssCdpManager is LibNote {
     function give(
         uint cdp,
         address dst
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         require(dst != address(0), "dst-address-0");
         require(dst != owns[cdp], "dst-already-owner");
 
@@ -187,7 +185,7 @@ contract DssCdpManager is LibNote {
         uint cdp,
         int dink,
         int dart
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         address urn = urns[cdp];
         VatLike(vat).frob(
             ilks[cdp],
@@ -204,7 +202,7 @@ contract DssCdpManager is LibNote {
         uint cdp,
         address dst,
         uint wad
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         VatLike(vat).flux(ilks[cdp], urns[cdp], dst, wad);
     }
 
@@ -215,7 +213,7 @@ contract DssCdpManager is LibNote {
         uint cdp,
         address dst,
         uint wad
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         VatLike(vat).flux(ilk, urns[cdp], dst, wad);
     }
 
@@ -224,7 +222,7 @@ contract DssCdpManager is LibNote {
         uint cdp,
         address dst,
         uint rad
-    ) public note cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         VatLike(vat).move(urns[cdp], dst, rad);
     }
 
@@ -232,7 +230,7 @@ contract DssCdpManager is LibNote {
     function quit(
         uint cdp,
         address dst
-    ) public note cdpAllowed(cdp) urnAllowed(dst) {
+    ) public cdpAllowed(cdp) urnAllowed(dst) {
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urns[cdp]);
         VatLike(vat).fork(
             ilks[cdp],
@@ -247,7 +245,7 @@ contract DssCdpManager is LibNote {
     function enter(
         address src,
         uint cdp
-    ) public note urnAllowed(src) cdpAllowed(cdp) {
+    ) public urnAllowed(src) cdpAllowed(cdp) {
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], src);
         VatLike(vat).fork(
             ilks[cdp],
@@ -262,7 +260,7 @@ contract DssCdpManager is LibNote {
     function shift(
         uint cdpSrc,
         uint cdpDst
-    ) public note cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
+    ) public cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
         require(ilks[cdpSrc] == ilks[cdpDst], "non-matching-cdps");
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdpSrc], urns[cdpSrc]);
         VatLike(vat).fork(

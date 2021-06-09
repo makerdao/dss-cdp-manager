@@ -4,4 +4,3 @@
 [submodule "lib/dss-deploy"]
 	path = lib/dss-deploy
 	url = https://github.com/makerdao/dss-deploy
-	branch = v1.2
