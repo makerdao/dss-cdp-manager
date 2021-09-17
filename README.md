@@ -1,4 +1,5 @@
 # 1. Introduction (Summary)
+![Build Status](https://github.com/makerdao/dss-cdp-manager/actions/workflows/.github/workflows/tests.yaml/badge.svg?branch=dss-v1.2)
 
 **Summary:** The `DssCdpManager` (aka `manager`) was created to enable a formalized process for CDPs to be transferred between owners. In short, the `manager` works by having a `dss` wrapper that allows users to interact with their CDPs in an easy way, treating them as non-fungible tokens (NFTs).
 
